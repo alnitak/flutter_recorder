@@ -18,6 +18,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final _recorder = Recorder.instance;
+  final silenceDb = ValueNotifier(-20.0);
 
   @override
   void initState() {
@@ -128,7 +129,7 @@ class _MyAppState extends State<MyApp> {
                       onPressed: () {
                         _recorder.setSilenceDetection(
                           enable: true,
-                          silenceThresholdDb: -20,
+                          silenceThresholdDb: -7,
                         );
                       },
                       child: const Text('setSilenceDetection ON'),
@@ -142,6 +143,54 @@ class _MyAppState extends State<MyApp> {
                   ],
                 ),
                 spacerSmall,
+                StreamBuilder(
+                  stream: _recorder.silenceChangedEvents,
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData) {
+                      return ColoredBox(
+                        color:
+                            snapshot.data!.isSilent ? Colors.green : Colors.red,
+                        child: SizedBox(
+                          width: 70,
+                          height: 50,
+                          child: Center(
+                            child:
+                                Text(snapshot.data!.decibel.toStringAsFixed(1)),
+                          ),
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+                ValueListenableBuilder(
+                  valueListenable: silenceDb,
+                  builder: (_, value, __) {
+                    return Row(
+                      mainAxisSize: MainAxisSize.max,
+                      children: [
+                        Text('${value.toStringAsFixed(1)}dB'),
+                        Expanded(
+                          child: Slider(
+                            value: silenceDb.value,
+                            min: -60,
+                            max: 0,
+                            label: value.toStringAsFixed(1),
+                            onChanged: (value) {
+                              silenceDb.value = value;
+                              _recorder.setSilenceDetection(
+                                enable: true,
+                                silenceThresholdDb: value,
+                              onSilenceChanged: (isSilent, decibel) {
+                                  print('SILENCE CHANGED: $isSilent, $decibel');
+                                },);
+                            },
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
                 const Bars(),
               ],
             ),

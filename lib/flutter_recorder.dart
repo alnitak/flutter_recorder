@@ -1,5 +1,6 @@
-// ignore_for_file: omit_local_variable_types
+// ignore_for_file: omit_local_variable_types, avoid_positional_boolean_parameters
 
+import 'dart:async';
 import 'dart:ffi' as ffi;
 import 'dart:io';
 import 'dart:typed_data';
@@ -8,6 +9,12 @@ import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_recorder/enums.dart';
 import 'package:flutter_recorder/flutter_recorder_bindings_generated.dart';
+
+/// Callback when silence state is changed.
+typedef SilenceCallback = void Function(bool isSilent, double decibel);
+
+/// Silence state.
+typedef SilenceState = ({bool isSilent, double decibel});
 
 /// Use this class to _capture_ audio (such as from a microphone).
 class Recorder {
@@ -57,6 +64,16 @@ class Recorder {
   /// ```
   static final Recorder instance = Recorder._();
 
+  SilenceCallback? _silenceCallback;
+
+  /// Controller to listen to silence changed event.
+  late final StreamController<SilenceState> silenceChangedEventController =
+      StreamController.broadcast();
+
+  /// Listener for silence changed.
+  Stream<SilenceState> get silenceChangedEvents =>
+      silenceChangedEventController.stream;
+
   static const String _libName = 'flutter_recorder';
 
   /// The dynamic library in which the symbols for [FlutterRecorderBindings]
@@ -76,6 +93,47 @@ class Recorder {
 
   /// The bindings to the native functions in [_dylib].
   final FlutterRecorderBindings _bindings = FlutterRecorderBindings(_dylib);
+
+  void _silenceChangedCallback(
+    ffi.Pointer<ffi.Bool> silence,
+    ffi.Pointer<ffi.Float> db,
+  ) {
+    // voiceEndedEventController.add(handle.value);
+    // print('SILENCE CHANGED: ${silence.value}, ${db.value}');
+    _silenceCallback?.call(silence.value, db.value);
+    silenceChangedEventController.add(
+      (isSilent: silence.value, decibel: db.value),
+    );
+  }
+
+  /// Enable or disable silence detection.
+  ///
+  /// [enable] true = enable silence detection, false = disable.
+  /// [silenceThresholdDb] the silence threshold in dB.
+  ///
+  /// Return [CaptureErrors.captureNoError] if no error.
+  /// Returns [CaptureErrors.captureNotInited].
+  void setSilenceDetection({
+    required bool enable,
+    double silenceThresholdDb = -40.0,
+    SilenceCallback? onSilenceChanged,
+  }) {
+    final nativeSilenceChangedCallable =
+        ffi.NativeCallable<dartSilenceChangedCallback_tFunction>.listener(
+      _silenceChangedCallback,
+    );
+
+    _bindings
+      ..setDartEventCallback(nativeSilenceChangedCallable.nativeFunction)
+      ..setSilenceDetection(enable, silenceThresholdDb);
+
+    if (onSilenceChanged != null) {
+      _silenceCallback = onSilenceChanged;
+    }
+    if (!enable) {
+      _silenceCallback = null;
+    }
+  }
 
   /// List available input devices. Useful on desktop to choose
   /// which input device to use.
@@ -167,6 +225,15 @@ class Recorder {
     return _bindings.stopListen();
   }
 
+  /// Get the current volume in dB.
+  double getVolumeDb() {
+    final ffi.Pointer<ffi.Float> volume = calloc(4);
+    final error = _bindings.getVolumeDb(volume);
+    final v = volume.value;
+    calloc.free(volume);
+    return error != CaptureErrors.captureNoError ? -200 : v;
+  }
+
   /// Smooth FFT data.
   ///
   /// When new data is read and the values are decreasing, the new value will be
@@ -182,20 +249,6 @@ class Recorder {
   /// Returns [CaptureErrors.captureNotInited].
   CaptureErrors setFftSmoothing(double smooth) {
     return _bindings.setFftSmoothing(smooth);
-  }
-
-  /// Enable or disable silence detection.
-  /// 
-  /// [enable] true = enable silence detection, false = disable.
-  /// [silenceThresholdDb] the silence threshold in dB.
-  ///
-  /// Return [CaptureErrors.captureNoError] if no error.
-  /// Returns [CaptureErrors.captureNotInited].
-  void setSilenceDetection({
-    required bool enable,
-    double silenceThresholdDb = -40.0,
-  }) {
-    _bindings.setSilenceDetection(enable, silenceThresholdDb);
   }
 
   /// Return a 256 float array containing FFT data in the range [-1.0, 1.0]

@@ -8,6 +8,9 @@
 #include <vector>
 #include <string>
 
+
+
+
 struct CaptureDevice {
     char* name;
     unsigned int isDefault;
@@ -28,7 +31,6 @@ public:
     ///     If [deviceID] is -1, the default will be used
     /// @param deviceID the device ID chosen to be initialized
     /// @return `captureNoError` if no error or else `captureInitFailed`
-    // TODO(marco): eventually add all the errors miniaudio could return
     CaptureErrors init(int deviceID);
 
     /// @brief Must be called when there is no more need of the capture or when closing the app
@@ -40,8 +42,11 @@ public:
     CaptureErrors stopListen();
 
     CaptureErrors setSilenceDetection(bool enable, float silenceThresholdDb);
+    void setDartEventCallback(dartSilenceChangedCallback_t dartSilenceChangedCallback);
 
     float* getWave();
+
+    float *getVolumeDb();
 
     /// Wheter or not the callback is detecting silence.
     bool isDetectingSilence;
@@ -63,6 +68,7 @@ private:
 
     /// true when the capture device is initialized.
     bool mInited;
+
 };
 
 #endif // CAPTURE_H

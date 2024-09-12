@@ -28,6 +28,35 @@ class FlutterRecorderBindings {
           lookup)
       : _lookup = lookup;
 
+  CaptureErrors setDartEventCallback(
+    dartSilenceChangedCallback_t silence_changed_callback,
+  ) {
+    return CaptureErrors.fromValue(_setDartEventCallback(
+      silence_changed_callback,
+    ));
+  }
+
+  late final _setDartEventCallbackPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.UnsignedInt Function(
+              dartSilenceChangedCallback_t)>>('setDartEventCallback');
+  late final _setDartEventCallback = _setDartEventCallbackPtr
+      .asFunction<int Function(dartSilenceChangedCallback_t)>();
+
+  void nativeFree(
+    ffi.Pointer<ffi.Void> pointer,
+  ) {
+    return _nativeFree(
+      pointer,
+    );
+  }
+
+  late final _nativeFreePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+          'nativeFree');
+  late final _nativeFree =
+      _nativeFreePtr.asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
   void listCaptureDevices(
     ffi.Pointer<ffi.Pointer<ffi.Char>> devicesName,
     ffi.Pointer<ffi.Pointer<ffi.Int>> deviceId,
@@ -153,6 +182,20 @@ class FlutterRecorderBindings {
   late final _setSilenceDetection =
       _setSilenceDetectionPtr.asFunction<int Function(bool, double)>();
 
+  CaptureErrors getVolumeDb(
+    ffi.Pointer<ffi.Float> volumeDb,
+  ) {
+    return CaptureErrors.fromValue(_getVolumeDb(
+      volumeDb,
+    ));
+  }
+
+  late final _getVolumeDbPtr = _lookup<
+          ffi.NativeFunction<ffi.UnsignedInt Function(ffi.Pointer<ffi.Float>)>>(
+      'getVolumeDb');
+  late final _getVolumeDb =
+      _getVolumeDbPtr.asFunction<int Function(ffi.Pointer<ffi.Float>)>();
+
   void getFft(
     ffi.Pointer<ffi.Pointer<ffi.Float>> fft,
   ) {
@@ -266,3 +309,10 @@ enum CaptureErrors {
         _ => throw ArgumentError("Unknown value for CaptureErrors: $value"),
       };
 }
+
+typedef dartSilenceChangedCallback_t
+    = ffi.Pointer<ffi.NativeFunction<dartSilenceChangedCallback_tFunction>>;
+typedef dartSilenceChangedCallback_tFunction = ffi.Void Function(
+    ffi.Pointer<ffi.Bool>, ffi.Pointer<ffi.Float>);
+typedef DartdartSilenceChangedCallback_tFunction = void Function(
+    ffi.Pointer<ffi.Bool>, ffi.Pointer<ffi.Float>);

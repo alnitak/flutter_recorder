@@ -37,7 +37,11 @@
 #if defined _IS_LINUX_ || defined _IS_MACOS_ || defined _IS_ANDROID_ || defined _WASM_
 #include <pthread.h>
 #include <unistd.h>
+#include <stdbool.h>
 #define FFI_PLUGIN_EXPORT __attribute__((visibility("default"))) __attribute__((used))
 #endif
+
+typedef void (*dartSilenceChangedCallback_t)(bool *, float *);
+
 
 #endif // COMMON_H

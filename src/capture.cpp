@@ -7,8 +7,12 @@
 // 1024 means 1/(44100*2)*1024 = 0.0116 ms
 #define BUFFER_SIZE 1024            // Buffer length
 #define MOVING_AVERAGE_SIZE 5       // Moving average window size
-
 float capturedBuffer[BUFFER_SIZE];
+float energy_db = -200.0f;
+
+// to be used by `NativeCallable` since it will be called inside the audio thread,
+// these functions must return void.
+void (*dartSilenceChangedCallback)(bool *, float *) = nullptr;
 
 // Function to convert energy to decibels
 float energy_to_db(float energy)
@@ -43,7 +47,7 @@ void detectSilence(float *captured, ma_uint32 frameCount, float silenceThreshold
     float smoothed_energy = moving_average_sum / MOVING_AVERAGE_SIZE;
 
     // Convert energy to decibels
-    float energy_db = energy_to_db(smoothed_energy);
+    energy_db = energy_to_db(smoothed_energy);
 
     // Check if the signal is below the silence threshold
     if (energy_db < silenceThresholdDb)
@@ -51,8 +55,10 @@ void detectSilence(float *captured, ma_uint32 frameCount, float silenceThreshold
         if (!is_silent)
         {
             // Transition: Sound -> Silence
-            printf("Silence started. Level in dB: %.2f\n", energy_db);
+            // printf("Silence started. Level in dB: %.2f\n", energy_db);
             is_silent = true;
+            if (dartSilenceChangedCallback != nullptr)
+                dartSilenceChangedCallback(&is_silent, &energy_db);
         }
     }
     else
@@ -60,8 +66,10 @@ void detectSilence(float *captured, ma_uint32 frameCount, float silenceThreshold
         if (is_silent)
         {
             // Transition: Silence -> Sound
-            printf("Sound started. Level in dB: %.2f\n", energy_db);
+            // printf("Sound started. Level in dB: %.2f\n", energy_db);
             is_silent = false;
+            if (dartSilenceChangedCallback != nullptr)
+                dartSilenceChangedCallback(&is_silent, &energy_db);
         }
     }
 }
@@ -81,15 +89,19 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
     }
 }
 
-Capture::Capture() : mInited(false),
-                     isDetectingSilence(false),
-                     silenceThresholdDb(-40.0f) {};
+Capture::Capture() : isDetectingSilence(false),
+                     silenceThresholdDb(-40.0f),
+                     mInited(false) {};
 
 Capture::~Capture()
 {
     dispose();
 }
 
+void Capture::setDartEventCallback(dartSilenceChangedCallback_t callback)
+{
+    dartSilenceChangedCallback = callback;
+}
 std::vector<CaptureDevice> Capture::listCaptureDevices()
 {
     // printf("***************** LIST DEVICES START\n");

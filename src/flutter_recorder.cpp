@@ -13,6 +13,25 @@
 Capture capture;
 std::unique_ptr<Analyzer> analyzerCapture = std::make_unique<Analyzer>(256);
 
+
+/// Set a Dart functions to call when an event occurs.
+FFI_PLUGIN_EXPORT enum CaptureErrors setDartEventCallback(
+    dartSilenceChangedCallback_t silence_changed_callback
+) {
+    if (!capture.isInited())
+        return captureNotInited;
+    capture.setDartEventCallback(silence_changed_callback);
+    return captureNoError;
+}
+
+FFI_PLUGIN_EXPORT void nativeFree(void *pointer)
+{
+    free(pointer);
+}
+
+// ///////////////////////////////
+// Capture bindings functions
+// ///////////////////////////////
 FFI_PLUGIN_EXPORT void listCaptureDevices(
     char **devicesName,
     int **deviceId,
@@ -105,6 +124,13 @@ FFI_PLUGIN_EXPORT enum CaptureErrors setSilenceDetection(bool enable, float sile
         return captureNotInited;
     capture.setSilenceDetection(enable, silenceThresholdDb);
     return captureNoError;
+}
+
+FFI_PLUGIN_EXPORT enum CaptureErrors getVolumeDb(float *volumeDb)
+{
+    if (!capture.isInited())
+        return captureNotInited;
+    volumeDb = capture.getVolumeDb();
 }
 
 FFI_PLUGIN_EXPORT enum CaptureErrors setFftSmoothing(float smooth)

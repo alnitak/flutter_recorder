@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -20,11 +19,13 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
   late final Ticker ticker;
   late Bmp32Header image;
   Uint8List? bmpBytes;
+  late double vuMeter;
 
   @override
   void initState() {
     super.initState();
     image = Bmp32Header.setHeader(512, 256);
+    vuMeter = 0.0;
     ticker = createTicker(_tick);
     ticker.start();
   }
@@ -39,6 +40,7 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
     if (context.mounted) {
       setState(() {
         _buildBmpImage();
+        vuMeter = Recorder.instance.getVolumeDb();
       });
     }
   }
@@ -79,6 +81,22 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
                   ),
                 ),
               ),
+
+              /// VU-meter
+              SizedBox(
+                width: 40,
+                height: 100,
+                child: ColoredBox(
+                  color: Colors.black,
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: SizedBox(
+                      width: 40,
+                      height: vuMeter,
+                    ),
+                  ),
+                ),
+              )
             ],
           ),
           const SizedBox(height: 6),
@@ -113,8 +131,7 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
       for (var x = 256; x < 512; x++) {
         final offset = y * 512 + x;
         b[offset * 4 + 0] = 0; // R
-        b[offset * 4 + 1] =
-            (texture2D[offset] * 255).abs().floor(); // G
+        b[offset * 4 + 1] = (texture2D[offset] * 255).abs().floor(); // G
         b[offset * 4 + 2] = 0; // B
         b[offset * 4 + 3] = 255; // A
       }
