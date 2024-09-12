@@ -1,0 +1,21 @@
+# Run with `dart run ffigen --config ffigen.yaml`.
+name: FlutterRecorderBindings
+description: |
+  Bindings for `src/flutter_recorder.h`.
+
+  Regenerate bindings with `dart run ffigen --config ffigen.yaml`.
+  export CPATH="$(clang -v 2>&1 | grep "Selected GCC installation" | rev | cut -d' ' -f1 | rev)/include";  dart run ffigen --config ffigen.yaml
+output: 'lib/flutter_recorder_bindings_generated.dart'
+headers:
+  entry-points:
+    - 'src/flutter_recorder.h'
+  include-directives:
+    - 'src/flutter_recorder.h'
+preamble: |
+  // ignore_for_file: always_specify_types
+  // ignore_for_file: camel_case_types
+  // ignore_for_file: non_constant_identifier_names
+silence-enum-warning: true
+comments:
+  style: any
+  length: full

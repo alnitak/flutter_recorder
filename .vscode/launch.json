@@ -1,0 +1,63 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "example debug",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "cwd": "${workspaceFolder}/example"
+
+        },
+        {
+            "name": "example profile",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile",
+            "program": "lib/main.dart",
+            "cwd": "${workspaceFolder}/example"
+        },
+        {
+            "name": "example release",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release",
+            "program": "lib/main.dart",
+            "cwd": "${workspaceFolder}/example"
+        },
+        {
+            "name": "Debug native Linux",
+            "preLaunchTask": "compile linux debug",
+            "type": "cppdbg",
+            "request": "launch",
+            "args": [],
+            "program": "${workspaceFolder}/example/build/linux/x64/debug/bundle/flutter_recorder_example",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Debug native Linux VERBOSE",
+            "preLaunchTask": "compile linux debug verbose",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/example/build/linux/x64/debug/bundle/flutter_recorder_example",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Debug native Linux test",
+            "preLaunchTask": "compile linux test debug",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/example/build/linux/x64/debug/bundle/flutter_recorder_example",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Chrome",
+            "type": "chrome",
+            "preLaunchTask": "compile web debug",
+            "request": "launch"
+        }
+    ]
+}

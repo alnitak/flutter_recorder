@@ -1,0 +1,26 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "compile linux debug verbose",
+            "command": "cd ${workspaceFolder}/example; flutter build linux -t lib/main.dart --debug --verbose",
+            // "args": ["build", "linux", "--verbose"],
+            "type": "shell"
+        },
+        {
+            "label": "compile linux debug",
+            "command": "cd ${workspaceFolder}/example; flutter build linux -t lib/main.dart --debug",
+            "type": "shell"
+        },
+        {
+            "label": "compile linux test debug",
+            "command": "cd ${workspaceFolder}/example; flutter build linux -t tests/tests.dart --debug",
+            "type": "shell"
+        },
+        {
+            "label": "compile web debug",
+            "command": "cd ${workspaceFolder}/example; flutter run -d chrome --web-renderer canvaskit --web-browser-flag '--disable-web-security' -t lib/main.dart --release",
+            "type": "shell"
+        }
+    ]
+}
