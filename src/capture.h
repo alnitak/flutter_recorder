@@ -46,7 +46,7 @@ public:
 
     float* getWave();
 
-    float *getVolumeDb();
+    float getVolumeDb();
 
     /// Wheter or not the callback is detecting silence.
     bool isDetectingSilence;

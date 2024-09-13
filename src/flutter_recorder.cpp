@@ -130,7 +130,8 @@ FFI_PLUGIN_EXPORT enum CaptureErrors getVolumeDb(float *volumeDb)
 {
     if (!capture.isInited())
         return captureNotInited;
-    volumeDb = capture.getVolumeDb();
+    *volumeDb = capture.getVolumeDb();
+    return captureNoError;
 }
 
 FFI_PLUGIN_EXPORT enum CaptureErrors setFftSmoothing(float smooth)

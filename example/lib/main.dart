@@ -182,7 +182,7 @@ class _MyAppState extends State<MyApp> {
                                 enable: true,
                                 silenceThresholdDb: value,
                               onSilenceChanged: (isSilent, decibel) {
-                                  print('SILENCE CHANGED: $isSilent, $decibel');
+                                  // print('SILENCE CHANGED: $isSilent, $decibel');
                                 },);
                             },
                           ),

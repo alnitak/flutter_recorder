@@ -210,6 +210,11 @@ CaptureErrors Capture::stopListen()
     return captureNoError;
 }
 
+float Capture::getVolumeDb()
+{
+    return energy_db;
+}
+
 CaptureErrors Capture::setSilenceDetection(bool enable, float silenceThresholdDb)
 {
     if (!mInited)

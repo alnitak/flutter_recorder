@@ -40,7 +40,11 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
     if (context.mounted) {
       setState(() {
         _buildBmpImage();
-        vuMeter = Recorder.instance.getVolumeDb();
+
+        /// 60 = scale to minimum decibel
+        final db = Recorder.instance.getVolumeDb();
+        vuMeter = (db.abs() / 60.0);
+        // print('db: $db, vuMeter: $vuMeter');
       });
     }
   }
@@ -81,6 +85,7 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
                   ),
                 ),
               ),
+              const SizedBox(width: 6),
 
               /// VU-meter
               SizedBox(
@@ -92,7 +97,8 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
                     alignment: Alignment.bottomCenter,
                     child: SizedBox(
                       width: 40,
-                      height: vuMeter,
+                      height: 100 - vuMeter * 100,
+                      child: const ColoredBox(color: Colors.green),
                     ),
                   ),
                 ),
