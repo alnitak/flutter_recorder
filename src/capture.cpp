@@ -3,12 +3,13 @@
 #include <cstdarg>
 #include <memory.h>
 #include <cmath>
+#include <atomic>
 
 // 1024 means 1/(44100*2)*1024 = 0.0116 ms
 #define BUFFER_SIZE 1024            // Buffer length
-#define MOVING_AVERAGE_SIZE 5       // Moving average window size
+#define MOVING_AVERAGE_SIZE 4       // Moving average window size
 float capturedBuffer[BUFFER_SIZE];
-float energy_db = -200.0f;
+std::atomic<float> energy_db = -90.0f;
 
 // to be used by `NativeCallable` since it will be called inside the audio thread,
 // these functions must return void.
@@ -20,9 +21,8 @@ float energy_to_db(float energy)
     return 10.0f * log10f(energy + 1e-10f); // Add a small value to avoid log(0)
 }
 
-void detectSilence(float *captured, ma_uint32 frameCount, float silenceThresholdDb)
+void calculateEnergy(float *captured, ma_uint32 frameCount)
 {
-    static bool is_silent = true;                           // Initial state
     static float moving_average[MOVING_AVERAGE_SIZE] = {0}; // Moving average window
     static int average_index = 0;                           // Circular buffer index
     float sum = 0.0f;
@@ -48,6 +48,11 @@ void detectSilence(float *captured, ma_uint32 frameCount, float silenceThreshold
 
     // Convert energy to decibels
     energy_db = energy_to_db(smoothed_energy);
+}
+
+void detectSilence(float silenceThresholdDb)
+{
+    static bool is_silent = true; // Initial state
 
     // Check if the signal is below the silence threshold
     if (energy_db < silenceThresholdDb)
@@ -57,8 +62,10 @@ void detectSilence(float *captured, ma_uint32 frameCount, float silenceThreshold
             // Transition: Sound -> Silence
             // printf("Silence started. Level in dB: %.2f\n", energy_db);
             is_silent = true;
-            if (dartSilenceChangedCallback != nullptr)
-                dartSilenceChangedCallback(&is_silent, &energy_db);
+            if (dartSilenceChangedCallback != nullptr) {
+                float temp_value = energy_db.load();
+                dartSilenceChangedCallback(&is_silent, &temp_value);
+            }
         }
     }
     else
@@ -68,8 +75,10 @@ void detectSilence(float *captured, ma_uint32 frameCount, float silenceThreshold
             // Transition: Silence -> Sound
             // printf("Sound started. Level in dB: %.2f\n", energy_db);
             is_silent = false;
-            if (dartSilenceChangedCallback != nullptr)
-                dartSilenceChangedCallback(&is_silent, &energy_db);
+            if (dartSilenceChangedCallback != nullptr) {
+                float temp_value = energy_db.load();
+                dartSilenceChangedCallback(&is_silent, &temp_value);
+            }
         }
     }
 }
@@ -83,9 +92,10 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
     memcpy(capturedBuffer, captured, sizeof(float) * BUFFER_SIZE);
 
     Capture *userData = (Capture *)pDevice->pUserData;
+    calculateEnergy(captured, frameCount);
     if (userData->isDetectingSilence)
     {
-        detectSilence(captured, frameCount, userData->silenceThresholdDb);
+        detectSilence(userData->silenceThresholdDb);
     }
 }
 
