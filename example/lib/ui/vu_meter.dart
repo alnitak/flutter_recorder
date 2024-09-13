@@ -6,36 +6,50 @@ class VuMeter extends StatelessWidget {
     required this.width,
     required this.height,
     required this.vuMeter,
+    required this.db,
   });
 
   final double width;
   final double height;
   final double vuMeter;
+  final double db;
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Container(
-          width: 20,
-          height: 256,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Colors.green,
-                Colors.red,
-              ],
-              begin: Alignment.bottomCenter,
-              end: Alignment.topCenter,
+    return SizedBox(
+      width: width,
+      height: height,
+      child: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.green,
+                  Colors.red,
+                ],
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+              ),
             ),
           ),
-        ),
-        Container(
-          width: 20,
-          height: 256 * vuMeter,
-          color: Colors.black,
-        ),
-      ],
+          Container(
+            width: width,
+            height: height * vuMeter,
+            color: Colors.black,
+          ),
+          Align(
+            alignment: Alignment.bottomLeft,
+            child: Text(
+              db.toStringAsFixed(1),
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

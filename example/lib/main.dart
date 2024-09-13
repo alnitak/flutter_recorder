@@ -146,21 +146,19 @@ class _MyAppState extends State<MyApp> {
                 StreamBuilder(
                   stream: _recorder.silenceChangedEvents,
                   builder: (context, snapshot) {
-                    if (snapshot.hasData) {
-                      return ColoredBox(
-                        color:
-                            snapshot.data!.isSilent ? Colors.green : Colors.red,
-                        child: SizedBox(
-                          width: 70,
-                          height: 50,
-                          child: Center(
-                            child:
-                                Text(snapshot.data!.decibel.toStringAsFixed(1)),
-                          ),
+                    return ColoredBox(
+                      color: snapshot.hasData && snapshot.data!.isSilent
+                          ? Colors.green
+                          : Colors.red,
+                      child: SizedBox(
+                        width: 70,
+                        height: 50,
+                        child: Center(
+                          child:
+                              Text(_recorder.getVolumeDb().toStringAsFixed(1)),
                         ),
-                      );
-                    }
-                    return const SizedBox.shrink();
+                      ),
+                    );
                   },
                 ),
                 ValueListenableBuilder(

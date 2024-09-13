@@ -21,6 +21,7 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
   late Bmp32Header image;
   Uint8List? bmpBytes;
   late double vuMeter;
+  late double db;
 
   @override
   void initState() {
@@ -43,7 +44,7 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
         _buildBmpImage();
 
         /// 60 = scale to minimum decibel
-        final db = Recorder.instance.getVolumeDb();
+        db = Recorder.instance.getVolumeDb();
         vuMeter = (db.abs() / 60.0).clamp(0, 1);
         // print('db: $db, vuMeter: $vuMeter');
       });
@@ -110,9 +111,10 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
 
               /// VU-meter
               VuMeter(
-                width: 20,
+                width: 50,
                 height: 256,
                 vuMeter: vuMeter,
+                db: db,
               ),
             ],
           ),
