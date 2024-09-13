@@ -5,6 +5,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_recorder/flutter_recorder.dart';
 import 'package:flutter_recorder_example/tools/bmp_header.dart';
 import 'package:flutter_recorder_example/ui/fft_painter.dart';
+import 'package:flutter_recorder_example/ui/vu_meter.dart';
 import 'package:flutter_recorder_example/ui/wave_painter.dart';
 
 /// Visualizer for audio data
@@ -43,7 +44,7 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
 
         /// 60 = scale to minimum decibel
         final db = Recorder.instance.getVolumeDb();
-        vuMeter = (db.abs() / 60.0);
+        vuMeter = (db.abs() / 60.0).clamp(0, 1);
         // print('db: $db, vuMeter: $vuMeter');
       });
     }
@@ -54,12 +55,12 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
     return Padding(
       padding: const EdgeInsets.all(6),
       child: Column(
-        // mainAxisSize: MainAxisSize.min,
         children: [
           /// FFT and wave audio data.
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              /// FFT
               ColoredBox(
                 color: Colors.black,
                 child: RepaintBoundary(
@@ -72,7 +73,9 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
                   ),
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 32),
+
+              /// Wave
               ColoredBox(
                 color: Colors.black,
                 child: RepaintBoundary(
@@ -86,37 +89,33 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
                 ),
               ),
               const SizedBox(width: 6),
-
-              /// VU-meter
-              SizedBox(
-                width: 40,
-                height: 100,
-                child: ColoredBox(
-                  color: Colors.black,
-                  child: Align(
-                    alignment: Alignment.bottomCenter,
-                    child: SizedBox(
-                      width: 40,
-                      height: 100 - vuMeter * 100,
-                      child: const ColoredBox(color: Colors.green),
-                    ),
-                  ),
-                ),
-              )
             ],
           ),
           const SizedBox(height: 6),
 
-          /// Texture audio data.
-          if (bmpBytes != null)
-            SizedBox(
-              width: 512,
-              height: 256,
-              child: Image.memory(
-                bmpBytes!,
-                gaplessPlayback: true,
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              /// Texture audio data.
+              if (bmpBytes != null)
+                SizedBox(
+                  width: 512,
+                  height: 256,
+                  child: Image.memory(
+                    bmpBytes!,
+                    gaplessPlayback: true,
+                  ),
+                ),
+              const SizedBox(width: 6),
+
+              /// VU-meter
+              VuMeter(
+                width: 20,
+                height: 256,
+                vuMeter: vuMeter,
               ),
-            ),
+            ],
+          ),
         ],
       ),
     );

@@ -181,9 +181,10 @@ class _MyAppState extends State<MyApp> {
                               _recorder.setSilenceDetection(
                                 enable: true,
                                 silenceThresholdDb: value,
-                              onSilenceChanged: (isSilent, decibel) {
+                                onSilenceChanged: (isSilent, decibel) {
                                   // print('SILENCE CHANGED: $isSilent, $decibel');
-                                },);
+                                },
+                              );
                             },
                           ),
                         ),
