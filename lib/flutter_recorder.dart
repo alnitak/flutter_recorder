@@ -227,13 +227,19 @@ class Recorder {
     return _bindings.stopListen();
   }
 
-  /// Get the current volume in dB.
-  double getVolumeDb() {
-    final ffi.Pointer<ffi.Float> volume = calloc(4);
-    final error = _bindings.getVolumeDb(volume);
-    final v = volume.value;
-    calloc.free(volume);
-    return error != CaptureErrors.captureNoError ? -200 : v;
+  /// Start recording.
+  void startRecording(String path) {
+    _bindings.startRecording(path.toNativeUtf8().cast());
+  }
+
+  /// Pause recording.
+  void setPauseRecording({required bool pause}) {
+    _bindings.setPauseRecording(pause);
+  }
+
+  /// Stop recording.
+  void stopRecording() {
+    _bindings.stopRecording();
   }
 
   /// Smooth FFT data.
@@ -308,5 +314,14 @@ class Recorder {
     // debugPrint(buf.toString());
 
     return textureList;
+  }
+
+  /// Get the current volume in dB.
+  double getVolumeDb() {
+    final ffi.Pointer<ffi.Float> volume = calloc(4);
+    final error = _bindings.getVolumeDb(volume);
+    final v = volume.value;
+    calloc.free(volume);
+    return error != CaptureErrors.captureNoError ? -200 : v;
   }
 }

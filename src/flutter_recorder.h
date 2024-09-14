@@ -45,6 +45,12 @@ extern "C"
         float silenceThresholdDb,
         float silenceDuration);
 
+    FFI_PLUGIN_EXPORT void startRecording(const char *path);
+
+    FFI_PLUGIN_EXPORT void setPauseRecording(bool pause);
+
+    FFI_PLUGIN_EXPORT void stopRecording();
+
     FFI_PLUGIN_EXPORT enum CaptureErrors getVolumeDb(float *volumeDb);
 
     FFI_PLUGIN_EXPORT void getFft(float **fft);

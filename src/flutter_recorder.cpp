@@ -128,6 +128,27 @@ FFI_PLUGIN_EXPORT enum CaptureErrors setSilenceDetection(
     return captureNoError;
 }
 
+FFI_PLUGIN_EXPORT void startRecording(const char *path)
+{
+    if (!capture.isInited())
+        return;
+    capture.startRecording(path);
+}
+
+FFI_PLUGIN_EXPORT void setPauseRecording(bool pause)
+{
+    if (!capture.isInited())
+        return;
+    capture.setPauseRecording(pause);
+}
+
+FFI_PLUGIN_EXPORT void stopRecording()
+{
+    if (!capture.isInited())
+        return;
+    capture.stopRecording();
+}
+
 FFI_PLUGIN_EXPORT enum CaptureErrors getVolumeDb(float *volumeDb)
 {
     if (!capture.isInited())

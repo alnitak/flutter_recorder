@@ -11,6 +11,7 @@
 #define MOVING_AVERAGE_SIZE 4 // Moving average window size
 float capturedBuffer[BUFFER_SIZE];
 std::atomic<bool> is_silent = true; // Initial state
+bool delayed_silence_started = false;
 std::atomic<float> energy_db = -90.0f;
 clock_t startSilence;
 
@@ -55,7 +56,6 @@ void calculateEnergy(float *captured, ma_uint32 frameCount)
 
 void detectSilence(float silenceThresholdDb, float silenceDuration)
 {
-    static bool delayed_silence_started = false;
     // Check if the signal is below the silence threshold
     if (energy_db < silenceThresholdDb)
     {
@@ -78,7 +78,6 @@ void detectSilence(float silenceThresholdDb, float silenceDuration)
                     dartSilenceChangedCallback(&delayed_silence_started, &energy_value);
                 }
             }
-            
         }
     }
     else
@@ -86,7 +85,8 @@ void detectSilence(float silenceThresholdDb, float silenceDuration)
         if (is_silent.load())
         {
             double elapsed = ((double)(clock() - startSilence) / CLOCKS_PER_SEC);
-            if (elapsed >= silenceDuration && delayed_silence_started) {
+            if (elapsed >= silenceDuration && delayed_silence_started)
+            {
                 // printf("Sound started after a silence of %.2f s\n",
                 //        ((double)(clock() - startSilence) / CLOCKS_PER_SEC));
                 // Transition: Silence -> Sound
@@ -114,8 +114,6 @@ void detectSilence(float silenceThresholdDb, float silenceDuration)
 
 void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
 {
-    static int i = 0;
-    static int n = 0;
     // Process the captured audio data as needed.
     float *captured = (float *)(pInput); // Assuming float format
     // Do something with the captured audio data...
@@ -126,17 +124,17 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
     if (userData->isDetectingSilence)
     {
         detectSilence(userData->silenceThresholdDb, userData->silenceDuration);
-        double elapsed = ((double)(clock() - startSilence) / CLOCKS_PER_SEC);
-        if (elapsed > userData->silenceDuration)
+        if (!delayed_silence_started && userData->isRecording && !userData->isRecordingPaused)
         {
-            // if (is_silent.load()) printf("2 second silence detected. Recording paused! %d\n", i);
+            userData->wav.write(captured, frameCount);
         }
-        else
+    }
+    else
+    {
+        if (userData->isRecording && !userData->isRecordingPaused)
         {
-            // if (!is_silent.load()) printf("Recording! %d\n", n);
+            userData->wav.write(captured, frameCount);
         }
-        ++i;
-        ++n;
     }
 }
 
@@ -146,7 +144,9 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
 Capture::Capture() : isDetectingSilence(false),
                      silenceThresholdDb(-40.0f),
                      silenceDuration(2.0f),
-                     mInited(false) {};
+                     mInited(false),
+                     isRecording(false),
+                     isRecordingPaused(false) {};
 
 Capture::~Capture()
 {
@@ -267,11 +267,6 @@ CaptureErrors Capture::stopListen()
     return captureNoError;
 }
 
-float Capture::getVolumeDb()
-{
-    return energy_db;
-}
-
 CaptureErrors Capture::setSilenceDetection(bool enable, float silenceThresholdDb, float silenceDuration)
 {
     if (!mInited)
@@ -281,6 +276,33 @@ CaptureErrors Capture::setSilenceDetection(bool enable, float silenceThresholdDb
     this->silenceThresholdDb = silenceThresholdDb;
     this->silenceDuration = silenceDuration;
     return captureNoError;
+}
+
+ma_result Capture::startRecording(const char *path)
+{
+    if (!mInited)
+        return MA_DEVICE_NOT_INITIALIZED;
+    ma_result result = wav.init(path, deviceConfig);
+    if (result != MA_SUCCESS)
+        return result;
+    isRecording = true;
+    isRecordingPaused = false;
+    return MA_SUCCESS;
+}
+
+void Capture::setPauseRecording(bool pause)
+{
+    if (!mInited)
+        return;
+    isRecordingPaused = pause;
+}
+
+void Capture::stopRecording()
+{
+    if (!mInited)
+        return;
+    wav.close();
+    isRecording = false;
 }
 
 float waveData[256];
@@ -296,4 +318,9 @@ float *Capture::getWave()
                       n;
     }
     return waveData;
+}
+
+float Capture::getVolumeDb()
+{
+    return energy_db;
 }

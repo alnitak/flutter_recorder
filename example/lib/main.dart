@@ -130,26 +130,40 @@ class _MyAppState extends State<MyApp> {
                         _recorder.setSilenceDetection(
                           enable: true,
                           silenceThresholdDb: -27,
-                          silenceDuration: 4.0,
+                          silenceDuration: 0.1,
                         );
                       },
-                      child: const Text('setSilenceDetection ON -27 4.0'),
-                    ),
-                    OutlinedButton(
-                      onPressed: () {
-                        _recorder.setSilenceDetection(
-                          enable: true,
-                          silenceThresholdDb: -27,
-                          silenceDuration: 2.0,
-                        );
-                      },
-                      child: const Text('setSilenceDetection ON -30 2.0'),
+                      child: const Text('setSilenceDetection ON -27 0.1'),
                     ),
                     OutlinedButton(
                       onPressed: () {
                         _recorder.setSilenceDetection(enable: false);
                       },
                       child: const Text('setSilenceDetection OFF'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        _recorder.startRecording('/home/deimos/my_file.wav');
+                      },
+                      child: const Text('Start recording'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        _recorder.setPauseRecording(pause: true);
+                      },
+                      child: const Text('Pause recording'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        _recorder.setPauseRecording(pause: false);
+                      },
+                      child: const Text('UNPause recording'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        _recorder.stopRecording();
+                      },
+                      child: const Text('Stop recording'),
                     ),
                   ],
                 ),

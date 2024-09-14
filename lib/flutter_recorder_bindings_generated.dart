@@ -185,6 +185,42 @@ class FlutterRecorderBindings {
   late final _setSilenceDetection =
       _setSilenceDetectionPtr.asFunction<int Function(bool, double, double)>();
 
+  void startRecording(
+    ffi.Pointer<ffi.Char> path,
+  ) {
+    return _startRecording(
+      path,
+    );
+  }
+
+  late final _startRecordingPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Char>)>>(
+          'startRecording');
+  late final _startRecording =
+      _startRecordingPtr.asFunction<void Function(ffi.Pointer<ffi.Char>)>();
+
+  void setPauseRecording(
+    bool pause,
+  ) {
+    return _setPauseRecording(
+      pause,
+    );
+  }
+
+  late final _setPauseRecordingPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Bool)>>(
+          'setPauseRecording');
+  late final _setPauseRecording =
+      _setPauseRecordingPtr.asFunction<void Function(bool)>();
+
+  void stopRecording() {
+    return _stopRecording();
+  }
+
+  late final _stopRecordingPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function()>>('stopRecording');
+  late final _stopRecording = _stopRecordingPtr.asFunction<void Function()>();
+
   CaptureErrors getVolumeDb(
     ffi.Pointer<ffi.Float> volumeDb,
   ) {

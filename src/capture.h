@@ -3,13 +3,11 @@
 
 #include "enums.h"
 #include "common.h"
+#include "wav.h"
 #include "miniaudio.h"
 
 #include <vector>
 #include <string>
-
-
-
 
 struct CaptureDevice {
     char* name;
@@ -21,6 +19,8 @@ class Capture {
 public:
     Capture();
     ~Capture();
+
+    void setDartEventCallback(dartSilenceChangedCallback_t dartSilenceChangedCallback);
 
     /// stores a list of available capture devices
     /// detected by miniaudio
@@ -37,12 +37,18 @@ public:
     void dispose();
 
     bool isInited();
+
     bool isDeviceStartedListen();
+
     CaptureErrors startListen();
+
     CaptureErrors stopListen();
 
     CaptureErrors setSilenceDetection(bool enable, float silenceThresholdDb, float silenceDuration);
-    void setDartEventCallback(dartSilenceChangedCallback_t dartSilenceChangedCallback);
+
+    ma_result startRecording(const char *path);
+    void setPauseRecording(bool pause);
+    void stopRecording();
 
     float* getWave();
 
@@ -56,6 +62,10 @@ public:
 
     /// The duration of silence in seconds after which the silence is considered silence.
     float silenceDuration;
+
+    WriteAudio::Wav wav;
+    bool isRecording;
+    bool isRecordingPaused;
 
 private:
     ma_context context;
@@ -71,7 +81,6 @@ private:
 
     /// true when the capture device is initialized.
     bool mInited;
-
 };
 
 #endif // CAPTURE_H

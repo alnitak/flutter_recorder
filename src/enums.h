@@ -12,6 +12,7 @@ typedef enum CaptureErrors
     captureNotInited,
     /// Failed to start the device.
     failedToStartDevice
+
 } CaptureErrorsInternal_t;
 
 #endif // ENUMS_H
