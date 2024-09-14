@@ -129,14 +129,25 @@ class _MyAppState extends State<MyApp> {
                       onPressed: () {
                         _recorder.setSilenceDetection(
                           enable: true,
-                          silenceThresholdDb: -7,
+                          silenceThresholdDb: -27,
+                          silenceDuration: 4.0,
                         );
                       },
-                      child: const Text('setSilenceDetection ON'),
+                      child: const Text('setSilenceDetection ON -27 4.0'),
                     ),
                     OutlinedButton(
                       onPressed: () {
-                        _recorder.setSilenceDetection(enable: true);
+                        _recorder.setSilenceDetection(
+                          enable: true,
+                          silenceThresholdDb: -27,
+                          silenceDuration: 2.0,
+                        );
+                      },
+                      child: const Text('setSilenceDetection ON -30 2.0'),
+                    ),
+                    OutlinedButton(
+                      onPressed: () {
+                        _recorder.setSilenceDetection(enable: false);
                       },
                       child: const Text('setSilenceDetection OFF'),
                     ),

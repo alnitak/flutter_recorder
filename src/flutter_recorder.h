@@ -40,7 +40,10 @@ extern "C"
 
     FFI_PLUGIN_EXPORT enum CaptureErrors stopListen();
 
-    FFI_PLUGIN_EXPORT enum CaptureErrors setSilenceDetection(bool enable, float silenceThresholdDb);
+    FFI_PLUGIN_EXPORT enum CaptureErrors setSilenceDetection(
+        bool enable,
+        float silenceThresholdDb,
+        float silenceDuration);
 
     FFI_PLUGIN_EXPORT enum CaptureErrors getVolumeDb(float *volumeDb);
 
@@ -55,8 +58,6 @@ extern "C"
     FFI_PLUGIN_EXPORT float getTextureValue(int row, int column);
 
     FFI_PLUGIN_EXPORT enum CaptureErrors setFftSmoothing(float smooth);
-
-
 
 #ifdef __cplusplus
 }

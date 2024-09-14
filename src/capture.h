@@ -41,7 +41,7 @@ public:
     CaptureErrors startListen();
     CaptureErrors stopListen();
 
-    CaptureErrors setSilenceDetection(bool enable, float silenceThresholdDb);
+    CaptureErrors setSilenceDetection(bool enable, float silenceThresholdDb, float silenceDuration);
     void setDartEventCallback(dartSilenceChangedCallback_t dartSilenceChangedCallback);
 
     float* getWave();
@@ -51,8 +51,11 @@ public:
     /// Wheter or not the callback is detecting silence.
     bool isDetectingSilence;
 
-    /// the threshold for detecting silence.
+    /// The threshold for detecting silence.
     float silenceThresholdDb;
+
+    /// The duration of silence in seconds after which the silence is considered silence.
+    float silenceDuration;
 
 private:
     ma_context context;

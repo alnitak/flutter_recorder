@@ -4,12 +4,15 @@
 #include <memory.h>
 #include <cmath>
 #include <atomic>
+#include <time.h>
 
 // 1024 means 1/(44100*2)*1024 = 0.0116 ms
-#define BUFFER_SIZE 1024            // Buffer length
-#define MOVING_AVERAGE_SIZE 4       // Moving average window size
+#define BUFFER_SIZE 1024      // Buffer length
+#define MOVING_AVERAGE_SIZE 4 // Moving average window size
 float capturedBuffer[BUFFER_SIZE];
+std::atomic<bool> is_silent = true; // Initial state
 std::atomic<float> energy_db = -90.0f;
+clock_t startSilence;
 
 // to be used by `NativeCallable` since it will be called inside the audio thread,
 // these functions must return void.
@@ -50,34 +53,60 @@ void calculateEnergy(float *captured, ma_uint32 frameCount)
     energy_db = energy_to_db(smoothed_energy);
 }
 
-void detectSilence(float silenceThresholdDb)
+void detectSilence(float silenceThresholdDb, float silenceDuration)
 {
-    static bool is_silent = true; // Initial state
-
+    static bool delayed_silence_started = false;
     // Check if the signal is below the silence threshold
     if (energy_db < silenceThresholdDb)
     {
-        if (!is_silent)
+        if (!is_silent.load() && !delayed_silence_started)
         {
+            startSilence = clock();
             // Transition: Sound -> Silence
-            // printf("Silence started. Level in dB: %.2f\n", energy_db);
             is_silent = true;
-            if (dartSilenceChangedCallback != nullptr) {
-                float temp_value = energy_db.load();
-                dartSilenceChangedCallback(&is_silent, &temp_value);
+        }
+        else
+        {
+            double elapsed = ((double)(clock() - startSilence) / CLOCKS_PER_SEC);
+            if (elapsed >= silenceDuration && is_silent.load() && !delayed_silence_started)
+            {
+                printf("Silence started after %f s. Level in dB: %.2f\n", elapsed, energy_db.load());
+                delayed_silence_started = true;
+                if (dartSilenceChangedCallback != nullptr)
+                {
+                    float energy_value = energy_db.load();
+                    dartSilenceChangedCallback(&delayed_silence_started, &energy_value);
+                }
             }
+            
         }
     }
     else
     {
-        if (is_silent)
+        if (is_silent.load())
         {
-            // Transition: Silence -> Sound
-            // printf("Sound started. Level in dB: %.2f\n", energy_db);
-            is_silent = false;
-            if (dartSilenceChangedCallback != nullptr) {
-                float temp_value = energy_db.load();
-                dartSilenceChangedCallback(&is_silent, &temp_value);
+            double elapsed = ((double)(clock() - startSilence) / CLOCKS_PER_SEC);
+            if (elapsed >= silenceDuration && delayed_silence_started) {
+                // printf("Sound started after a silence of %.2f s\n",
+                //        ((double)(clock() - startSilence) / CLOCKS_PER_SEC));
+                // Transition: Silence -> Sound
+                printf("Sound startedstarted after %f s. Level in dB: %.2f\n", elapsed, energy_db.load());
+                is_silent = false;
+                delayed_silence_started = false;
+                if (dartSilenceChangedCallback != nullptr)
+                {
+                    float energy_value = energy_db.load();
+                    auto silent = is_silent.load();
+                    dartSilenceChangedCallback(&silent, &energy_value);
+                }
+            }
+
+            /// Reset the clock if sound happens during the deley after a silence,
+            if (elapsed < silenceDuration && is_silent.load())
+            {
+                startSilence = clock();
+                is_silent = false;
+                delayed_silence_started = false;
             }
         }
     }
@@ -85,8 +114,9 @@ void detectSilence(float silenceThresholdDb)
 
 void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
 {
-    // Process the captured audio data as needed
-    // For example, you can copy it to a buffer for later use.
+    static int i = 0;
+    static int n = 0;
+    // Process the captured audio data as needed.
     float *captured = (float *)(pInput); // Assuming float format
     // Do something with the captured audio data...
     memcpy(capturedBuffer, captured, sizeof(float) * BUFFER_SIZE);
@@ -95,12 +125,27 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
     calculateEnergy(captured, frameCount);
     if (userData->isDetectingSilence)
     {
-        detectSilence(userData->silenceThresholdDb);
+        detectSilence(userData->silenceThresholdDb, userData->silenceDuration);
+        double elapsed = ((double)(clock() - startSilence) / CLOCKS_PER_SEC);
+        if (elapsed > userData->silenceDuration)
+        {
+            // if (is_silent.load()) printf("2 second silence detected. Recording paused! %d\n", i);
+        }
+        else
+        {
+            // if (!is_silent.load()) printf("Recording! %d\n", n);
+        }
+        ++i;
+        ++n;
     }
 }
 
+// ////////////////////////
+// Capture Implementation
+// ////////////////////////
 Capture::Capture() : isDetectingSilence(false),
                      silenceThresholdDb(-40.0f),
+                     silenceDuration(2.0f),
                      mInited(false) {};
 
 Capture::~Capture()
@@ -139,9 +184,9 @@ std::vector<CaptureDevice> Capture::listCaptureDevices()
     for (ma_uint32 i = 0; i < captureCount; i++)
     {
         printf("######%s %d - %s\n",
-                     pCaptureInfos[i].isDefault ? " X" : "-",
-                     i,
-                     pCaptureInfos[i].name);
+               pCaptureInfos[i].isDefault ? " X" : "-",
+               i,
+               pCaptureInfos[i].name);
         CaptureDevice cd;
         cd.name = strdup(pCaptureInfos[i].name);
         cd.isDefault = pCaptureInfos[i].isDefault;
@@ -158,8 +203,10 @@ CaptureErrors Capture::init(int deviceID)
         return captureInitFailed;
     deviceConfig = ma_device_config_init(ma_device_type_capture);
     deviceConfig.periodSizeInFrames = BUFFER_SIZE;
-    if (deviceID != -1) {
-        if (listCaptureDevices().size() == 0) return captureInitFailed;
+    if (deviceID != -1)
+    {
+        if (listCaptureDevices().size() == 0)
+            return captureInitFailed;
         deviceConfig.capture.pDeviceID = &pCaptureInfos[deviceID].id;
     }
     deviceConfig.capture.format = ma_format_f32;
@@ -225,13 +272,14 @@ float Capture::getVolumeDb()
     return energy_db;
 }
 
-CaptureErrors Capture::setSilenceDetection(bool enable, float silenceThresholdDb)
+CaptureErrors Capture::setSilenceDetection(bool enable, float silenceThresholdDb, float silenceDuration)
 {
     if (!mInited)
         return captureNotInited;
 
     this->isDetectingSilence = enable;
     this->silenceThresholdDb = silenceThresholdDb;
+    this->silenceDuration = silenceDuration;
     return captureNoError;
 }
 

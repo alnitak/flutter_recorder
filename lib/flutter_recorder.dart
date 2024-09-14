@@ -116,6 +116,7 @@ class Recorder {
   void setSilenceDetection({
     required bool enable,
     double silenceThresholdDb = -40.0,
+    double silenceDuration = 2.0,
     SilenceCallback? onSilenceChanged,
   }) {
     final nativeSilenceChangedCallable =
@@ -125,7 +126,7 @@ class Recorder {
 
     _bindings
       ..setDartEventCallback(nativeSilenceChangedCallable.nativeFunction)
-      ..setSilenceDetection(enable, silenceThresholdDb);
+      ..setSilenceDetection(enable, silenceThresholdDb, silenceDuration);
 
     if (onSilenceChanged != null) {
       _silenceCallback = onSilenceChanged;
@@ -195,6 +196,7 @@ class Recorder {
 
   /// Dispose capture device.
   void deinit() {
+    _silenceCallback = null;
     _bindings.deinit();
   }
 

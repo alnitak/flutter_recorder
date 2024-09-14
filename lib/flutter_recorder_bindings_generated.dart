@@ -169,18 +169,21 @@ class FlutterRecorderBindings {
   CaptureErrors setSilenceDetection(
     bool enable,
     double silenceThresholdDb,
+    double silenceDuration,
   ) {
     return CaptureErrors.fromValue(_setSilenceDetection(
       enable,
       silenceThresholdDb,
+      silenceDuration,
     ));
   }
 
   late final _setSilenceDetectionPtr = _lookup<
-          ffi.NativeFunction<ffi.UnsignedInt Function(ffi.Bool, ffi.Float)>>(
-      'setSilenceDetection');
+      ffi.NativeFunction<
+          ffi.UnsignedInt Function(
+              ffi.Bool, ffi.Float, ffi.Float)>>('setSilenceDetection');
   late final _setSilenceDetection =
-      _setSilenceDetectionPtr.asFunction<int Function(bool, double)>();
+      _setSilenceDetectionPtr.asFunction<int Function(bool, double, double)>();
 
   CaptureErrors getVolumeDb(
     ffi.Pointer<ffi.Float> volumeDb,

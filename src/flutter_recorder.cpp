@@ -13,11 +13,10 @@
 Capture capture;
 std::unique_ptr<Analyzer> analyzerCapture = std::make_unique<Analyzer>(256);
 
-
 /// Set a Dart functions to call when an event occurs.
 FFI_PLUGIN_EXPORT enum CaptureErrors setDartEventCallback(
-    dartSilenceChangedCallback_t silence_changed_callback
-) {
+    dartSilenceChangedCallback_t silence_changed_callback)
+{
     if (!capture.isInited())
         return captureNotInited;
     capture.setDartEventCallback(silence_changed_callback);
@@ -54,10 +53,10 @@ FFI_PLUGIN_EXPORT void listCaptureDevices(
             continue;
 
         devicesName[i] = strdup(d[i].name);
-        isDefault[i]   = (int *)malloc(sizeof(int *));
-        *isDefault[i]  = d[i].isDefault;
-        deviceId[i]   = (int *)malloc(sizeof(int *));
-        *deviceId[i]   = d[i].id;
+        isDefault[i] = (int *)malloc(sizeof(int *));
+        *isDefault[i] = d[i].isDefault;
+        deviceId[i] = (int *)malloc(sizeof(int *));
+        *deviceId[i] = d[i].id;
 
         numDevices++;
     }
@@ -118,11 +117,14 @@ FFI_PLUGIN_EXPORT enum CaptureErrors stopListen()
     return capture.stopListen();
 }
 
-FFI_PLUGIN_EXPORT enum CaptureErrors setSilenceDetection(bool enable, float silenceThresholdDb)
+FFI_PLUGIN_EXPORT enum CaptureErrors setSilenceDetection(
+    bool enable,
+    float silenceThresholdDb,
+    float silenceDuration)
 {
     if (!capture.isInited())
         return captureNotInited;
-    capture.setSilenceDetection(enable, silenceThresholdDb);
+    capture.setSilenceDetection(enable, silenceThresholdDb, silenceDuration);
     return captureNoError;
 }
 
