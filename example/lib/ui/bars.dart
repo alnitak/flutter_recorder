@@ -28,6 +28,7 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
     super.initState();
     image = Bmp32Header.setHeader(512, 256);
     vuMeter = 0.0;
+    db = 0.0;
     ticker = createTicker(_tick);
     ticker.start();
   }

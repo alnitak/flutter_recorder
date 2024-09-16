@@ -108,15 +108,13 @@ class Recorder {
 
   /// Enable or disable silence detection.
   ///
-  /// [enable] true = enable silence detection, false = disable.
-  /// [silenceThresholdDb] the silence threshold in dB.
+  /// [enable] wheter to enable or disable silence detection. Default to false.
+  /// [onSilenceChanged] callback when silence state is changed.
   ///
   /// Return [CaptureErrors.captureNoError] if no error.
   /// Returns [CaptureErrors.captureNotInited].
   void setSilenceDetection({
     required bool enable,
-    double silenceThresholdDb = -40.0,
-    double silenceDuration = 2.0,
     SilenceCallback? onSilenceChanged,
   }) {
     final nativeSilenceChangedCallable =
@@ -126,7 +124,7 @@ class Recorder {
 
     _bindings
       ..setDartEventCallback(nativeSilenceChangedCallable.nativeFunction)
-      ..setSilenceDetection(enable, silenceThresholdDb, silenceDuration);
+      ..setSilenceDetection(enable);
 
     if (onSilenceChanged != null) {
       _silenceCallback = onSilenceChanged;
@@ -134,6 +132,52 @@ class Recorder {
     if (!enable) {
       _silenceCallback = null;
     }
+  }
+
+  /// Set silence threshold in dB.
+  ///
+  /// [silenceThresholdDb] the silence threshold in dB. A volume under this
+  /// value is considered to be silence. Default to -40.
+  ///
+  /// Note on dB value:
+  /// - Decibels (dB) are a relative measure. In digital audio, there is
+  /// no 'absolute 0 dB level' that corresponds to absolute silence.
+  /// - The 0 dB level is usually defined as the maximum possible signal level,
+  /// i.e., the maximum amplitude of the signal that the system can handle
+  /// without distortion.
+  /// - Negative dB values indicate that the signal's energy is lower compared
+  /// to this maximum.
+  void setSilenceThresholdDb(double silenceThresholdDb) {
+    assert(silenceThresholdDb < 0, 'silenceThresholdDb must be < 0');
+    _bindings.setSilenceThresholdDb(silenceThresholdDb);
+  }
+
+  /// Set silence duration in seconds.
+  ///
+  /// [silenceDuration] the duration of silence in seconds. If the volume
+  /// remains silent for this duration, the callback will be triggered. Default
+  /// to 2 seconds.
+  void setSilenceDuration(double silenceDuration) {
+    assert(silenceDuration >= 0, 'silenceDuration must be >= 0');
+    _bindings.setSilenceDuration(silenceDuration);
+  }
+
+  /// Set seconds of audio to write before starting recording again after
+  /// silence.
+  ///
+  /// [secondsOfAudioToWriteBefore] seconds of audio to write occurred before
+  /// starting recording againg after silence. Default to 0 seconds.
+  /// ```text
+  /// |*** silence ***|******** recording *********|
+  ///                 ^ start of recording
+  ///             ^ secondsOfAudioToWriteBefore (write some before silence ends)
+  /// ```
+  void setSecondsOfAudioToWriteBefore(double secondsOfAudioToWriteBefore) {
+    assert(
+      secondsOfAudioToWriteBefore >= 0,
+      'secondsOfAudioToWriteBefore must be >= 0',
+    );
+    _bindings.setSecondsOfAudioToWriteBefore(secondsOfAudioToWriteBefore);
   }
 
   /// List available input devices. Useful on desktop to choose

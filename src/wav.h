@@ -14,7 +14,7 @@ namespace WriteAudio
             close();
         };
 
-        ma_result init(const char *path, ma_device_config deviceConfig)
+        CaptureErrors init(const char *path, ma_device_config deviceConfig)
         {
             ma_encoder_config config = ma_encoder_config_init(
                 ma_encoding_format_wav,
@@ -25,19 +25,23 @@ namespace WriteAudio
             if (result != MA_SUCCESS)
             {
                 printf("error %d. Failed to initialize output file.\n", result);
+                if (result == MA_INVALID_ARGS) return invalidArgs;
+                return failedToInitializeRecording;
             }
-            return result;
+            return captureNoError;
         }
 
-        ma_result write(void *pFramesIn, ma_uint64 frameCount)
+        CaptureErrors write(void *pFramesIn, ma_uint64 frameCount)
         {
             ma_uint64 framesWritten;
             ma_result result = ma_encoder_write_pcm_frames(&encoder, pFramesIn, frameCount, &framesWritten);
             if (result != MA_SUCCESS)
             {
                 printf("error %d. Failed to write to output file.\n", result);
+                if (result == MA_INVALID_ARGS) return invalidArgs;
+                return failedToWriteWav;
             }
-            return result;
+            return captureNoError;
         }
 
         void close()

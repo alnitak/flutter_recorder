@@ -117,22 +117,39 @@ FFI_PLUGIN_EXPORT enum CaptureErrors stopListen()
     return capture.stopListen();
 }
 
-FFI_PLUGIN_EXPORT enum CaptureErrors setSilenceDetection(
-    bool enable,
-    float silenceThresholdDb,
-    float silenceDuration)
+FFI_PLUGIN_EXPORT enum CaptureErrors setSilenceDetection(bool enable)
 {
     if (!capture.isInited())
         return captureNotInited;
-    capture.setSilenceDetection(enable, silenceThresholdDb, silenceDuration);
-    return captureNoError;
+    return capture.setSilenceDetection(enable);
 }
 
-FFI_PLUGIN_EXPORT void startRecording(const char *path)
+FFI_PLUGIN_EXPORT void setSilenceThresholdDb(float silenceThresholdDb)
 {
     if (!capture.isInited())
         return;
-    capture.startRecording(path);
+    capture.setSilenceThresholdDb(silenceThresholdDb);
+}
+
+FFI_PLUGIN_EXPORT void setSilenceDuration(float silenceDuration)
+{
+    if (!capture.isInited())
+        return;
+    capture.setSilenceDuration(silenceDuration);
+}
+
+FFI_PLUGIN_EXPORT void setSecondsOfAudioToWriteBefore(float secondsOfAudioToWriteBefore)
+{
+    if (!capture.isInited())
+        return;
+    capture.setSecondsOfAudioToWriteBefore(secondsOfAudioToWriteBefore);
+}
+
+FFI_PLUGIN_EXPORT enum CaptureErrors startRecording(const char *path)
+{
+    if (!capture.isInited())
+        return captureNotInited;
+    return capture.startRecording(path);
 }
 
 FFI_PLUGIN_EXPORT void setPauseRecording(bool pause)

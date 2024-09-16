@@ -1,7 +1,9 @@
 #include "capture.h"
+#include "circular_buffer.h"
 
 #include <cstdarg>
 #include <memory.h>
+#include <memory>
 #include <cmath>
 #include <atomic>
 #include <time.h>
@@ -10,10 +12,12 @@
 #define BUFFER_SIZE 1024      // Buffer length
 #define MOVING_AVERAGE_SIZE 4 // Moving average window size
 float capturedBuffer[BUFFER_SIZE];
-std::atomic<bool> is_silent = true; // Initial state
-bool delayed_silence_started = false;
-std::atomic<float> energy_db = -90.0f;
-clock_t startSilence;
+std::atomic<bool> is_silent = true;    // Initial state
+bool delayed_silence_started = false;  // Whether the silence is delayed
+std::atomic<float> energy_db = -90.0f; // Current energy
+
+/// the buffer used for capturing audio.
+std::unique_ptr<CircularBuffer> circularBuffer;
 
 // to be used by `NativeCallable` since it will be called inside the audio thread,
 // these functions must return void.
@@ -54,10 +58,11 @@ void calculateEnergy(float *captured, ma_uint32 frameCount)
     energy_db = energy_to_db(smoothed_energy);
 }
 
-void detectSilence(float silenceThresholdDb, float silenceDuration)
+void detectSilence(Capture *userData)
 {
+    static clock_t startSilence;                  // Start time of silence
     // Check if the signal is below the silence threshold
-    if (energy_db < silenceThresholdDb)
+    if (energy_db < userData->silenceThresholdDb)
     {
         if (!is_silent.load() && !delayed_silence_started)
         {
@@ -68,9 +73,12 @@ void detectSilence(float silenceThresholdDb, float silenceDuration)
         else
         {
             double elapsed = ((double)(clock() - startSilence) / CLOCKS_PER_SEC);
-            if (elapsed >= silenceDuration && is_silent.load() && !delayed_silence_started)
+            if (elapsed >= userData->silenceDuration && is_silent.load() && !delayed_silence_started)
             {
                 printf("Silence started after %f s. Level in dB: %.2f\n", elapsed, energy_db.load());
+                /// empty capturedBuffer
+                if (circularBuffer && circularBuffer.get()->size() > BUFFER_SIZE)
+                    circularBuffer.get()->pop(circularBuffer.get()->size());
                 delayed_silence_started = true;
                 if (dartSilenceChangedCallback != nullptr)
                 {
@@ -85,14 +93,20 @@ void detectSilence(float silenceThresholdDb, float silenceDuration)
         if (is_silent.load())
         {
             double elapsed = ((double)(clock() - startSilence) / CLOCKS_PER_SEC);
-            if (elapsed >= silenceDuration && delayed_silence_started)
+            if (elapsed >= userData->silenceDuration && delayed_silence_started)
             {
                 // printf("Sound started after a silence of %.2f s\n",
                 //        ((double)(clock() - startSilence) / CLOCKS_PER_SEC));
                 // Transition: Silence -> Sound
-                printf("Sound startedstarted after %f s. Level in dB: %.2f\n", elapsed, energy_db.load());
+                printf("Sound started after %f s. Level in dB: %.2f   %f %f %f\n", elapsed, energy_db.load(),
+                    userData->silenceThresholdDb, userData->silenceDuration, userData->secondsOfAudioToWriteBefore);
                 is_silent = false;
                 delayed_silence_started = false;
+                // Write all the circularBuffer data which contains the audio occurred before the silence ended.
+                if (userData->isRecording && userData->secondsOfAudioToWriteBefore > 0 && circularBuffer) {
+                    unsigned int frameCount = (unsigned int)(circularBuffer.get()->size());
+                    userData->wav.write(circularBuffer.get()->pop(frameCount).data(), frameCount);
+                }
                 if (dartSilenceChangedCallback != nullptr)
                 {
                     float energy_value = energy_db.load();
@@ -102,7 +116,7 @@ void detectSilence(float silenceThresholdDb, float silenceDuration)
             }
 
             /// Reset the clock if sound happens during the deley after a silence,
-            if (elapsed < silenceDuration && is_silent.load())
+            if (elapsed < userData->silenceDuration && is_silent.load())
             {
                 startSilence = clock();
                 is_silent = false;
@@ -123,7 +137,8 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
     calculateEnergy(captured, frameCount);
     if (userData->isDetectingSilence)
     {
-        detectSilence(userData->silenceThresholdDb, userData->silenceDuration);
+        detectSilence(userData);
+
         if (!delayed_silence_started && userData->isRecording && !userData->isRecordingPaused)
         {
             userData->wav.write(captured, frameCount);
@@ -144,9 +159,10 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
 Capture::Capture() : isDetectingSilence(false),
                      silenceThresholdDb(-40.0f),
                      silenceDuration(2.0f),
-                     mInited(false),
+                     secondsOfAudioToWriteBefore(0.0f),
                      isRecording(false),
-                     isRecordingPaused(false) {};
+                     isRecordingPaused(false),
+                     mInited(false) {};
 
 Capture::~Capture()
 {
@@ -267,27 +283,50 @@ CaptureErrors Capture::stopListen()
     return captureNoError;
 }
 
-CaptureErrors Capture::setSilenceDetection(bool enable, float silenceThresholdDb, float silenceDuration)
+CaptureErrors Capture::setSilenceDetection(bool enable)
 {
     if (!mInited)
         return captureNotInited;
 
     this->isDetectingSilence = enable;
-    this->silenceThresholdDb = silenceThresholdDb;
-    this->silenceDuration = silenceDuration;
+    int frameCount = secondsOfAudioToWriteBefore * deviceConfig.capture.channels * deviceConfig.sampleRate;
+    circularBuffer = std::make_unique<CircularBuffer>(frameCount);
     return captureNoError;
 }
 
-ma_result Capture::startRecording(const char *path)
+void Capture::setSilenceThresholdDb(float silenceThresholdDb)
 {
     if (!mInited)
-        return MA_DEVICE_NOT_INITIALIZED;
-    ma_result result = wav.init(path, deviceConfig);
-    if (result != MA_SUCCESS)
+        return;
+    this->silenceThresholdDb = silenceThresholdDb;
+}
+
+void Capture::setSilenceDuration(float silenceDuration)
+{
+    if (!mInited)
+        return;
+    this->silenceDuration = silenceDuration;
+}
+
+void Capture::setSecondsOfAudioToWriteBefore(float secondsOfAudioToWriteBefore)
+{
+    if (!mInited)
+        return;
+    this->secondsOfAudioToWriteBefore = secondsOfAudioToWriteBefore;
+    int frameCount = secondsOfAudioToWriteBefore * deviceConfig.capture.channels * deviceConfig.sampleRate;
+    circularBuffer = std::make_unique<CircularBuffer>(frameCount);
+}
+
+CaptureErrors Capture::startRecording(const char *path)
+{
+    if (!mInited)
+        return captureNotInited;
+    CaptureErrors result = wav.init(path, deviceConfig);
+    if (result != captureNoError)
         return result;
     isRecording = true;
     isRecordingPaused = false;
-    return MA_SUCCESS;
+    return captureNoError;
 }
 
 void Capture::setPauseRecording(bool pause)
@@ -299,9 +338,10 @@ void Capture::setPauseRecording(bool pause)
 
 void Capture::stopRecording()
 {
-    if (!mInited)
+    if (!mInited || !isRecording)
         return;
     wav.close();
+    circularBuffer.reset();
     isRecording = false;
 }
 

@@ -18,7 +18,9 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final _recorder = Recorder.instance;
-  final silenceDb = ValueNotifier(-20.0);
+  var thresholdDb = -20.0;
+  var silenceDuration = 2.0;
+  var secondsOfAudioToWriteBefore = 0.0;
 
   @override
   void initState() {
@@ -127,11 +129,12 @@ class _MyAppState extends State<MyApp> {
                     ),
                     OutlinedButton(
                       onPressed: () {
-                        _recorder.setSilenceDetection(
-                          enable: true,
-                          silenceThresholdDb: -27,
-                          silenceDuration: 0.1,
-                        );
+                        _recorder.setSilenceDetection(enable: true,onSilenceChanged: (isSilent, decibel) {
+                                  // print('SILENCE CHANGED: $isSilent, $decibel');
+                                },);
+                        _recorder.setSilenceThresholdDb(-27);
+                        _recorder.setSilenceDuration(0.1);
+                        _recorder.setSecondsOfAudioToWriteBefore(0.0);
                       },
                       child: const Text('setSilenceDetection ON -27 0.1'),
                     ),
@@ -186,34 +189,76 @@ class _MyAppState extends State<MyApp> {
                     );
                   },
                 ),
-                ValueListenableBuilder(
-                  valueListenable: silenceDb,
-                  builder: (_, value, __) {
-                    return Row(
+                Column(
+                  children: [
+                    // Threshold dB slider
+                    Row(
                       mainAxisSize: MainAxisSize.max,
                       children: [
-                        Text('${value.toStringAsFixed(1)}dB'),
+                        Text('Threshold: ${thresholdDb.toStringAsFixed(1)}dB'),
                         Expanded(
                           child: Slider(
-                            value: silenceDb.value,
+                            value: thresholdDb,
                             min: -60,
                             max: 0,
-                            label: value.toStringAsFixed(1),
+                            label: thresholdDb.toStringAsFixed(1),
                             onChanged: (value) {
-                              silenceDb.value = value;
-                              _recorder.setSilenceDetection(
-                                enable: true,
-                                silenceThresholdDb: value,
-                                onSilenceChanged: (isSilent, decibel) {
-                                  // print('SILENCE CHANGED: $isSilent, $decibel');
-                                },
-                              );
+                              _recorder.setSilenceThresholdDb(value);
+                              setState(() {
+                                thresholdDb = value;
+                              });
                             },
                           ),
                         ),
                       ],
-                    );
-                  },
+                    ),
+                    
+                    // Silence duration slider
+                    Row(
+                      mainAxisSize: MainAxisSize.max,
+                      children: [
+                        Text('Silence duration: '
+                        '${silenceDuration.toStringAsFixed(1)}'),
+                        Expanded(
+                          child: Slider(
+                            value: silenceDuration,
+                            min: 0,
+                            max: 10,
+                            label: silenceDuration.toStringAsFixed(1),
+                            onChanged: (value) {
+                              _recorder.setSilenceDuration(value);
+                              setState(() {
+                                silenceDuration = value;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    // Silence duration slider
+                    Row(
+                      mainAxisSize: MainAxisSize.max,
+                      children: [
+                        Text('Silence duration: '
+                        '${secondsOfAudioToWriteBefore.toStringAsFixed(1)}'),
+                        Expanded(
+                          child: Slider(
+                            value: secondsOfAudioToWriteBefore,
+                            min: 0,
+                            max: 10,
+                            label: silenceDuration.toStringAsFixed(1),
+                            onChanged: (value) {
+                              _recorder.setSecondsOfAudioToWriteBefore(value);
+                              setState(() {
+                                secondsOfAudioToWriteBefore = value;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
                 const Bars(),
               ],

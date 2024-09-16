@@ -168,36 +168,73 @@ class FlutterRecorderBindings {
 
   CaptureErrors setSilenceDetection(
     bool enable,
-    double silenceThresholdDb,
-    double silenceDuration,
   ) {
     return CaptureErrors.fromValue(_setSilenceDetection(
       enable,
-      silenceThresholdDb,
-      silenceDuration,
     ));
   }
 
-  late final _setSilenceDetectionPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.UnsignedInt Function(
-              ffi.Bool, ffi.Float, ffi.Float)>>('setSilenceDetection');
+  late final _setSilenceDetectionPtr =
+      _lookup<ffi.NativeFunction<ffi.UnsignedInt Function(ffi.Bool)>>(
+          'setSilenceDetection');
   late final _setSilenceDetection =
-      _setSilenceDetectionPtr.asFunction<int Function(bool, double, double)>();
+      _setSilenceDetectionPtr.asFunction<int Function(bool)>();
 
-  void startRecording(
-    ffi.Pointer<ffi.Char> path,
+  void setSilenceThresholdDb(
+    double silenceThresholdDb,
   ) {
-    return _startRecording(
-      path,
+    return _setSilenceThresholdDb(
+      silenceThresholdDb,
     );
   }
 
-  late final _startRecordingPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Char>)>>(
-          'startRecording');
+  late final _setSilenceThresholdDbPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Float)>>(
+          'setSilenceThresholdDb');
+  late final _setSilenceThresholdDb =
+      _setSilenceThresholdDbPtr.asFunction<void Function(double)>();
+
+  void setSilenceDuration(
+    double silenceDuration,
+  ) {
+    return _setSilenceDuration(
+      silenceDuration,
+    );
+  }
+
+  late final _setSilenceDurationPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Float)>>(
+          'setSilenceDuration');
+  late final _setSilenceDuration =
+      _setSilenceDurationPtr.asFunction<void Function(double)>();
+
+  void setSecondsOfAudioToWriteBefore(
+    double secondsOfAudioToWriteBefore,
+  ) {
+    return _setSecondsOfAudioToWriteBefore(
+      secondsOfAudioToWriteBefore,
+    );
+  }
+
+  late final _setSecondsOfAudioToWriteBeforePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Float)>>(
+          'setSecondsOfAudioToWriteBefore');
+  late final _setSecondsOfAudioToWriteBefore =
+      _setSecondsOfAudioToWriteBeforePtr.asFunction<void Function(double)>();
+
+  CaptureErrors startRecording(
+    ffi.Pointer<ffi.Char> path,
+  ) {
+    return CaptureErrors.fromValue(_startRecording(
+      path,
+    ));
+  }
+
+  late final _startRecordingPtr = _lookup<
+          ffi.NativeFunction<ffi.UnsignedInt Function(ffi.Pointer<ffi.Char>)>>(
+      'startRecording');
   late final _startRecording =
-      _startRecordingPtr.asFunction<void Function(ffi.Pointer<ffi.Char>)>();
+      _startRecordingPtr.asFunction<int Function(ffi.Pointer<ffi.Char>)>();
 
   void setPauseRecording(
     bool pause,
@@ -335,7 +372,16 @@ enum CaptureErrors {
   captureNotInited(2),
 
   /// Failed to start the device.
-  failedToStartDevice(3);
+  failedToStartDevice(3),
+
+  /// Failed to initialize wav recording.
+  failedToInitializeRecording(4),
+
+  /// Invalid arguments while initializing wav recording.
+  invalidArgs(5),
+
+  /// Failed to write wav file.
+  failedToWriteWav(6);
 
   final int value;
   const CaptureErrors(this.value);
@@ -345,6 +391,9 @@ enum CaptureErrors {
         1 => captureInitFailed,
         2 => captureNotInited,
         3 => failedToStartDevice,
+        4 => failedToInitializeRecording,
+        5 => invalidArgs,
+        6 => failedToWriteWav,
         _ => throw ArgumentError("Unknown value for CaptureErrors: $value"),
       };
 }

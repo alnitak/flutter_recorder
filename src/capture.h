@@ -9,13 +9,15 @@
 #include <vector>
 #include <string>
 
-struct CaptureDevice {
-    char* name;
+struct CaptureDevice
+{
+    char *name;
     unsigned int isDefault;
     unsigned int id;
 };
 
-class Capture {
+class Capture
+{
 public:
     Capture();
     ~Capture();
@@ -44,13 +46,19 @@ public:
 
     CaptureErrors stopListen();
 
-    CaptureErrors setSilenceDetection(bool enable, float silenceThresholdDb, float silenceDuration);
+    CaptureErrors setSilenceDetection(bool enable);
 
-    ma_result startRecording(const char *path);
+    void setSilenceThresholdDb(float silenceThresholdDb);
+    void setSilenceDuration(float silenceDuration);
+    void setSecondsOfAudioToWriteBefore(float secondsOfAudioToWriteBefore);
+
+    CaptureErrors startRecording(const char *path);
+
     void setPauseRecording(bool pause);
+
     void stopRecording();
 
-    float* getWave();
+    float *getWave();
 
     float getVolumeDb();
 
@@ -63,8 +71,16 @@ public:
     /// The duration of silence in seconds after which the silence is considered silence.
     float silenceDuration;
 
+    /// ms of audio to write occurred before starting recording againg after silence.
+    float secondsOfAudioToWriteBefore;
+
+    ///
     WriteAudio::Wav wav;
+
+    /// true when the capture device is recording.
     bool isRecording;
+
+    /// true when the capture device is paused.
     bool isRecordingPaused;
 
 private:

@@ -40,12 +40,15 @@ extern "C"
 
     FFI_PLUGIN_EXPORT enum CaptureErrors stopListen();
 
-    FFI_PLUGIN_EXPORT enum CaptureErrors setSilenceDetection(
-        bool enable,
-        float silenceThresholdDb,
-        float silenceDuration);
+    FFI_PLUGIN_EXPORT enum CaptureErrors setSilenceDetection(bool enable);
 
-    FFI_PLUGIN_EXPORT void startRecording(const char *path);
+    FFI_PLUGIN_EXPORT void setSilenceThresholdDb(float silenceThresholdDb);
+    
+    FFI_PLUGIN_EXPORT void setSilenceDuration(float silenceDuration);
+
+    FFI_PLUGIN_EXPORT void setSecondsOfAudioToWriteBefore(float secondsOfAudioToWriteBefore);
+
+    FFI_PLUGIN_EXPORT enum CaptureErrors startRecording(const char *path);
 
     FFI_PLUGIN_EXPORT void setPauseRecording(bool pause);
 
