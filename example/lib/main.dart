@@ -240,7 +240,7 @@ class _MyAppState extends State<MyApp> {
                     Row(
                       mainAxisSize: MainAxisSize.max,
                       children: [
-                        Text('Silence duration: '
+                        Text('write before: '
                         '${secondsOfAudioToWriteBefore.toStringAsFixed(1)}'),
                         Expanded(
                           child: Slider(

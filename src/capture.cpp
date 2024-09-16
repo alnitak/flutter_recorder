@@ -58,21 +58,43 @@ void calculateEnergy(float *captured, ma_uint32 frameCount)
     energy_db = energy_to_db(smoothed_energy);
 }
 
+void getTime(struct timespec *time)
+{
+    if (clock_gettime(CLOCK_REALTIME, time) == -1)
+    {
+        perror("clock getTime");
+        exit(EXIT_FAILURE);
+    }
+}
+
+/// @brief returns the elapsed time in seconds
+double getElapsed(struct timespec since)
+{
+    struct timespec now;
+    if (clock_gettime(CLOCK_REALTIME, &now) == -1)
+    {
+        perror("clock getTime");
+        exit(EXIT_FAILURE);
+    }
+    return ((double)(now.tv_sec - since.tv_sec) +
+            (double)(now.tv_nsec - since.tv_nsec) / 1.0e9L);
+}
+
 void detectSilence(Capture *userData)
 {
-    static clock_t startSilence;                  // Start time of silence
+    static struct timespec startSilence; // Start time of silence
     // Check if the signal is below the silence threshold
     if (energy_db < userData->silenceThresholdDb)
     {
         if (!is_silent.load() && !delayed_silence_started)
         {
-            startSilence = clock();
+            getTime(&startSilence);
             // Transition: Sound -> Silence
             is_silent = true;
         }
         else
         {
-            double elapsed = ((double)(clock() - startSilence) / CLOCKS_PER_SEC);
+            double elapsed = getElapsed(startSilence);
             if (elapsed >= userData->silenceDuration && is_silent.load() && !delayed_silence_started)
             {
                 printf("Silence started after %f s. Level in dB: %.2f\n", elapsed, energy_db.load());
@@ -92,33 +114,31 @@ void detectSilence(Capture *userData)
     {
         if (is_silent.load())
         {
-            double elapsed = ((double)(clock() - startSilence) / CLOCKS_PER_SEC);
+            double elapsed = getElapsed(startSilence);
             if (elapsed >= userData->silenceDuration && delayed_silence_started)
             {
-                // printf("Sound started after a silence of %.2f s\n",
-                //        ((double)(clock() - startSilence) / CLOCKS_PER_SEC));
                 // Transition: Silence -> Sound
                 printf("Sound started after %f s. Level in dB: %.2f   %f %f %f\n", elapsed, energy_db.load(),
-                    userData->silenceThresholdDb, userData->silenceDuration, userData->secondsOfAudioToWriteBefore);
+                       userData->silenceThresholdDb, userData->silenceDuration, userData->secondsOfAudioToWriteBefore);
                 is_silent = false;
                 delayed_silence_started = false;
                 // Write all the circularBuffer data which contains the audio occurred before the silence ended.
-                if (userData->isRecording && userData->secondsOfAudioToWriteBefore > 0 && circularBuffer) {
+                if (userData->isRecording && userData->secondsOfAudioToWriteBefore > 0 && circularBuffer)
+                {
                     unsigned int frameCount = (unsigned int)(circularBuffer.get()->size());
                     userData->wav.write(circularBuffer.get()->pop(frameCount).data(), frameCount);
                 }
                 if (dartSilenceChangedCallback != nullptr)
                 {
                     float energy_value = energy_db.load();
-                    auto silent = is_silent.load();
-                    dartSilenceChangedCallback(&silent, &energy_value);
+                    dartSilenceChangedCallback(&delayed_silence_started, &energy_value);
                 }
             }
 
             /// Reset the clock if sound happens during the deley after a silence,
             if (elapsed < userData->silenceDuration && is_silent.load())
             {
-                startSilence = clock();
+                getTime(&startSilence);
                 is_silent = false;
                 delayed_silence_started = false;
             }
