@@ -4,7 +4,7 @@ part 'exceptions_from_cpp.dart';
 
 /// A base class for all flutter_recorder exceptions.
 sealed class RecorderException implements Exception {
-  /// Creates a new SoLoud exception.
+  /// Creates a new Recorder exception.
   const RecorderException([this.message]);
 
   /// A message that explains what exactly went wrong in that particular case.
@@ -34,19 +34,13 @@ sealed class RecorderException implements Exception {
   }
 }
 
-/// A base class for all SoLoud exceptions that are thrown from the Dart side.
-abstract class RecorderDartException extends RecorderException {
-  /// Creates a new SoLoud exception that is thrown from the Dart side.
-  const RecorderDartException([super.message]);
-}
-
 /// A base class for all flutter_recorder exceptions that are thrown from
 /// the C++ side.
 ///
 /// These exceptions correspond to the errors define in the
 /// [CaptureErrors] enum.
 abstract class RecorderCppException extends RecorderException {
-  /// Creates a new SoLoud exception that is thrown from the C++ side.
+  /// Creates a new Recorder exception that is thrown from the C++ side.
   const RecorderCppException([super.message]);
 
   /// Takes a [CaptureErrors] enum value and returns a corresponding exception.
