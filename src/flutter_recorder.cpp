@@ -1,3 +1,4 @@
+// TODO(marco): add all miniaudio errors
 #define MINIAUDIO_IMPLEMENTATION
 #include "miniaudio.h"
 
@@ -14,13 +15,10 @@ Capture capture;
 std::unique_ptr<Analyzer> analyzerCapture = std::make_unique<Analyzer>(256);
 
 /// Set a Dart functions to call when an event occurs.
-FFI_PLUGIN_EXPORT enum CaptureErrors setDartEventCallback(
+FFI_PLUGIN_EXPORT void setDartEventCallback(
     dartSilenceChangedCallback_t silence_changed_callback)
 {
-    if (!capture.isInited())
-        return captureNotInited;
     capture.setDartEventCallback(silence_changed_callback);
-    return captureNoError;
 }
 
 FFI_PLUGIN_EXPORT void nativeFree(void *pointer)
@@ -110,18 +108,14 @@ FFI_PLUGIN_EXPORT enum CaptureErrors startListen()
     return capture.startListen();
 }
 
-FFI_PLUGIN_EXPORT enum CaptureErrors stopListen()
+FFI_PLUGIN_EXPORT void stopListen()
 {
-    if (!capture.isInited())
-        return captureNotInited;
-    return capture.stopListen();
+    capture.stopListen();
 }
 
-FFI_PLUGIN_EXPORT enum CaptureErrors setSilenceDetection(bool enable)
+FFI_PLUGIN_EXPORT void setSilenceDetection(bool enable)
 {
-    if (!capture.isInited())
-        return captureNotInited;
-    return capture.setSilenceDetection(enable);
+    capture.setSilenceDetection(enable);
 }
 
 FFI_PLUGIN_EXPORT void setSilenceThresholdDb(float silenceThresholdDb)
@@ -166,20 +160,14 @@ FFI_PLUGIN_EXPORT void stopRecording()
     capture.stopRecording();
 }
 
-FFI_PLUGIN_EXPORT enum CaptureErrors getVolumeDb(float *volumeDb)
+FFI_PLUGIN_EXPORT void getVolumeDb(float *volumeDb)
 {
-    if (!capture.isInited())
-        return captureNotInited;
     *volumeDb = capture.getVolumeDb();
-    return captureNoError;
 }
 
-FFI_PLUGIN_EXPORT enum CaptureErrors setFftSmoothing(float smooth)
+FFI_PLUGIN_EXPORT void setFftSmoothing(float smooth)
 {
-    if (!capture.isInited())
-        return captureNotInited;
     analyzerCapture.get()->setSmoothing(smooth);
-    return captureNoError;
 }
 
 /// Return a 256 float array containing FFT data.
@@ -220,20 +208,19 @@ FFI_PLUGIN_EXPORT void getTexture(float *samples)
 }
 
 float capturedTexture2D[256][512];
-FFI_PLUGIN_EXPORT enum CaptureErrors getTexture2D(float **samples)
+FFI_PLUGIN_EXPORT void getTexture2D(float **samples)
 {
     if (analyzerCapture.get() == nullptr || !capture.isInited())
     {
         *samples = *capturedTexture2D;
         memset(*samples, 0, sizeof(float) * 512 * 256);
-        return captureNotInited;
+        return;
     }
     /// shift up 1 row
     memmove(*capturedTexture2D + 512, capturedTexture2D, sizeof(float) * 512 * 255);
     /// store the new 1st row
     getTexture(capturedTexture2D[0]);
     *samples = *capturedTexture2D;
-    return captureNoError;
 }
 
 FFI_PLUGIN_EXPORT float getTextureValue(int row, int column)

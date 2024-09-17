@@ -125,8 +125,12 @@ void detectSilence(Capture *userData)
                 // Write all the circularBuffer data which contains the audio occurred before the silence ended.
                 if (userData->isRecording && userData->secondsOfAudioToWriteBefore > 0 && circularBuffer)
                 {
-                    unsigned int frameCount = (unsigned int)(circularBuffer.get()->size());
-                    userData->wav.write(circularBuffer.get()->pop(frameCount).data(), frameCount);
+                    ma_uint32 frameCount = (unsigned int)(circularBuffer.get()->size());
+                    auto data = circularBuffer.get()->pop(frameCount);
+                    printf("WRITE secondsOfAudioToWriteBefore buffer size: %u  frames: %u  frame got: %u\n",
+                    circularBuffer.get()->size(), frameCount, data.size());
+                    // The framCount in wav.write is one for all the channels.
+                    userData->wav.write(data.data(), data.size() / userData->deviceConfig.capture.channels);
                 }
                 if (dartSilenceChangedCallback != nullptr)
                 {
@@ -158,6 +162,12 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
     if (userData->isDetectingSilence)
     {
         detectSilence(userData);
+
+        // Copy current buffer to circularBuffer
+        if (delayed_silence_started && userData->isRecording && userData->secondsOfAudioToWriteBefore > 0) {
+             std::vector<float> values(captured, captured + frameCount);
+            circularBuffer.get()->push(values);
+        }
 
         if (!delayed_silence_started && userData->isRecording && !userData->isRecordingPaused)
         {
@@ -246,7 +256,7 @@ CaptureErrors Capture::init(int deviceID)
         deviceConfig.capture.pDeviceID = &pCaptureInfos[deviceID].id;
     }
     deviceConfig.capture.format = ma_format_f32;
-    deviceConfig.capture.channels = 2;
+    deviceConfig.capture.channels = 1;
     deviceConfig.sampleRate = 44100;
     deviceConfig.dataCallback = data_callback;
     deviceConfig.pUserData = this;
@@ -254,6 +264,7 @@ CaptureErrors Capture::init(int deviceID)
     result = ma_device_init(NULL, &deviceConfig, &device);
     if (result != MA_SUCCESS)
     {
+        // TODO(marco): add other error handling from ma_device_init
         printf("Failed to initialize capture device.\n");
         return captureInitFailed;
     }
@@ -264,6 +275,7 @@ CaptureErrors Capture::init(int deviceID)
 void Capture::dispose()
 {
     mInited = false;
+    circularBuffer.reset();
     ma_device_uninit(&device);
 }
 
@@ -293,47 +305,34 @@ CaptureErrors Capture::startListen()
     return captureNoError;
 }
 
-CaptureErrors Capture::stopListen()
+void Capture::stopListen()
 {
-    if (!mInited)
-        return captureNotInited;
-
     ma_device_uninit(&device);
     mInited = false;
-    return captureNoError;
 }
 
-CaptureErrors Capture::setSilenceDetection(bool enable)
+void Capture::setSilenceDetection(bool enable)
 {
-    if (!mInited)
-        return captureNotInited;
-
     this->isDetectingSilence = enable;
-    int frameCount = secondsOfAudioToWriteBefore * deviceConfig.capture.channels * deviceConfig.sampleRate;
-    circularBuffer = std::make_unique<CircularBuffer>(frameCount);
-    return captureNoError;
 }
 
 void Capture::setSilenceThresholdDb(float silenceThresholdDb)
 {
-    if (!mInited)
-        return;
     this->silenceThresholdDb = silenceThresholdDb;
 }
 
 void Capture::setSilenceDuration(float silenceDuration)
 {
-    if (!mInited)
-        return;
     this->silenceDuration = silenceDuration;
 }
 
 void Capture::setSecondsOfAudioToWriteBefore(float secondsOfAudioToWriteBefore)
 {
-    if (!mInited)
-        return;
     this->secondsOfAudioToWriteBefore = secondsOfAudioToWriteBefore;
-    int frameCount = secondsOfAudioToWriteBefore * deviceConfig.capture.channels * deviceConfig.sampleRate;
+    ma_uint32 frameCount = secondsOfAudioToWriteBefore * deviceConfig.capture.channels * deviceConfig.sampleRate;
+    frameCount = (frameCount >> 1) << 1;
+    if (!circularBuffer)
+        circularBuffer.reset();
     circularBuffer = std::make_unique<CircularBuffer>(frameCount);
 }
 
@@ -344,6 +343,7 @@ CaptureErrors Capture::startRecording(const char *path)
     CaptureErrors result = wav.init(path, deviceConfig);
     if (result != captureNoError)
         return result;
+    setSecondsOfAudioToWriteBefore(secondsOfAudioToWriteBefore);
     isRecording = true;
     isRecordingPaused = false;
     return captureNoError;
@@ -351,7 +351,7 @@ CaptureErrors Capture::startRecording(const char *path)
 
 void Capture::setPauseRecording(bool pause)
 {
-    if (!mInited)
+    if (!mInited || !isRecording)
         return;
     isRecordingPaused = pause;
 }

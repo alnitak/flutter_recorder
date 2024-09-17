@@ -8,6 +8,7 @@ import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_recorder/enums.dart';
+import 'package:flutter_recorder/exceptions/exceptions.dart';
 import 'package:flutter_recorder/flutter_recorder_bindings_generated.dart';
 
 /// Callback when silence state is changed.
@@ -110,9 +111,6 @@ class Recorder {
   ///
   /// [enable] wheter to enable or disable silence detection. Default to false.
   /// [onSilenceChanged] callback when silence state is changed.
-  ///
-  /// Return [CaptureErrors.captureNoError] if no error.
-  /// Returns [CaptureErrors.captureNotInited].
   void setSilenceDetection({
     required bool enable,
     SilenceCallback? onSilenceChanged,
@@ -232,10 +230,13 @@ class Recorder {
 
   /// Initialize input device with [deviceID].
   ///
-  /// Returns [CaptureErrors.captureNoError] if no error.
-  /// Returns [CaptureErrors.captureInitFailed].
-  CaptureErrors init({int deviceID = -1}) {
-    return _bindings.init(deviceID);
+  /// Thows [RecorderInitializeFailedException] if something goes wrong, ie. no
+  /// device found with [deviceID] id.
+  void init({int deviceID = -1}) {
+    final error = _bindings.init(deviceID);
+    if (error != CaptureErrors.captureNoError) {
+      throw RecorderCppException.fromPlayerError(error);
+    }
   }
 
   /// Dispose capture device.
@@ -256,24 +257,29 @@ class Recorder {
 
   /// Start listening to the device.
   ///
-  /// Returns [CaptureErrors.captureNoError] if no error.
-  /// Returns [CaptureErrors.captureNotInited].
-  /// Returns [CaptureErrors.failedToStartDevice].
-  CaptureErrors startListen() {
-    return _bindings.startListen();
+  /// Throws [RecorderCaptureNotInitializedException].
+  /// Throws [RecorderFailedToStartDeviceException].
+  void startListen() {
+    final error = _bindings.startListen();
+    if (error != CaptureErrors.captureNoError) {
+      throw RecorderCppException.fromPlayerError(error);
+    }
   }
 
   /// Stop listening to the device.
-  ///
-  /// Returns [CaptureErrors.captureNoError] if no error.
-  /// Returns [CaptureErrors.captureNotInited].
-  CaptureErrors stopListen() {
-    return _bindings.stopListen();
+  void stopListen() {
+    _bindings.stopListen();
   }
 
   /// Start recording.
+  ///
+  /// Throws [RecorderCaptureNotInitializedException].
+  /// Throws [RecorderFailedToInitializeRecordingException].
   void startRecording(String path) {
-    _bindings.startRecording(path.toNativeUtf8().cast());
+    final error = _bindings.startRecording(path.toNativeUtf8().cast());
+    if (error != CaptureErrors.captureNoError) {
+      throw RecorderCppException.fromPlayerError(error);
+    }
   }
 
   /// Pause recording.
@@ -296,11 +302,8 @@ class Recorder {
   /// 1 = values don't get down when they reach their max value.
   /// the new value is calculated with:
   /// newFreq = smooth * oldFreq + (1 - smooth) * newFreq
-  ///
-  /// Return [CaptureErrors.captureNoError] if no error.
-  /// Returns [CaptureErrors.captureNotInited].
-  CaptureErrors setFftSmoothing(double smooth) {
-    return _bindings.setFftSmoothing(smooth);
+  void setFftSmoothing(double smooth) {
+    _bindings.setFftSmoothing(smooth);
   }
 
   /// Return a 256 float array containing FFT data in the range [-1.0, 1.0]
@@ -342,30 +345,15 @@ class Recorder {
     calloc.free(data);
     final textureList = val.cast<ffi.Float>().asTypedList(512 * 256);
 
-    // final buf = StringBuffer()..write('DART: ');
-    // for (var i = 0; i < 50; i++) {
-    //   buf
-    //     ..write(data[i].toStringAsFixed(3))
-    //     ..write(' ');
-    // }
-    // buf.write('\n\n');
-    // for (var i = 256; i < 306; i++) {
-    //   buf
-    //     ..write(data[i].toStringAsFixed(3))
-    //     ..write(' ');
-    // }
-    // buf.writeln();
-    // debugPrint(buf.toString());
-
     return textureList;
   }
 
-  /// Get the current volume in dB.
+  /// Get the current volume in dB. Returns -90 if the capture is not inited.
   double getVolumeDb() {
     final ffi.Pointer<ffi.Float> volume = calloc(4);
-    final error = _bindings.getVolumeDb(volume);
+    _bindings.getVolumeDb(volume);
     final v = volume.value;
     calloc.free(volume);
-    return error != CaptureErrors.captureNoError ? -200 : v;
+    return v;
   }
 }

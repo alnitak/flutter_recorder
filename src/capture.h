@@ -44,9 +44,9 @@ public:
 
     CaptureErrors startListen();
 
-    CaptureErrors stopListen();
+    void stopListen();
 
-    CaptureErrors setSilenceDetection(bool enable);
+    void setSilenceDetection(bool enable);
 
     void setSilenceThresholdDb(float silenceThresholdDb);
     void setSilenceDuration(float silenceDuration);
@@ -62,6 +62,8 @@ public:
 
     float getVolumeDb();
 
+    ma_device_config deviceConfig;
+    
     /// Wheter or not the callback is detecting silence.
     bool isDetectingSilence;
 
@@ -92,7 +94,6 @@ private:
     ma_result result;
     // ma_encoder_config encoderConfig;
     // ma_encoder encoder;
-    ma_device_config deviceConfig;
     ma_device device;
 
     /// true when the capture device is initialized.

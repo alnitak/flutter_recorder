@@ -11,7 +11,7 @@ extern "C"
 {
 #endif
 
-    FFI_PLUGIN_EXPORT enum CaptureErrors setDartEventCallback(
+    FFI_PLUGIN_EXPORT void setDartEventCallback(
         dartSilenceChangedCallback_t silence_changed_callback);
 
     FFI_PLUGIN_EXPORT void nativeFree(void *pointer);
@@ -38,9 +38,9 @@ extern "C"
 
     FFI_PLUGIN_EXPORT enum CaptureErrors startListen();
 
-    FFI_PLUGIN_EXPORT enum CaptureErrors stopListen();
+    FFI_PLUGIN_EXPORT void stopListen();
 
-    FFI_PLUGIN_EXPORT enum CaptureErrors setSilenceDetection(bool enable);
+    FFI_PLUGIN_EXPORT void setSilenceDetection(bool enable);
 
     FFI_PLUGIN_EXPORT void setSilenceThresholdDb(float silenceThresholdDb);
     
@@ -54,7 +54,7 @@ extern "C"
 
     FFI_PLUGIN_EXPORT void stopRecording();
 
-    FFI_PLUGIN_EXPORT enum CaptureErrors getVolumeDb(float *volumeDb);
+    FFI_PLUGIN_EXPORT void getVolumeDb(float *volumeDb);
 
     FFI_PLUGIN_EXPORT void getFft(float **fft);
 
@@ -62,11 +62,11 @@ extern "C"
 
     FFI_PLUGIN_EXPORT void getTexture(float *samples);
 
-    FFI_PLUGIN_EXPORT enum CaptureErrors getTexture2D(float **samples);
+    FFI_PLUGIN_EXPORT void getTexture2D(float **samples);
 
     FFI_PLUGIN_EXPORT float getTextureValue(int row, int column);
 
-    FFI_PLUGIN_EXPORT enum CaptureErrors setFftSmoothing(float smooth);
+    FFI_PLUGIN_EXPORT void setFftSmoothing(float smooth);
 
 #ifdef __cplusplus
 }

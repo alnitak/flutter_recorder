@@ -28,20 +28,19 @@ class FlutterRecorderBindings {
           lookup)
       : _lookup = lookup;
 
-  CaptureErrors setDartEventCallback(
+  void setDartEventCallback(
     dartSilenceChangedCallback_t silence_changed_callback,
   ) {
-    return CaptureErrors.fromValue(_setDartEventCallback(
+    return _setDartEventCallback(
       silence_changed_callback,
-    ));
+    );
   }
 
   late final _setDartEventCallbackPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.UnsignedInt Function(
-              dartSilenceChangedCallback_t)>>('setDartEventCallback');
+          ffi.NativeFunction<ffi.Void Function(dartSilenceChangedCallback_t)>>(
+      'setDartEventCallback');
   late final _setDartEventCallback = _setDartEventCallbackPtr
-      .asFunction<int Function(dartSilenceChangedCallback_t)>();
+      .asFunction<void Function(dartSilenceChangedCallback_t)>();
 
   void nativeFree(
     ffi.Pointer<ffi.Void> pointer,
@@ -158,27 +157,27 @@ class FlutterRecorderBindings {
       _lookup<ffi.NativeFunction<ffi.UnsignedInt Function()>>('startListen');
   late final _startListen = _startListenPtr.asFunction<int Function()>();
 
-  CaptureErrors stopListen() {
-    return CaptureErrors.fromValue(_stopListen());
+  void stopListen() {
+    return _stopListen();
   }
 
   late final _stopListenPtr =
-      _lookup<ffi.NativeFunction<ffi.UnsignedInt Function()>>('stopListen');
-  late final _stopListen = _stopListenPtr.asFunction<int Function()>();
+      _lookup<ffi.NativeFunction<ffi.Void Function()>>('stopListen');
+  late final _stopListen = _stopListenPtr.asFunction<void Function()>();
 
-  CaptureErrors setSilenceDetection(
+  void setSilenceDetection(
     bool enable,
   ) {
-    return CaptureErrors.fromValue(_setSilenceDetection(
+    return _setSilenceDetection(
       enable,
-    ));
+    );
   }
 
   late final _setSilenceDetectionPtr =
-      _lookup<ffi.NativeFunction<ffi.UnsignedInt Function(ffi.Bool)>>(
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Bool)>>(
           'setSilenceDetection');
   late final _setSilenceDetection =
-      _setSilenceDetectionPtr.asFunction<int Function(bool)>();
+      _setSilenceDetectionPtr.asFunction<void Function(bool)>();
 
   void setSilenceThresholdDb(
     double silenceThresholdDb,
@@ -258,19 +257,19 @@ class FlutterRecorderBindings {
       _lookup<ffi.NativeFunction<ffi.Void Function()>>('stopRecording');
   late final _stopRecording = _stopRecordingPtr.asFunction<void Function()>();
 
-  CaptureErrors getVolumeDb(
+  void getVolumeDb(
     ffi.Pointer<ffi.Float> volumeDb,
   ) {
-    return CaptureErrors.fromValue(_getVolumeDb(
+    return _getVolumeDb(
       volumeDb,
-    ));
+    );
   }
 
-  late final _getVolumeDbPtr = _lookup<
-          ffi.NativeFunction<ffi.UnsignedInt Function(ffi.Pointer<ffi.Float>)>>(
-      'getVolumeDb');
+  late final _getVolumeDbPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Float>)>>(
+          'getVolumeDb');
   late final _getVolumeDb =
-      _getVolumeDbPtr.asFunction<int Function(ffi.Pointer<ffi.Float>)>();
+      _getVolumeDbPtr.asFunction<void Function(ffi.Pointer<ffi.Float>)>();
 
   void getFft(
     ffi.Pointer<ffi.Pointer<ffi.Float>> fft,
@@ -314,20 +313,20 @@ class FlutterRecorderBindings {
   late final _getTexture =
       _getTexturePtr.asFunction<void Function(ffi.Pointer<ffi.Float>)>();
 
-  CaptureErrors getTexture2D(
+  void getTexture2D(
     ffi.Pointer<ffi.Pointer<ffi.Float>> samples,
   ) {
-    return CaptureErrors.fromValue(_getTexture2D(
+    return _getTexture2D(
       samples,
-    ));
+    );
   }
 
   late final _getTexture2DPtr = _lookup<
       ffi.NativeFunction<
-          ffi.UnsignedInt Function(
+          ffi.Void Function(
               ffi.Pointer<ffi.Pointer<ffi.Float>>)>>('getTexture2D');
   late final _getTexture2D = _getTexture2DPtr
-      .asFunction<int Function(ffi.Pointer<ffi.Pointer<ffi.Float>>)>();
+      .asFunction<void Function(ffi.Pointer<ffi.Pointer<ffi.Float>>)>();
 
   double getTextureValue(
     int row,
@@ -345,20 +344,27 @@ class FlutterRecorderBindings {
   late final _getTextureValue =
       _getTextureValuePtr.asFunction<double Function(int, int)>();
 
-  CaptureErrors setFftSmoothing(
+  void setFftSmoothing(
     double smooth,
   ) {
-    return CaptureErrors.fromValue(_setFftSmoothing(
+    return _setFftSmoothing(
       smooth,
-    ));
+    );
   }
 
   late final _setFftSmoothingPtr =
-      _lookup<ffi.NativeFunction<ffi.UnsignedInt Function(ffi.Float)>>(
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Float)>>(
           'setFftSmoothing');
   late final _setFftSmoothing =
-      _setFftSmoothingPtr.asFunction<int Function(double)>();
+      _setFftSmoothingPtr.asFunction<void Function(double)>();
 }
+
+typedef dartSilenceChangedCallback_t
+    = ffi.Pointer<ffi.NativeFunction<dartSilenceChangedCallback_tFunction>>;
+typedef dartSilenceChangedCallback_tFunction = ffi.Void Function(
+    ffi.Pointer<ffi.Bool>, ffi.Pointer<ffi.Float>);
+typedef DartdartSilenceChangedCallback_tFunction = void Function(
+    ffi.Pointer<ffi.Bool>, ffi.Pointer<ffi.Float>);
 
 /// Possible capture errors
 enum CaptureErrors {
@@ -397,10 +403,3 @@ enum CaptureErrors {
         _ => throw ArgumentError("Unknown value for CaptureErrors: $value"),
       };
 }
-
-typedef dartSilenceChangedCallback_t
-    = ffi.Pointer<ffi.NativeFunction<dartSilenceChangedCallback_tFunction>>;
-typedef dartSilenceChangedCallback_tFunction = ffi.Void Function(
-    ffi.Pointer<ffi.Bool>, ffi.Pointer<ffi.Float>);
-typedef DartdartSilenceChangedCallback_tFunction = void Function(
-    ffi.Pointer<ffi.Bool>, ffi.Pointer<ffi.Float>);

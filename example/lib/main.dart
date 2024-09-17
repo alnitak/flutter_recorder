@@ -70,8 +70,11 @@ class _MyAppState extends State<MyApp> {
                     ),
                     OutlinedButton(
                       onPressed: () {
-                        final e = _recorder.init();
-                        debugPrint('-------------- init() $e\n');
+                        try {
+                        _recorder.init();
+                        } on Exception catch (e) {
+                          debugPrint('-------------- init() $e\n');
+                        }
                       },
                       child: const Text('init'),
                     ),
@@ -91,8 +94,11 @@ class _MyAppState extends State<MyApp> {
                     ),
                     OutlinedButton(
                       onPressed: () {
-                        final e = _recorder.startListen();
-                        debugPrint('-------------- startListen() $e\n');
+                        try {
+                        _recorder.startListen();
+                        } on Exception catch (e) {
+                          debugPrint('-------------- startListen() $e\n');
+                        }
                       },
                       child: const Text('startListen'),
                     ),
@@ -146,7 +152,11 @@ class _MyAppState extends State<MyApp> {
                     ),
                     ElevatedButton(
                       onPressed: () {
+                        try {
                         _recorder.startRecording('/home/deimos/my_file.wav');
+                        } on Exception catch (e) {
+                          debugPrint('-------------- startRecording() $e\n');
+                        }
                       },
                       child: const Text('Start recording'),
                     ),
