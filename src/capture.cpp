@@ -1,3 +1,4 @@
+#include "common.h"
 #include "capture.h"
 #include "circular_buffer.h"
 
@@ -7,6 +8,41 @@
 #include <cmath>
 #include <atomic>
 #include <time.h>
+
+#ifdef _IS_WIN_
+#define CLOCK_REALTIME 0
+// struct timespec { long long tv_sec; long tv_nsec; };    //header part
+int clock_gettime(int, struct timespec *spec)      //C-file part
+{  __int64 wintime; GetSystemTimeAsFileTime((FILETIME*)&wintime);
+   wintime      -=116444736000000000i64;  //1jan1601 to 1jan1970
+   spec->tv_sec  =wintime / 10000000i64;           //seconds
+   spec->tv_nsec =wintime % 10000000i64 *100;      //nano-seconds
+   return 0;
+}
+#endif
+// #else
+void getTime(struct timespec *time)
+{
+    if (clock_gettime(CLOCK_REALTIME, time) == -1)
+    {
+        perror("clock getTime");
+        exit(EXIT_FAILURE);
+    }
+}
+
+/// @brief returns the elapsed time in seconds
+double getElapsed(struct timespec since)
+{
+    struct timespec now;
+    if (clock_gettime(CLOCK_REALTIME, &now) == -1)
+    {
+        perror("clock getTime");
+        exit(EXIT_FAILURE);
+    }
+    return ((double)(now.tv_sec - since.tv_sec) +
+            (double)(now.tv_nsec - since.tv_nsec) / 1.0e9L);
+}
+// #endif
 
 // 1024 means 1/(44100*2)*1024 = 0.0116 ms
 #define BUFFER_SIZE 1024      // Buffer length
@@ -56,28 +92,6 @@ void calculateEnergy(float *captured, ma_uint32 frameCount)
 
     // Convert energy to decibels
     energy_db = energy_to_db(smoothed_energy);
-}
-
-void getTime(struct timespec *time)
-{
-    if (clock_gettime(CLOCK_REALTIME, time) == -1)
-    {
-        perror("clock getTime");
-        exit(EXIT_FAILURE);
-    }
-}
-
-/// @brief returns the elapsed time in seconds
-double getElapsed(struct timespec since)
-{
-    struct timespec now;
-    if (clock_gettime(CLOCK_REALTIME, &now) == -1)
-    {
-        perror("clock getTime");
-        exit(EXIT_FAILURE);
-    }
-    return ((double)(now.tv_sec - since.tv_sec) +
-            (double)(now.tv_nsec - since.tv_nsec) / 1.0e9L);
 }
 
 void detectSilence(Capture *userData)
@@ -329,7 +343,7 @@ void Capture::setSilenceDuration(float silenceDuration)
 void Capture::setSecondsOfAudioToWriteBefore(float secondsOfAudioToWriteBefore)
 {
     this->secondsOfAudioToWriteBefore = secondsOfAudioToWriteBefore;
-    ma_uint32 frameCount = secondsOfAudioToWriteBefore * deviceConfig.capture.channels * deviceConfig.sampleRate;
+    ma_uint32 frameCount = (ma_uint32)(secondsOfAudioToWriteBefore * deviceConfig.capture.channels * deviceConfig.sampleRate);
     frameCount = (frameCount >> 1) << 1;
     if (!circularBuffer)
         circularBuffer.reset();

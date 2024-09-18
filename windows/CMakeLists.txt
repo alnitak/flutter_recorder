@@ -7,6 +7,29 @@ cmake_minimum_required(VERSION 3.14)
 # Project-level configuration.
 set(PROJECT_NAME "flutter_recorder")
 project(${PROJECT_NAME} LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+
+if (UNIX AND NOT WIN32 AND NOT APPLE)
+	if (CMAKE_SIZEOF_VOID_P MATCHES "8")
+		set (LIB_POSTFIX "64" CACHE STRING "suffix for 32/64 dir placement")
+		mark_as_advanced (LIB_POSTFIX)
+	endif ()
+endif ()
+if (MSVC)
+	add_definitions (-D_CRT_SECURE_NO_WARNINGS)
+endif()
+if (NOT DEFINED LIB_POSTFIX)
+  set (LIB_POSTFIX "")
+endif ()
+
+# list( APPEND CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Wno-error -fPIC")
+message("*************************************************1 ${CMAKE_CXX_FLAGS} *************************************************")
+#set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Wno-error -fPIC -msse2 -msse -mavx -mavx2 -mfma")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /WX-")
+message("*************************************************2 ${CMAKE_CXX_FLAGS} *************************************************")
+
 
 # Invoke the build for native code shared with the other target platforms.
 # This can be changed to accommodate different builds.

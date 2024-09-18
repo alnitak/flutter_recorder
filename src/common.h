@@ -26,6 +26,7 @@
 #endif
 
 #ifdef _IS_WIN_
+#define NOMINMAX
 #include <windows.h>
 #define FFI_PLUGIN_EXPORT __declspec(dllexport)
 #endif

@@ -29,6 +29,24 @@
             "cwd": "${workspaceFolder}/example"
         },
         {
+            "name": "Debug native Windows",
+            "preLaunchTask": "compile windows debug",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "args": [],
+            "program": "${workspaceFolder}/example/build/windows/x64/runner/Debug/flutter_recorder_example.exe",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Debug native Windows VERBOSE",
+            "preLaunchTask": "compile windows debug verbose",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "args": [],
+            "program": "${workspaceFolder}/example/build/windows/x64//runner/Debug/flutter_recorder_example.exe",
+            "cwd": "${workspaceFolder}"
+        },
+        {
             "name": "Debug native Linux",
             "preLaunchTask": "compile linux debug",
             "type": "cppdbg",

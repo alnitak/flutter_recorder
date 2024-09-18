@@ -1,9 +1,12 @@
 #ifndef CIRCULAR_BUFFER_H
 #define CIRCULAR_BUFFER_H
 
+#include "common.h"
 #include <iostream>
 #include <vector>
+#ifndef _IS_WIN_
 #include <algorithm>
+#endif
 
 class CircularBuffer
 {

@@ -153,7 +153,8 @@ class _MyAppState extends State<MyApp> {
                     ElevatedButton(
                       onPressed: () {
                         try {
-                        _recorder.startRecording('/home/deimos/my_file.wav');
+                        // _recorder.startRecording('/home/deimos/my_file.wav');
+                        _recorder.startRecording('C:\\1\\my_file.wav');
                         } on Exception catch (e) {
                           debugPrint('-------------- startRecording() $e\n');
                         }
