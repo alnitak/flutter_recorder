@@ -48,9 +48,9 @@ double getElapsed(struct timespec since)
 #define BUFFER_SIZE 1024      // Buffer length
 #define MOVING_AVERAGE_SIZE 4 // Moving average window size
 float capturedBuffer[BUFFER_SIZE];
-std::atomic<bool> is_silent = true;    // Initial state
+std::atomic<bool> is_silent{true};    // Initial state
 bool delayed_silence_started = false;  // Whether the silence is delayed
-std::atomic<float> energy_db = -90.0f; // Current energy
+std::atomic<float> energy_db{-90.0f}; // Current energy
 
 /// the buffer used for capturing audio.
 std::unique_ptr<CircularBuffer> circularBuffer;
@@ -141,8 +141,8 @@ void detectSilence(Capture *userData)
                 {
                     ma_uint32 frameCount = (unsigned int)(circularBuffer.get()->size());
                     auto data = circularBuffer.get()->pop(frameCount);
-                    printf("WRITE secondsOfAudioToWriteBefore buffer size: %u  frames: %u  frame got: %u\n",
-                    circularBuffer.get()->size(), frameCount, data.size());
+                    // printf("WRITE secondsOfAudioToWriteBefore buffer size: %u  frames: %u  frame got: %u\n",
+                    //    circularBuffer.get()->size(), frameCount, data.size());
                     // The framCount in wav.write is one for all the channels.
                     userData->wav.write(data.data(), data.size() / userData->deviceConfig.capture.channels);
                 }
