@@ -8,10 +8,12 @@
 #include <cmath>
 #include <atomic>
 #include <time.h>
+#include "soloud_fft.h"
 
 #ifdef _IS_WIN_
 #define CLOCK_REALTIME 0
 // struct timespec { long long tv_sec; long tv_nsec; };    //header part
+// Windows is not POSIX compliant. Implement this.
 int clock_gettime(int, struct timespec *spec)      //C-file part
 {  __int64 wintime; GetSystemTimeAsFileTime((FILETIME*)&wintime);
    wintime      -=116444736000000000i64;  //1jan1601 to 1jan1970
@@ -55,7 +57,7 @@ std::atomic<float> energy_db{-90.0f}; // Current energy
 /// the buffer used for capturing audio.
 std::unique_ptr<CircularBuffer> circularBuffer;
 
-// to be used by `NativeCallable` since it will be called inside the audio thread,
+// To be used by `NativeCallable` since it will be called inside the audio thread,
 // these functions must return void.
 void (*dartSilenceChangedCallback)(bool *, float *) = nullptr;
 
@@ -164,12 +166,54 @@ void detectSilence(Capture *userData)
     }
 }
 
+// Define the frequency range for the human voice
+#define VOICE_MIN_FREQ 85.0    // Min frequecy (85 Hz)
+#define VOICE_MAX_FREQ 255.0   // Max frequenza (255 Hz)
+// Function to filter non-human frequencies in the frequency domain
+void filter_voice_frequencies(float* freq_buffer, int buffer_size, int sample_rate) {
+    // Calculate the frequency resolution (bin size)
+    float freq_resolution = (float)sample_rate / buffer_size;
+
+    for (int i = 0; i < buffer_size>>1; i++) {
+        // Calculate the frequency corresponding to the index [i]
+        float freq = (i << 1) * freq_resolution;
+        float real = freq_buffer[i * 2];
+        float imag = freq_buffer[i * 2 + 1];
+        float mag = sqrtf(real * real + imag * imag);
+
+        // Apply bandpass filter: cancels out frequencies outside the voice range
+        if (freq < VOICE_MIN_FREQ || freq > VOICE_MAX_FREQ) {
+        // if (i < 0 || i > 25 || mag < 0.01f) {
+            // freq_buffer[i] = 0.0f;  // Sopprimi frequenze fuori dal range della voce
+            freq_buffer[i*2] = 0.0f;  // Sopprimi frequenze fuori dal range della voce
+            freq_buffer[i*2 + 1] = 0.0f;  // Sopprimi frequenze fuori dal range della voce
+        //     printf("Filtered id: %d frequency: %f Hz  mag: %f\n", i, freq, mag);
+        }
+    }
+}
+
+void remove_noise_with_fft(float* audio_buffer) {
+    // Esegui la FFT sul buffer audio
+    FFT::fft(audio_buffer, BUFFER_SIZE);  // Sovrascrive il buffer con il risultato FFT
+
+    // Filtra le frequenze non corrispondenti alla voce umana
+    filter_voice_frequencies(audio_buffer, BUFFER_SIZE, 44100);
+
+    // Esegui la IFFT per tornare al dominio del tempo
+    FFT::ifft(audio_buffer, BUFFER_SIZE);  // Sovrascrive il buffer con il risultato IFFT
+}
+
 void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
 {
     // Process the captured audio data as needed.
     float *captured = (float *)(pInput); // Assuming float format
     // Do something with the captured audio data...
     memcpy(capturedBuffer, captured, sizeof(float) * BUFFER_SIZE);
+
+    /// Noise reduction
+    remove_noise_with_fft(captured);
+    
+    
 
     Capture *userData = (Capture *)pDevice->pUserData;
     calculateEnergy(captured, frameCount);
@@ -382,14 +426,14 @@ void Capture::stopRecording()
 float waveData[256];
 float *Capture::getWave()
 {
-    int n = BUFFER_SIZE >> 8;
+    // int n = BUFFER_SIZE >> 8;
     for (int i = 0; i < 256; i++)
     {
-        waveData[i] = (capturedBuffer[i * n] +
-                       capturedBuffer[i * n + 1] +
-                       capturedBuffer[i * n + 2] +
-                       capturedBuffer[i * n + 3]) /
-                      n;
+        waveData[i] = (capturedBuffer[i * 4] +
+                       capturedBuffer[i * 4 + 1] +
+                       capturedBuffer[i * 4 + 2] +
+                       capturedBuffer[i * 4 + 3]) /
+                      4;
     }
     return waveData;
 }
