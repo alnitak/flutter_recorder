@@ -1,4 +1,4 @@
-import 'package:flutter_recorder/flutter_recorder_bindings_generated.dart';
+import 'package:flutter_recorder/src/bindings/flutter_recorder_bindings_generated.dart';
 
 part 'exceptions_from_cpp.dart';
 

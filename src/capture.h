@@ -22,8 +22,6 @@ public:
     Capture();
     ~Capture();
 
-    void setDartEventCallback(dartSilenceChangedCallback_t dartSilenceChangedCallback);
-
     /// stores a list of available capture devices
     /// detected by miniaudio
     std::vector<CaptureDevice> listCaptureDevices();

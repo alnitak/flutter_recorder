@@ -1,4 +1,3 @@
-#include "common.h"
 #include "capture.h"
 #include "circular_buffer.h"
 
@@ -57,10 +56,6 @@ std::atomic<float> energy_db{-90.0f}; // Current energy
 /// the buffer used for capturing audio.
 std::unique_ptr<CircularBuffer> circularBuffer;
 
-// To be used by `NativeCallable` since it will be called inside the audio thread,
-// these functions must return void.
-void (*dartSilenceChangedCallback)(bool *, float *) = nullptr;
-
 // Function to convert energy to decibels
 float energy_to_db(float energy)
 {
@@ -118,10 +113,10 @@ void detectSilence(Capture *userData)
                 if (circularBuffer && circularBuffer.get()->size() > BUFFER_SIZE)
                     circularBuffer.get()->pop(circularBuffer.get()->size());
                 delayed_silence_started = true;
-                if (dartSilenceChangedCallback != nullptr)
+                if (nativeSilenceChangedCallback != nullptr)
                 {
                     float energy_value = energy_db.load();
-                    dartSilenceChangedCallback(&delayed_silence_started, &energy_value);
+                    nativeSilenceChangedCallback(&delayed_silence_started, &energy_value);
                 }
             }
         }
@@ -148,10 +143,10 @@ void detectSilence(Capture *userData)
                     // The framCount in wav.write is one for all the channels.
                     userData->wav.write(data.data(), data.size() / userData->deviceConfig.capture.channels);
                 }
-                if (dartSilenceChangedCallback != nullptr)
+                if (nativeSilenceChangedCallback != nullptr)
                 {
                     float energy_value = energy_db.load();
-                    dartSilenceChangedCallback(&delayed_silence_started, &energy_value);
+                    nativeSilenceChangedCallback(&delayed_silence_started, &energy_value);
                 }
             }
 
@@ -177,9 +172,9 @@ void filter_voice_frequencies(float* freq_buffer, int buffer_size, int sample_ra
     for (int i = 0; i < buffer_size>>1; i++) {
         // Calculate the frequency corresponding to the index [i]
         float freq = (i << 1) * freq_resolution;
-        float real = freq_buffer[i * 2];
-        float imag = freq_buffer[i * 2 + 1];
-        float mag = sqrtf(real * real + imag * imag);
+        // float real = freq_buffer[i * 2];
+        // float imag = freq_buffer[i * 2 + 1];
+        // float mag = sqrtf(real * real + imag * imag);
 
         // Apply bandpass filter: cancels out frequencies outside the voice range
         if (freq < VOICE_MIN_FREQ || freq > VOICE_MAX_FREQ) {
@@ -257,10 +252,6 @@ Capture::~Capture()
     dispose();
 }
 
-void Capture::setDartEventCallback(dartSilenceChangedCallback_t callback)
-{
-    dartSilenceChangedCallback = callback;
-}
 std::vector<CaptureDevice> Capture::listCaptureDevices()
 {
     // printf("***************** LIST DEVICES START\n");
