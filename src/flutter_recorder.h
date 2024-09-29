@@ -11,6 +11,8 @@ extern "C"
 {
 #endif
 
+    FFI_PLUGIN_EXPORT void createWorkerInWasm();
+
     FFI_PLUGIN_EXPORT void setDartEventCallback(
         dartSilenceChangedCallback_t silence_changed_callback);
 

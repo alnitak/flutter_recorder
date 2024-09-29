@@ -51,7 +51,7 @@ double getElapsed(struct timespec since)
 float capturedBuffer[BUFFER_SIZE];
 std::atomic<bool> is_silent{true};    // Initial state
 bool delayed_silence_started = false;  // Whether the silence is delayed
-std::atomic<float> energy_db{-90.0f}; // Current energy
+std::atomic<float> energy_db{-100.0f}; // Current energy
 
 /// the buffer used for capturing audio.
 std::unique_ptr<CircularBuffer> circularBuffer;

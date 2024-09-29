@@ -44,9 +44,9 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
       setState(() {
         _buildBmpImage();
 
-        /// 60 = scale to minimum decibel
+        /// 100 = scale to minimum decibel
         db = Recorder.instance.getVolumeDb();
-        vuMeter = (db.abs() / 60.0).clamp(0, 1);
+        vuMeter = (db.abs() / 100.0).clamp(0, 1);
         // print('db: $db, vuMeter: $vuMeter');
       });
     }

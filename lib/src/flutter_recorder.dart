@@ -1,13 +1,9 @@
 // ignore_for_file: omit_local_variable_types, avoid_positional_boolean_parameters
 
-import 'dart:async';
-import 'dart:ffi' as ffi;
-import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_recorder/src/bindings/flutter_recorder_bindings_generated.dart';
+import 'package:flutter_recorder/src/bindings/recorder.dart';
 import 'package:flutter_recorder/src/enums.dart';
 import 'package:flutter_recorder/src/exceptions/exceptions.dart';
 
@@ -18,7 +14,7 @@ typedef SilenceCallback = void Function(bool isSilent, double decibel);
 typedef SilenceState = ({bool isSilent, double decibel});
 
 /// Use this class to _capture_ audio (such as from a microphone).
-abstract class Recorder {
+interface class Recorder {
   /// The private constructor of [Recorder]. This prevents developers from
   /// instantiating new instances.
   Recorder._();
@@ -65,47 +61,11 @@ abstract class Recorder {
   /// ```
   static final Recorder instance = Recorder._();
 
-  SilenceCallback? _silenceCallback;
+  final _recoreder = RecorderController();
 
-  /// Controller to listen to silence changed event.
-  late final StreamController<SilenceState> silenceChangedEventController =
-      StreamController.broadcast();
-
-  /// Listener for silence changed.
+  /// Listening to silence state changes.
   Stream<SilenceState> get silenceChangedEvents =>
-      silenceChangedEventController.stream;
-
-  static const String _libName = 'flutter_recorder';
-
-  /// The dynamic library in which the symbols for [FlutterRecorderBindings]
-  /// can be found.
-  static final ffi.DynamicLibrary _dylib = () {
-    if (Platform.isMacOS || Platform.isIOS) {
-      return ffi.DynamicLibrary.open('$_libName.framework/$_libName');
-    }
-    if (Platform.isAndroid || Platform.isLinux) {
-      return ffi.DynamicLibrary.open('lib$_libName.so');
-    }
-    if (Platform.isWindows) {
-      return ffi.DynamicLibrary.open('$_libName.dll');
-    }
-    throw UnsupportedError('Unknown platform: ${Platform.operatingSystem}');
-  }();
-
-  /// The bindings to the native functions in [_dylib].
-  final FlutterRecorderBindings _bindings = FlutterRecorderBindings(_dylib);
-
-  void _silenceChangedCallback(
-    ffi.Pointer<ffi.Bool> silence,
-    ffi.Pointer<ffi.Float> db,
-  ) {
-    // voiceEndedEventController.add(handle.value);
-    // print('SILENCE CHANGED: ${silence.value}, ${db.value}');
-    _silenceCallback?.call(silence.value, db.value);
-    silenceChangedEventController.add(
-      (isSilent: silence.value, decibel: db.value),
-    );
-  }
+      _recoreder.impl.silenceChangedEvents;
 
   /// Enable or disable silence detection.
   ///
@@ -115,21 +75,10 @@ abstract class Recorder {
     required bool enable,
     SilenceCallback? onSilenceChanged,
   }) {
-    final nativeSilenceChangedCallable =
-        ffi.NativeCallable<dartSilenceChangedCallback_tFunction>.listener(
-      _silenceChangedCallback,
+    _recoreder.impl.setSilenceDetection(
+      enable: enable,
+      onSilenceChanged: onSilenceChanged,
     );
-
-    _bindings
-      ..setDartEventCallback(nativeSilenceChangedCallable.nativeFunction)
-      ..setSilenceDetection(enable);
-
-    if (onSilenceChanged != null) {
-      _silenceCallback = onSilenceChanged;
-    }
-    if (!enable) {
-      _silenceCallback = null;
-    }
   }
 
   /// Set silence threshold in dB.
@@ -146,8 +95,7 @@ abstract class Recorder {
   /// - Negative dB values indicate that the signal's energy is lower compared
   /// to this maximum.
   void setSilenceThresholdDb(double silenceThresholdDb) {
-    assert(silenceThresholdDb < 0, 'silenceThresholdDb must be < 0');
-    _bindings.setSilenceThresholdDb(silenceThresholdDb);
+    _recoreder.impl.setSilenceThresholdDb(silenceThresholdDb);
   }
 
   /// Set silence duration in seconds.
@@ -156,8 +104,7 @@ abstract class Recorder {
   /// remains silent for this duration, the callback will be triggered. Default
   /// to 2 seconds.
   void setSilenceDuration(double silenceDuration) {
-    assert(silenceDuration >= 0, 'silenceDuration must be >= 0');
-    _bindings.setSilenceDuration(silenceDuration);
+    _recoreder.impl.setSilenceDuration(silenceDuration);
   }
 
   /// Set seconds of audio to write before starting recording again after
@@ -171,60 +118,15 @@ abstract class Recorder {
   ///             ^ secondsOfAudioToWriteBefore (write some before silence ends)
   /// ```
   void setSecondsOfAudioToWriteBefore(double secondsOfAudioToWriteBefore) {
-    assert(
-      secondsOfAudioToWriteBefore >= 0,
-      'secondsOfAudioToWriteBefore must be >= 0',
-    );
-    _bindings.setSecondsOfAudioToWriteBefore(secondsOfAudioToWriteBefore);
+    _recoreder.impl.setSecondsOfAudioToWriteBefore(secondsOfAudioToWriteBefore);
   }
 
   /// List available input devices. Useful on desktop to choose
   /// which input device to use.
   List<CaptureDevice> listCaptureDevices() {
     final ret = <CaptureDevice>[];
-    final ffi.Pointer<ffi.Pointer<ffi.Char>> deviceNames =
-        calloc(ffi.sizeOf<ffi.Pointer<ffi.Pointer<ffi.Char>>>() * 255);
-    final ffi.Pointer<ffi.Pointer<ffi.Int>> deviceIds =
-        calloc(ffi.sizeOf<ffi.Pointer<ffi.Pointer<ffi.Int>>>() * 50);
-    final ffi.Pointer<ffi.Pointer<ffi.Int>> deviceIsDefault =
-        calloc(ffi.sizeOf<ffi.Pointer<ffi.Pointer<ffi.Int>>>() * 50);
-    final ffi.Pointer<ffi.Int> nDevices = calloc();
+    _recoreder.impl.listCaptureDevices();
 
-    _bindings.listCaptureDevices(
-      deviceNames,
-      deviceIds,
-      deviceIsDefault,
-      nDevices,
-    );
-
-    final ndev = nDevices.value;
-    for (var i = 0; i < ndev; i++) {
-      final s1 = (deviceNames + i).value;
-      final s = s1.cast<Utf8>().toDartString();
-      final id1 = (deviceIds + i).value;
-      final id = id1.value;
-      final n1 = (deviceIsDefault + i).value;
-      final n = n1.value;
-      ret.add(CaptureDevice(s, n == 1, id));
-    }
-
-    /// Free allocated memory done in C.
-    /// This work on all platforms but not on win.
-    // for (int i = 0; i < ndev; i++) {
-    //   calloc.free(devices.elementAt(i).value.ref.name);
-    //   calloc.free(devices.elementAt(i).value);
-    // }
-    _bindings.freeListCaptureDevices(
-      deviceNames,
-      deviceIds,
-      deviceIsDefault,
-      ndev,
-    );
-
-    calloc
-      ..free(deviceNames)
-      ..free(deviceIds)
-      ..free(nDevices);
     return ret;
   }
 
@@ -233,26 +135,23 @@ abstract class Recorder {
   /// Thows [RecorderInitializeFailedException] if something goes wrong, ie. no
   /// device found with [deviceID] id.
   void init({int deviceID = -1}) {
-    final error = _bindings.init(deviceID);
-    if (error != CaptureErrors.captureNoError) {
-      throw RecorderCppException.fromPlayerError(error);
-    }
+    _recoreder.impl.init(deviceID: deviceID);
+    _recoreder.impl.setDartEventCallbacks();
   }
 
   /// Dispose capture device.
   void deinit() {
-    _silenceCallback = null;
-    _bindings.deinit();
+    _recoreder.impl.deinit();
   }
 
   /// Whether the device is initialized.
   bool isDeviceInitialized() {
-    return _bindings.isInited() == 1;
+    return _recoreder.impl.isDeviceInitialized();
   }
 
   /// Whether listen to the device is started.
   bool isDeviceStartedListen() {
-    return _bindings.isDeviceStartedListen() == 1;
+    return _recoreder.impl.isDeviceStartedListen();
   }
 
   /// Start listening to the device.
@@ -260,15 +159,12 @@ abstract class Recorder {
   /// Throws [RecorderCaptureNotInitializedException].
   /// Throws [RecorderFailedToStartDeviceException].
   void startListen() {
-    final error = _bindings.startListen();
-    if (error != CaptureErrors.captureNoError) {
-      throw RecorderCppException.fromPlayerError(error);
-    }
+    _recoreder.impl.startListen();
   }
 
   /// Stop listening to the device.
   void stopListen() {
-    _bindings.stopListen();
+    _recoreder.impl.stopListen();
   }
 
   /// Start recording.
@@ -276,20 +172,17 @@ abstract class Recorder {
   /// Throws [RecorderCaptureNotInitializedException].
   /// Throws [RecorderFailedToInitializeRecordingException].
   void startRecording(String path) {
-    final error = _bindings.startRecording(path.toNativeUtf8().cast());
-    if (error != CaptureErrors.captureNoError) {
-      throw RecorderCppException.fromPlayerError(error);
-    }
+    _recoreder.impl.startRecording(path);
   }
 
   /// Pause recording.
   void setPauseRecording({required bool pause}) {
-    _bindings.setPauseRecording(pause);
+    _recoreder.impl.setPauseRecording(pause: pause);
   }
 
   /// Stop recording.
   void stopRecording() {
-    _bindings.stopRecording();
+    _recoreder.impl.stopRecording();
   }
 
   /// Smooth FFT data.
@@ -303,57 +196,28 @@ abstract class Recorder {
   /// the new value is calculated with:
   /// newFreq = smooth * oldFreq + (1 - smooth) * newFreq
   void setFftSmoothing(double smooth) {
-    _bindings.setFftSmoothing(smooth);
+    _recoreder.impl.setFftSmoothing(smooth);
   }
 
   /// Return a 256 float array containing FFT data in the range [-1.0, 1.0]
   /// not clamped.
   Float32List getFft() {
-    final ffi.Pointer<ffi.Pointer<ffi.Float>> fft = calloc(256 * 4);
-    _bindings.getFft(fft);
-
-    final val = ffi.Pointer<ffi.Float>.fromAddress(fft.value.address);
-    if (val == ffi.nullptr) return Float32List(256);
-
-    final fftList = val.cast<ffi.Float>().asTypedList(256);
-    calloc.free(fft);
-    return fftList;
+    return _recoreder.impl.getFft();
   }
 
   /// Return a 256 float array containing wave data in the range [-1.0, 1.0].
   Float32List getWave() {
-    final ffi.Pointer<ffi.Pointer<ffi.Float>> wave = calloc(256 * 4);
-    _bindings.getWave(wave);
-
-    final val = ffi.Pointer<ffi.Float>.fromAddress(wave.value.address);
-    if (val == ffi.nullptr) return Float32List(256);
-
-    final waveList = val.cast<ffi.Float>().asTypedList(256);
-    calloc.free(wave);
-    return waveList;
+    return _recoreder.impl.getWave();
   }
 
   /// Get the audio data representing an array of 256 floats FFT data and
   /// 256 float of wave data.
   Float32List getTexture2D() {
-    final ffi.Pointer<ffi.Pointer<ffi.Float>> data = calloc(512 * 256 * 4);
-    _bindings.getTexture2D(data);
-
-    final val = ffi.Pointer<ffi.Float>.fromAddress(data.value.address);
-    if (val == ffi.nullptr) return Float32List(512 * 256);
-
-    calloc.free(data);
-    final textureList = val.cast<ffi.Float>().asTypedList(512 * 256);
-
-    return textureList;
+    return _recoreder.impl.getTexture2D();
   }
 
-  /// Get the current volume in dB. Returns -90 if the capture is not inited.
+  /// Get the current volume in dB. Returns -100 if the capture is not inited.
   double getVolumeDb() {
-    final ffi.Pointer<ffi.Float> volume = calloc(4);
-    _bindings.getVolumeDb(volume);
-    final v = volume.value;
-    calloc.free(volume);
-    return v;
+    return _recoreder.impl.getVolumeDb();
   }
 }

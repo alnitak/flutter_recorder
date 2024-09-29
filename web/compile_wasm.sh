@@ -12,10 +12,10 @@ cd build
 em++ \
 -I ../../src/fft \
 -I ../../src \
-../../src/fft/soloud_fft.cpp \
-../../src/analyzer.cpp \
-../../src/capture.cpp \
 ../../src/flutter_recorder.cpp \
+../../src/capture.cpp \
+../../src/analyzer.cpp \
+../../src/fft/soloud_fft.cpp \
 -O3 \
 -msimd128 -msse3 \
 -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap']" \

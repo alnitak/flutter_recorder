@@ -144,6 +144,11 @@ class _MyAppState extends State<MyApp> {
                         _recorder.setSilenceThresholdDb(-27);
                         _recorder.setSilenceDuration(0.1);
                         _recorder.setSecondsOfAudioToWriteBefore(0.0);
+                        setState(() {
+                          thresholdDb = -27;
+                          silenceDuration = 0.1;
+                          secondsOfAudioToWriteBefore = 0;
+                        });
                       },
                       child: const Text('setSilenceDetection ON -27 0.1'),
                     ),
@@ -213,7 +218,7 @@ class _MyAppState extends State<MyApp> {
                         Expanded(
                           child: Slider(
                             value: thresholdDb,
-                            min: -60,
+                            min: -100,
                             max: 0,
                             label: thresholdDb.toStringAsFixed(1),
                             onChanged: (value) {

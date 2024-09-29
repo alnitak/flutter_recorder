@@ -29,15 +29,13 @@ dartSilenceChangedCallback_t nativeSilenceChangedCallback;
     /// Create the web worker and store a global "Module.workerUri" in JS.
     FFI_PLUGIN_EXPORT void createWorkerInWasm()
     {
-        printf("CPP void createWorkerInWasm()\n");
-
         EM_ASM({
             if (!Module.wasmWorker)
             {
                 // Create a new Worker from the URI
-                var workerUri = "assets/packages/flutter_soloud/web/worker.dart.js";
-                console.log("EM_ASM creating web worker!");
+                var workerUri = "assets/packages/flutter_recorder/web/worker.dart.js";
                 Module.wasmWorker = new Worker(workerUri);
+                console.log("EM_ASM creating web worker! " + workerUri + "  " + Module.wasmWorker);
             }
             else
             {
@@ -52,8 +50,8 @@ dartSilenceChangedCallback_t nativeSilenceChangedCallback;
         EM_ASM({
             if (Module.wasmWorker)
             {
-                console.log("EM_ASM posting message " + UTF8ToString($0) + 
-                    " with isSilent " + $1 + "  and energyDb " + $2);
+                // console.log("EM_ASM posting message \"" + UTF8ToString($0) + 
+                //     "\" with isSilent=" + $1 + "  and energyDb=" + $2);
                 // Send the message
                 Module.wasmWorker.postMessage(JSON.stringify({
                     "message" : UTF8ToString($0),
@@ -77,16 +75,14 @@ void silenceChangedCallback(bool *isSilent, float *energyDb)
     // emscripten_run_script("voiceEndedCallbackJS('1234')");
     sendToWorker("silenceChangedCallback", *isSilent, *energyDb);
 #endif
-    if (dartSilenceChangedCallback != nullptr) {
+    if (dartSilenceChangedCallback != nullptr)
         dartSilenceChangedCallback(isSilent, energyDb);
-    }
 }
+
 /// Set a Dart functions to call when an event occurs.
 FFI_PLUGIN_EXPORT void setDartEventCallback(
     dartSilenceChangedCallback_t silence_changed_callback)
 {
-    // dartSilenceChangedCallback = silence_changed_callback;
-    // nativeSilenceChangedCallback = silenceChangedCallback;
     dartSilenceChangedCallback = silence_changed_callback;
     nativeSilenceChangedCallback = silenceChangedCallback;
 }

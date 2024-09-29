@@ -3,9 +3,11 @@ name: FlutterRecorderBindings
 description: |
   Bindings for `src/flutter_recorder.h`.
 
-  Regenerate bindings with `dart run ffigen --config ffigen.yaml`.
-  export CPATH="$(clang -v 2>&1 | grep "Selected GCC installation" | rev | cut -d' ' -f1 | rev)/include";  dart run ffigen --config ffigen.yaml
-output: 'lib/bindings/flutter_recorder_bindings_generated.dart'
+  Regenerate bindings with
+  `dart run ffigen --config ffigen.yaml`
+  or
+  `export CPATH="$(clang -v 2>&1 | grep "Selected GCC installation" | rev | cut -d' ' -f1 | rev)/include";  dart run ffigen --config ffigen.yaml`
+output: 'lib/src/bindings/flutter_recorder_bindings_generated.dart'
 headers:
   entry-points:
     - 'src/flutter_recorder.h'
