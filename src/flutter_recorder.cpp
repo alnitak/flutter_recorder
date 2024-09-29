@@ -11,14 +11,80 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten/emscripten.h>
+#endif
+
 Capture capture;
 std::unique_ptr<Analyzer> analyzerCapture = std::make_unique<Analyzer>(256);
+
+
+dartSilenceChangedCallback_t dartSilenceChangedCallback;
+dartSilenceChangedCallback_t nativeSilenceChangedCallback;
+
+    //////////////////////////////////////////////////////////////
+    /// WEB WORKER
+
+#ifdef __EMSCRIPTEN__
+    /// Create the web worker and store a global "Module.workerUri" in JS.
+    FFI_PLUGIN_EXPORT void createWorkerInWasm()
+    {
+        EM_ASM({
+            if (!Module.wasmWorker)
+            {
+                // Create a new Worker from the URI
+                var workerUri = "assets/packages/flutter_recorder/web/worker.dart.js";
+                Module.wasmWorker = new Worker(workerUri);
+                console.log("EM_ASM creating web worker! " + workerUri + "  " + Module.wasmWorker);
+            }
+            else
+            {
+                console.log("EM_ASM web worker already created!");
+            }
+        });
+    }
+
+    /// Post a message with the web worker.
+    FFI_PLUGIN_EXPORT void sendToWorker(const char *message, bool isSilent, float energyDb)
+    {
+        EM_ASM({
+            if (Module.wasmWorker)
+            {
+                // console.log("EM_ASM posting message \"" + UTF8ToString($0) + 
+                //     "\" with isSilent=" + $1 + "  and energyDb=" + $2);
+                // Send the message
+                Module.wasmWorker.postMessage(JSON.stringify({
+                    "message" : UTF8ToString($0),
+                    "isSilent" : $1,
+                    "energyDb" : $2,
+                }));
+            }
+            else
+            {
+                console.error('Worker not found.');
+            } }, message, isSilent, energyDb);
+    }
+#endif
+
+
+void silenceChangedCallback(bool *isSilent, float *energyDb)
+{
+#ifdef __EMSCRIPTEN__
+    // Calling JavaScript from C/C++
+    // https://emscripten.org/docs/porting/connecting_cpp_and_javascript/Interacting-with-code.html#interacting-with-code-call-javascript-from-native
+    // emscripten_run_script("voiceEndedCallbackJS('1234')");
+    sendToWorker("silenceChangedCallback", *isSilent, *energyDb);
+#endif
+    if (dartSilenceChangedCallback != nullptr)
+        dartSilenceChangedCallback(isSilent, energyDb);
+}
 
 /// Set a Dart functions to call when an event occurs.
 FFI_PLUGIN_EXPORT void setDartEventCallback(
     dartSilenceChangedCallback_t silence_changed_callback)
 {
-    capture.setDartEventCallback(silence_changed_callback);
+    dartSilenceChangedCallback = silence_changed_callback;
+    nativeSilenceChangedCallback = silenceChangedCallback;
 }
 
 FFI_PLUGIN_EXPORT void nativeFree(void *pointer)

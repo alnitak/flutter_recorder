@@ -71,7 +71,7 @@ class _MyAppState extends State<MyApp> {
                     OutlinedButton(
                       onPressed: () {
                         try {
-                        _recorder.init();
+                          _recorder.init();
                         } on Exception catch (e) {
                           debugPrint('-------------- init() $e\n');
                         }
@@ -95,7 +95,7 @@ class _MyAppState extends State<MyApp> {
                     OutlinedButton(
                       onPressed: () {
                         try {
-                        _recorder.startListen();
+                          _recorder.startListen();
                         } on Exception catch (e) {
                           debugPrint('-------------- startListen() $e\n');
                         }
@@ -135,12 +135,20 @@ class _MyAppState extends State<MyApp> {
                     ),
                     OutlinedButton(
                       onPressed: () {
-                        _recorder.setSilenceDetection(enable: true,onSilenceChanged: (isSilent, decibel) {
-                                  // print('SILENCE CHANGED: $isSilent, $decibel');
-                                },);
+                        _recorder.setSilenceDetection(
+                          enable: true,
+                          onSilenceChanged: (isSilent, decibel) {
+                            // print('SILENCE CHANGED: $isSilent, $decibel');
+                          },
+                        );
                         _recorder.setSilenceThresholdDb(-27);
                         _recorder.setSilenceDuration(0.1);
                         _recorder.setSecondsOfAudioToWriteBefore(0.0);
+                        setState(() {
+                          thresholdDb = -27;
+                          silenceDuration = 0.1;
+                          secondsOfAudioToWriteBefore = 0;
+                        });
                       },
                       child: const Text('setSilenceDetection ON -27 0.1'),
                     ),
@@ -153,8 +161,8 @@ class _MyAppState extends State<MyApp> {
                     ElevatedButton(
                       onPressed: () {
                         try {
-                        _recorder.startRecording('/home/deimos/my_file.wav');
-                        // _recorder.startRecording('C:\\1\\my_file.wav');
+                          _recorder.startRecording('/home/deimos/my_file.wav');
+                          // _recorder.startRecording('C:\\1\\my_file.wav');
                         } on Exception catch (e) {
                           debugPrint('-------------- startRecording() $e\n');
                         }
@@ -210,7 +218,7 @@ class _MyAppState extends State<MyApp> {
                         Expanded(
                           child: Slider(
                             value: thresholdDb,
-                            min: -60,
+                            min: -100,
                             max: 0,
                             label: thresholdDb.toStringAsFixed(1),
                             onChanged: (value) {
@@ -223,13 +231,13 @@ class _MyAppState extends State<MyApp> {
                         ),
                       ],
                     ),
-                    
+
                     // Silence duration slider
                     Row(
                       mainAxisSize: MainAxisSize.max,
                       children: [
                         Text('Silence duration: '
-                        '${silenceDuration.toStringAsFixed(1)}'),
+                            '${silenceDuration.toStringAsFixed(1)}'),
                         Expanded(
                           child: Slider(
                             value: silenceDuration,
@@ -246,13 +254,13 @@ class _MyAppState extends State<MyApp> {
                         ),
                       ],
                     ),
-                    
+
                     // Silence duration slider
                     Row(
                       mainAxisSize: MainAxisSize.max,
                       children: [
                         Text('write before: '
-                        '${secondsOfAudioToWriteBefore.toStringAsFixed(1)}'),
+                            '${secondsOfAudioToWriteBefore.toStringAsFixed(1)}'),
                         Expanded(
                           child: Slider(
                             value: secondsOfAudioToWriteBefore,

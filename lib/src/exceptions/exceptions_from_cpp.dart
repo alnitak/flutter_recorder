@@ -11,8 +11,8 @@ class RecorderInitializeFailedException extends RecorderCppException {
   const RecorderInitializeFailedException([super.message]);
 
   @override
-  String get description => 'An error occurred while initializing recorder '
-      '(on the C++ side).';
+  String get description => 'An error occurred while initializing recorder. '
+      'Maybe it is already inited? (on the C++ side).';
 }
 
 /// An exception that is thrown when calling some methods while the recorder is

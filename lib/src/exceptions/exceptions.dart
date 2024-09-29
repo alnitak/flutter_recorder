@@ -1,4 +1,4 @@
-import 'package:flutter_recorder/flutter_recorder_bindings_generated.dart';
+import 'package:flutter_recorder/src/enums.dart';
 
 part 'exceptions_from_cpp.dart';
 
@@ -48,7 +48,7 @@ abstract class RecorderCppException extends RecorderException {
   ///
   /// If [error] is [CaptureErrors.captureNoError], this constructor throws
   /// an [ArgumentError].
-  factory RecorderCppException.fromPlayerError(CaptureErrors error) {
+  factory RecorderCppException.fromRecorderError(CaptureErrors error) {
     switch (error) {
       case CaptureErrors.captureNoError:
         throw ArgumentError(

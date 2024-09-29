@@ -8,10 +8,14 @@
 // ignore_for_file: type=lint
 import 'dart:ffi' as ffi;
 
+import 'package:flutter_recorder/src/enums.dart';
+
 /// Bindings for `src/flutter_recorder.h`.
 ///
-/// Regenerate bindings with `dart run ffigen --config ffigen.yaml`.
-/// export CPATH="$(clang -v 2>&1 | grep "Selected GCC installation" | rev | cut -d' ' -f1 | rev)/include";  dart run ffigen --config ffigen.yaml
+/// Regenerate bindings with
+/// `dart run ffigen --config ffigen.yaml`
+/// or
+/// `export CPATH="$(clang -v 2>&1 | grep "Selected GCC installation" | rev | cut -d' ' -f1 | rev)/include";  dart run ffigen --config ffigen.yaml`
 ///
 class FlutterRecorderBindings {
   /// Holds the symbol lookup function.
@@ -27,6 +31,15 @@ class FlutterRecorderBindings {
       ffi.Pointer<T> Function<T extends ffi.NativeType>(String symbolName)
           lookup)
       : _lookup = lookup;
+
+  void createWorkerInWasm() {
+    return _createWorkerInWasm();
+  }
+
+  late final _createWorkerInWasmPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function()>>('createWorkerInWasm');
+  late final _createWorkerInWasm =
+      _createWorkerInWasmPtr.asFunction<void Function()>();
 
   void setDartEventCallback(
     dartSilenceChangedCallback_t silence_changed_callback,
@@ -365,41 +378,3 @@ typedef dartSilenceChangedCallback_tFunction = ffi.Void Function(
     ffi.Pointer<ffi.Bool>, ffi.Pointer<ffi.Float>);
 typedef DartdartSilenceChangedCallback_tFunction = void Function(
     ffi.Pointer<ffi.Bool>, ffi.Pointer<ffi.Float>);
-
-/// Possible capture errors
-enum CaptureErrors {
-  /// No error
-  captureNoError(0),
-
-  /// The capture device has failed to initialize.
-  captureInitFailed(1),
-
-  /// The capture device has not yet been initialized.
-  captureNotInited(2),
-
-  /// Failed to start the device.
-  failedToStartDevice(3),
-
-  /// Failed to initialize wav recording.
-  failedToInitializeRecording(4),
-
-  /// Invalid arguments while initializing wav recording.
-  invalidArgs(5),
-
-  /// Failed to write wav file.
-  failedToWriteWav(6);
-
-  final int value;
-  const CaptureErrors(this.value);
-
-  static CaptureErrors fromValue(int value) => switch (value) {
-        0 => captureNoError,
-        1 => captureInitFailed,
-        2 => captureNotInited,
-        3 => failedToStartDevice,
-        4 => failedToInitializeRecording,
-        5 => invalidArgs,
-        6 => failedToWriteWav,
-        _ => throw ArgumentError("Unknown value for CaptureErrors: $value"),
-      };
-}

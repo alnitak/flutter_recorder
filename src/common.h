@@ -44,5 +44,11 @@
 
 typedef void (*dartSilenceChangedCallback_t)(bool *, float *);
 
+// To be used by `NativeCallable` since it will be called inside the audio thread,
+// these functions must return void.
+extern void (*dartSilenceChangedCallback)(bool *, float *);
+
+// Native functions can be called from any thread. It will eventually call `dartSilenceChangedCallback`.
+extern void (*nativeSilenceChangedCallback)(bool *, float *);
 
 #endif // COMMON_H
