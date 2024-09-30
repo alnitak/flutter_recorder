@@ -121,6 +121,9 @@ external void wasmGetFft(int samplesPtr);
 @JS('Module._getWave')
 external void wasmGetWave(int samplesPtr);
 
+@JS('Module._getTexture')
+external void wasmGetTexture(int samplesPtr);
+
 @JS('Module._getTexture2D')
 external void wasmGetTexture2D(int samplesPtr);
 

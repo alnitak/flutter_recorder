@@ -100,12 +100,15 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
             children: [
               /// Texture audio data.
               if (bmpBytes != null)
-                SizedBox(
-                  width: 512,
-                  height: 256,
-                  child: Image.memory(
-                    bmpBytes!,
-                    gaplessPlayback: true,
+                ColoredBox(
+                  color: Colors.black,
+                  child: SizedBox(
+                    width: 512,
+                    height: 256,
+                    child: Image.memory(
+                      bmpBytes!,
+                      gaplessPlayback: true,
+                    ),
                   ),
                 ),
               const SizedBox(width: 6),
@@ -139,7 +142,7 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
       for (var x = 256; x < 512; x++) {
         final offset = y * 512 + x;
         b[offset * 4 + 0] = 0; // R
-        b[offset * 4 + 1] = (texture2D[offset] * 255).abs().floor(); // G
+        b[offset * 4 + 1] = (texture2D[offset] * texture2D[offset] * 255).abs().floor(); // G
         b[offset * 4 + 2] = 0; // B
         b[offset * 4 + 3] = 255; // A
       }

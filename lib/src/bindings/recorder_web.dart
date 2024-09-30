@@ -226,11 +226,12 @@ class RecorderWeb extends RecorderImpl {
 
   @override
   Float32List getFft() {
-    final samplesPtr = wasmMalloc(256 * 4);
+    final samplesPtr = wasmMalloc(4);
     wasmGetFft(samplesPtr);
+    final samplesPtr2 = wasmGetI32Value(samplesPtr, '*');
     final samples = Float32List(256);
     for (var i = 0; i < 256; i++) {
-      samples[i] = wasmGetF32Value(samplesPtr + i * 4, 'float');
+      samples[i] = wasmGetF32Value(samplesPtr2 + i * 4, 'float');
     }
     wasmFree(samplesPtr);
     return samples;
@@ -238,11 +239,12 @@ class RecorderWeb extends RecorderImpl {
 
   @override
   Float32List getWave() {
-    final samplesPtr = wasmMalloc(256 * 4);
+    final samplesPtr = wasmMalloc(4);
     wasmGetWave(samplesPtr);
+    final samplesPtr2 = wasmGetI32Value(samplesPtr, '*');
     final samples = Float32List(256);
     for (var i = 0; i < 256; i++) {
-      samples[i] = wasmGetF32Value(samplesPtr + i * 4, 'float');
+      samples[i] = wasmGetF32Value(samplesPtr2 + i * 4, 'float');
     }
     wasmFree(samplesPtr);
     return samples;
@@ -250,11 +252,12 @@ class RecorderWeb extends RecorderImpl {
 
   @override
   Float32List getTexture2D() {
-    final samplesPtr = wasmMalloc(512 * 256 * 4);
+    final samplesPtr = wasmMalloc(4);
     wasmGetTexture2D(samplesPtr);
+    final samplesPtr2 = wasmGetI32Value(samplesPtr, '*');
     final samples = Float32List(512 * 256);
     for (var i = 0; i < 512 * 256; i++) {
-      samples[i] = wasmGetF32Value(samplesPtr + i * 4, 'float');
+      samples[i] = wasmGetF32Value(samplesPtr2 + i * 4, 'float');
     }
     wasmFree(samplesPtr);
     return samples;

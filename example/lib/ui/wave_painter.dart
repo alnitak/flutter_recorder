@@ -10,8 +10,7 @@ class WavePainter extends CustomPainter {
     final waveData = Recorder.instance.getWave();
 
     final barWidth = size.width / 256;
-    final paint = Paint()
-      ..color = Colors.yellow;
+    final paint = Paint()..color = Colors.yellow;
 
     for (var i = 0; i < 256; i++) {
       late final double barHeight;

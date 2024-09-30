@@ -239,8 +239,6 @@ FFI_PLUGIN_EXPORT void setFftSmoothing(float smooth)
 /// Return a 256 float array containing FFT data.
 FFI_PLUGIN_EXPORT void getFft(float **fft)
 {
-    if (!capture.isInited())
-        return;
     float *wave = capture.getWave();
     *fft = analyzerCapture.get()->calcFFT(wave);
 }
@@ -248,8 +246,6 @@ FFI_PLUGIN_EXPORT void getFft(float **fft)
 /// Return a 256 float array containing wave data.
 FFI_PLUGIN_EXPORT void getWave(float **wave)
 {
-    if (!capture.isInited())
-        return;
     *wave = capture.getWave();
 }
 
@@ -280,6 +276,7 @@ FFI_PLUGIN_EXPORT void getTexture2D(float **samples)
     {
         *samples = *capturedTexture2D;
         memset(*samples, 0, sizeof(float) * 512 * 256);
+        printf("capturedTexture2D not inited\n");
         return;
     }
     /// shift up 1 row
@@ -292,27 +289,4 @@ FFI_PLUGIN_EXPORT void getTexture2D(float **samples)
 FFI_PLUGIN_EXPORT float getTextureValue(int row, int column)
 {
     return capturedTexture2D[row][column];
-}
-
-// A very short-lived native function.
-//
-// For very short-lived functions, it is fine to call them on the main isolate.
-// They will block the Dart execution while running the native function, so
-// only do this for native functions which are guaranteed to be short-lived.
-FFI_PLUGIN_EXPORT int sum(int a, int b) { return a + b; }
-
-// A longer-lived native function, which occupies the thread calling it.
-//
-// Do not call these kind of native functions in the main isolate. They will
-// block Dart execution. This will cause dropped frames in Flutter applications.
-// Instead, call these native functions on a separate isolate.
-FFI_PLUGIN_EXPORT int sum_long_running(int a, int b)
-{
-    // Simulate work.
-#if _WIN32
-    Sleep(5000);
-#else
-    usleep(5000 * 1000);
-#endif
-    return a + b;
 }

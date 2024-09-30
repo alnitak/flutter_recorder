@@ -239,13 +239,17 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
 // ////////////////////////
 // Capture Implementation
 // ////////////////////////
+float waveData[256];
 Capture::Capture() : isDetectingSilence(false),
                      silenceThresholdDb(-40.0f),
                      silenceDuration(2.0f),
                      secondsOfAudioToWriteBefore(0.0f),
                      isRecording(false),
                      isRecordingPaused(false),
-                     mInited(false) {};
+                     mInited(false)
+{
+    memset(waveData, 0, sizeof(float) * 256);
+};
 
 Capture::~Capture()
 {
@@ -414,7 +418,6 @@ void Capture::stopRecording()
     isRecording = false;
 }
 
-float waveData[256];
 float *Capture::getWave()
 {
     // int n = BUFFER_SIZE >> 8;
