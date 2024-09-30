@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -43,11 +44,9 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
     if (context.mounted) {
       setState(() {
         _buildBmpImage();
-
         /// 100 = scale to minimum decibel
         db = Recorder.instance.getVolumeDb();
         vuMeter = (db.abs() / 100.0).clamp(0, 1);
-        // print('db: $db, vuMeter: $vuMeter');
       });
     }
   }
@@ -142,7 +141,8 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
       for (var x = 256; x < 512; x++) {
         final offset = y * 512 + x;
         b[offset * 4 + 0] = 0; // R
-        b[offset * 4 + 1] = (texture2D[offset] * texture2D[offset] * 255).abs().floor(); // G
+        b[offset * 4 + 1] =
+            (texture2D[offset] * texture2D[offset] * 255).abs().floor(); // G
         b[offset * 4 + 2] = 0; // B
         b[offset * 4 + 3] = 255; // A
       }
