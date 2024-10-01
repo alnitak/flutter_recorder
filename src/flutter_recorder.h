@@ -50,6 +50,8 @@ extern "C"
 
     FFI_PLUGIN_EXPORT void setSecondsOfAudioToWriteBefore(float secondsOfAudioToWriteBefore);
 
+    FFI_PLUGIN_EXPORT void wasmAskFileName();
+
     FFI_PLUGIN_EXPORT enum CaptureErrors startRecording(const char *path);
 
     FFI_PLUGIN_EXPORT void setPauseRecording(bool pause);

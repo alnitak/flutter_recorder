@@ -234,6 +234,15 @@ class FlutterRecorderBindings {
   late final _setSecondsOfAudioToWriteBefore =
       _setSecondsOfAudioToWriteBeforePtr.asFunction<void Function(double)>();
 
+  void wasmAskFileName() {
+    return _wasmAskFileName();
+  }
+
+  late final _wasmAskFileNamePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function()>>('wasmAskFileName');
+  late final _wasmAskFileName =
+      _wasmAskFileNamePtr.asFunction<void Function()>();
+
   CaptureErrors startRecording(
     ffi.Pointer<ffi.Char> path,
   ) {
@@ -378,3 +387,4 @@ typedef dartSilenceChangedCallback_tFunction = ffi.Void Function(
     ffi.Pointer<ffi.Bool>, ffi.Pointer<ffi.Float>);
 typedef DartdartSilenceChangedCallback_tFunction = void Function(
     ffi.Pointer<ffi.Bool>, ffi.Pointer<ffi.Float>);
+

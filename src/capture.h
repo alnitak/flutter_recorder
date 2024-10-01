@@ -50,6 +50,8 @@ public:
     void setSilenceDuration(float silenceDuration);
     void setSecondsOfAudioToWriteBefore(float secondsOfAudioToWriteBefore);
 
+    void wasmAskFileName();
+
     CaptureErrors startRecording(const char *path);
 
     void setPauseRecording(bool pause);

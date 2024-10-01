@@ -167,6 +167,12 @@ interface class Recorder {
     _recoreder.impl.stopListen();
   }
 
+  /// Ask for file name to save recording only for web. After calling this
+  /// method, the file name is set and [startRecording] can be called.
+  void webAskFileName() {
+    _recoreder.impl.webAskFileName();
+  }
+
   /// Start recording.
   ///
   /// Throws [RecorderCaptureNotInitializedException].

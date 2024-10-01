@@ -389,6 +389,11 @@ void Capture::setSecondsOfAudioToWriteBefore(float secondsOfAudioToWriteBefore)
     circularBuffer = std::make_unique<CircularBuffer>(frameCount);
 }
 
+void Capture::wasmAskFileName()
+{
+    wav.wasmAskFileName();
+}
+
 CaptureErrors Capture::startRecording(const char *path)
 {
     if (!mInited)

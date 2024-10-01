@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -98,6 +97,8 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
             mainAxisSize: MainAxisSize.min,
             children: [
               /// Texture audio data.
+              /// NOTE: on web this will not display. Seems to be a bug with 
+              /// gapless playback.
               if (bmpBytes != null)
                 ColoredBox(
                   color: Colors.black,

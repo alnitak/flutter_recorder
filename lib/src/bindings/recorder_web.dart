@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_recorder/src/bindings/js_extension.dart';
 import 'package:flutter_recorder/src/bindings/recorder.dart';
 import 'package:flutter_recorder/src/enums.dart';
@@ -75,10 +76,6 @@ class RecorderWeb extends RecorderImpl {
     );
   }
 
-  /// Enable or disable silence detection.
-  ///
-  /// [enable] wheter to enable or disable silence detection. Default to false.
-  /// [onSilenceChanged] callback when silence state is changed.
   @override
   void setSilenceDetection({
     required bool enable,
@@ -189,11 +186,16 @@ class RecorderWeb extends RecorderImpl {
     }
   }
 
-  /// Stop listening to the device.
   @override
   void stopListen() {
     wasmStopListen();
   }
+
+  @override
+  void webAskFileName() {
+    wasmAskFileName();
+  }
+
 
   @override
   void startRecording(String path) {
