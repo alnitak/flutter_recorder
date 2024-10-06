@@ -1,6 +1,6 @@
-import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_recorder/flutter_recorder.dart';
@@ -98,6 +98,8 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
             mainAxisSize: MainAxisSize.min,
             children: [
               /// Texture audio data.
+              /// NOTE: on Chrome this will not display. Seems to be a bug with 
+              /// gapless playback. It works on Firefox.
               if (bmpBytes != null)
                 ColoredBox(
                   color: Colors.black,
