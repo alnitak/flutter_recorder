@@ -103,9 +103,6 @@ external int wasmStartListen();
 @JS('Module._stopListen')
 external void wasmStopListen();
 
-@JS('Module._wasmAskFileName')
-external void wasmAskFileName();
-
 @JS('Module._startRecording')
 external int wasmStartRecording(int pathPtr);
 

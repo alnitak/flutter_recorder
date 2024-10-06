@@ -21,7 +21,7 @@ int clock_gettime(int, struct timespec *spec)      //C-file part
    return 0;
 }
 #endif
-// #else
+
 void getTime(struct timespec *time)
 {
     if (clock_gettime(CLOCK_REALTIME, time) == -1)
@@ -31,7 +31,7 @@ void getTime(struct timespec *time)
     }
 }
 
-/// @brief returns the elapsed time in seconds
+/// returns the elapsed time in seconds
 double getElapsed(struct timespec since)
 {
     struct timespec now;
@@ -43,7 +43,6 @@ double getElapsed(struct timespec since)
     return ((double)(now.tv_sec - since.tv_sec) +
             (double)(now.tv_nsec - since.tv_nsec) / 1.0e9L);
 }
-// #endif
 
 // 1024 means 1/(44100*2)*1024 = 0.0116 ms
 #define BUFFER_SIZE 1024      // Buffer length
@@ -161,54 +160,12 @@ void detectSilence(Capture *userData)
     }
 }
 
-// Define the frequency range for the human voice
-#define VOICE_MIN_FREQ 85.0    // Min frequecy (85 Hz)
-#define VOICE_MAX_FREQ 255.0   // Max frequenza (255 Hz)
-// Function to filter non-human frequencies in the frequency domain
-void filter_voice_frequencies(float* freq_buffer, int buffer_size, int sample_rate) {
-    // Calculate the frequency resolution (bin size)
-    float freq_resolution = (float)sample_rate / buffer_size;
-
-    for (int i = 0; i < buffer_size>>1; i++) {
-        // Calculate the frequency corresponding to the index [i]
-        float freq = (i << 1) * freq_resolution;
-        // float real = freq_buffer[i * 2];
-        // float imag = freq_buffer[i * 2 + 1];
-        // float mag = sqrtf(real * real + imag * imag);
-
-        // Apply bandpass filter: cancels out frequencies outside the voice range
-        if (freq < VOICE_MIN_FREQ || freq > VOICE_MAX_FREQ) {
-        // if (i < 0 || i > 25 || mag < 0.01f) {
-            // freq_buffer[i] = 0.0f;  // Sopprimi frequenze fuori dal range della voce
-            freq_buffer[i*2] = 0.0f;  // Sopprimi frequenze fuori dal range della voce
-            freq_buffer[i*2 + 1] = 0.0f;  // Sopprimi frequenze fuori dal range della voce
-        //     printf("Filtered id: %d frequency: %f Hz  mag: %f\n", i, freq, mag);
-        }
-    }
-}
-
-void remove_noise_with_fft(float* audio_buffer) {
-    // Esegui la FFT sul buffer audio
-    FFT::fft(audio_buffer, BUFFER_SIZE);  // Sovrascrive il buffer con il risultato FFT
-
-    // Filtra le frequenze non corrispondenti alla voce umana
-    filter_voice_frequencies(audio_buffer, BUFFER_SIZE, 44100);
-
-    // Esegui la IFFT per tornare al dominio del tempo
-    FFT::ifft(audio_buffer, BUFFER_SIZE);  // Sovrascrive il buffer con il risultato IFFT
-}
-
 void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
 {
     // Process the captured audio data as needed.
     float *captured = (float *)(pInput); // Assuming float format
     // Do something with the captured audio data...
     memcpy(capturedBuffer, captured, sizeof(float) * BUFFER_SIZE);
-
-    /// Noise reduction
-    remove_noise_with_fft(captured);
-    
-    
 
     Capture *userData = (Capture *)pDevice->pUserData;
     calculateEnergy(captured, frameCount);
@@ -236,9 +193,9 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
     }
 }
 
-// ////////////////////////
-// Capture Implementation
-// ////////////////////////
+// /////////////////////////////
+// Capture class Implementation
+// /////////////////////////////
 float waveData[256];
 Capture::Capture() : isDetectingSilence(false),
                      silenceThresholdDb(-40.0f),
@@ -310,14 +267,13 @@ CaptureErrors Capture::init(int deviceID)
     }
     deviceConfig.capture.format = ma_format_f32;
     deviceConfig.capture.channels = 1;
-    deviceConfig.sampleRate = 44100;
+    deviceConfig.sampleRate = 22050;
     deviceConfig.dataCallback = data_callback;
     deviceConfig.pUserData = this;
 
     result = ma_device_init(NULL, &deviceConfig, &device);
     if (result != MA_SUCCESS)
     {
-        // TODO(marco): add other error handling from ma_device_init
         printf("Failed to initialize capture device.\n");
         return captureInitFailed;
     }
@@ -387,11 +343,6 @@ void Capture::setSecondsOfAudioToWriteBefore(float secondsOfAudioToWriteBefore)
     if (!circularBuffer)
         circularBuffer.reset();
     circularBuffer = std::make_unique<CircularBuffer>(frameCount);
-}
-
-void Capture::wasmAskFileName()
-{
-    wav.wasmAskFileName();
 }
 
 CaptureErrors Capture::startRecording(const char *path)

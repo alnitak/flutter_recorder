@@ -105,11 +105,6 @@ abstract class RecorderImpl {
   @mustBeOverridden
   void stopListen();
 
-  /// Ask for file name to save recording only on the web. After calling this
-  /// method, the file name is set and [startRecording] can be called.
-  @mustBeOverridden
-  void webAskFileName();
-
   /// Start recording.
   ///
   /// Throws [RecorderCaptureNotInitializedException].

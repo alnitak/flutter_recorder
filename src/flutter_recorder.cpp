@@ -205,13 +205,6 @@ FFI_PLUGIN_EXPORT void setSecondsOfAudioToWriteBefore(float secondsOfAudioToWrit
     capture.setSecondsOfAudioToWriteBefore(secondsOfAudioToWriteBefore);
 }
 
-FFI_PLUGIN_EXPORT void wasmAskFileName()
-{
-    if (!capture.isInited())
-        return;
-    capture.wasmAskFileName();
-}
-
 FFI_PLUGIN_EXPORT enum CaptureErrors startRecording(const char *path)
 {
     if (!capture.isInited())

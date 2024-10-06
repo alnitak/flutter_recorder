@@ -205,11 +205,6 @@ class RecorderFfi extends RecorderImpl {
   }
 
   @override
-  void webAskFileName() {
-    _bindings.wasmAskFileName();
-  }
-
-  @override
   void startRecording(String path) {
     final error = _bindings.startRecording(path.toNativeUtf8().cast());
     if (error != CaptureErrors.captureNoError) {

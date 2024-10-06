@@ -192,12 +192,6 @@ class RecorderWeb extends RecorderImpl {
   }
 
   @override
-  void webAskFileName() {
-    wasmAskFileName();
-  }
-
-
-  @override
   void startRecording(String path) {
     final pathPtr = wasmMalloc(path.length);
     for (var i = 0; i < path.length; i++) {

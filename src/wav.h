@@ -8,6 +8,8 @@
 
 namespace WriteAudio
 {
+    // Class to write the WAV audio file. It uses miniaudio when not on the web platform and
+    // JS implementation within EM_ASM emscripten macro when on the web platform.
     class Wav
     {
     public:
@@ -18,6 +20,7 @@ namespace WriteAudio
             close();
         };
 
+    // Using miniaudio wav recorder when on non web platform.
 #ifndef __EMSCRIPTEN__
         CaptureErrors init(const char *path, ma_device_config deviceConfig)
         {
@@ -56,239 +59,141 @@ namespace WriteAudio
             ma_encoder_uninit(&encoder);
         }
 
-        // dummy implementation for JS
-        void wasmAskFileName()
-        {}
-
         ma_encoder encoder;
 #else
-        // JS implementation
-        // Funzione per inizializzare il file WAV
+        // JS implementation for the web platform.
+    
+        // Initialize WAV file.
         CaptureErrors init(const char *fileName, ma_device_config deviceConfig)
         {
-            
-            // Passa i parametri al modulo JavaScript
+            // Store parameters to the WASM Module.
             EM_ASM({
-                // Definisci un costruttore per WavWriter
-                function WavWriter() {
-                    this.dataChunks = [];
-                    this.byteRate = 0;
-                    this.blockAlign = 0;
-                    this.view = null;
-
-                    console.log('Formato ricevuto:', Module.format);
-                    this.init = function() {
-                        let bitDepth;
-                        switch (Module.format) {
-                            case 'float32':
-                                this.audioFormat = 3; // IEEE Float
-                                bitDepth = 32;
-                                break;
-                            case 'uint8':
-                                this.audioFormat = 1; // PCM
-                                bitDepth = 8;
-                                break;
-                            case 'int16':
-                                this.audioFormat = 1; // PCM
-                                bitDepth = 16;
-                                break;
-                            case 'int24':
-                                this.audioFormat = 1; // PCM
-                                bitDepth = 24;
-                                break;
-                            case 'int32':
-                                this.audioFormat = 1; // PCM
-                                bitDepth = 32;
-                                break;
-                            default:
-                                throw new Error('Unsupported format');
-                        }
-
-                        this.byteRate = (Module.sampleRate * Module.numChannels * bitDepth) / 8;
-                        this.blockAlign = (Module.numChannels * bitDepth) / 8;
-
-                        // Intestazione WAV
-                        this.wavHeader = new ArrayBuffer(44);
-                        this.view = new DataView(this.wavHeader);
-
-                        // RIFF Header
-                        this.writeString(0, 'RIFF');
-                        this.view.setUint32(4, 36, true); // ChunkSize
-                        this.writeString(8, 'WAVE');
-
-                        // fmt Subchunk
-                        this.writeString(12, 'fmt ');
-                        this.view.setUint32(16, 16, true); // Subchunk1Size
-                        this.view.setUint16(20, this.audioFormat, true); // AudioFormat
-                        this.view.setUint16(22, Module.numChannels, true); // NumChannels
-                        this.view.setUint32(24, Module.sampleRate, true); // SampleRate
-                        this.view.setUint32(28, this.byteRate, true); // ByteRate
-                        this.view.setUint16(32, this.blockAlign, true); // BlockAlign
-                        this.view.setUint16(34, bitDepth, true); // BitsPerSample
-
-                        // Data chunk
-                        this.writeString(36, 'data');
-                        this.view.setUint32(40, 0, true); // Subchunk2Size
-                    };
-
-                    this.writeString = function(offset, string) {
-                        for (let i = 0; i < string.length; i++) {
-                            this.view.setUint8(offset + i, string.charCodeAt(i));
-                        }
-                    };
-                }
-
-                function askFileName() {
-                    this.ask = function() {
-                        const fileName = 'output.wav'; // Nome file predefinito
-                        Module.fileName = fileName;
-
-                        // Funzione per salvare il file creato come Blob
-                        function saveBlobFile(content, fileName) {
-                            const blob = new Blob([content], { type: 'audio/wav' });
-                            const link = document.createElement('a');
-                            link.href = URL.createObjectURL(blob);
-                            link.download = fileName;
-
-                            // Simula un click sul link per forzare il download
-                            link.click();
-
-                            // Libera l'oggetto URL per evitare perdite di memoria
-                            URL.revokeObjectURL(link.href);
-                        }
-
-                        // Creiamo un esempio di contenuto vuoto (il tuo file .wav sarà scritto qui)
-                        const wavContent = new Uint8Array(44); // Intestazione WAV vuota
-
-                        // Salva il file usando la funzione saveBlobFile
-                        saveBlobFile(wavContent, fileName);
-                    }
-                }
-
-                // Imposta i parametri nel Module
-                // Module.fileName = UTF8ToString($0); // this must already been set by wasmAskFileName()
+                Module.dataChunks = [];
                 Module.fileName = "output.wav";
-                Module.format = UTF8ToString($1);
-                Module.numChannels = $2;
-                Module.sampleRate = $3;
-                console.log("EM_ASM init1: " + Module.fileName + "  " + Module.format + "  " + Module.numChannels + "  " + Module.sampleRate);
-
-                // Module.askFileName = new askFileName();
-
-                // Crea e inizializza l'oggetto WavWriter
-                Module.wavWriter = new WavWriter();
-                console.log("EM_ASM init2: " + Module.wavWriter);
-                Module.wavWriter.init();
-                console.log("EM_ASM init3: " + Module.wavWriter);
-                
-            }, fileName, "float32", deviceConfig.capture.channels, deviceConfig.sampleRate);
+                Module.numChannels = $0;
+                Module.sampleRate = $1;
+            }, deviceConfig.capture.channels, deviceConfig.sampleRate);
 
             return captureNoError;
         }
 
-        // Funzione per scrivere i dati
+        // Write audio data.
         void write(void *bufferPointer, int numFrames)
         {
             EM_ASM({
-            console.log("EM_ASM writing: " + $1);
-            const buffer = HEAPU8.subarray($0, $0 + $1);
-            Module.wavWriter.dataChunks.push(buffer); }, bufferPointer, numFrames);
+                if ($0 == 0 || $1 <= 0) {
+                    console.error("Invalid buffer pointer or number of frames");
+                    return;
+                }
+        
+                let buffer = HEAPF32.subarray($0 / 4, ($0 / 4) + $1);
+        
+                if (!Module.dataChunks) {
+                    Module.dataChunks = [];
+                }
+        
+                // Add new audio data to the buffer.
+                Module.dataChunks.push(...buffer);
+            },
+                   bufferPointer, numFrames);
         }
 
-        // Funzione per chiudere e finalizzare il file
+        // Finalize WAV file.
         void close()
         {
             EM_ASM({
-            console.log("EM_ASM close1");
-            // Calcola la dimensione totale dei dati audio
-            let dataSize = 0;
-            for (let i = 0; i < Module.wavWriter.dataChunks.length; i++) {
-                dataSize += Module.wavWriter.dataChunks[i].length;
-            }
 
-            // Aggiorna la dimensione del Chunk RIFF e del Subchunk2
-            Module.wavWriter.view.setUint32(4, 36 + dataSize, true); // Aggiorna ChunkSize
-            Module.wavWriter.view.setUint32(40, dataSize, true); // Aggiorna Subchunk2Size
-
-            // Crea un nuovo Uint8Array per contenere il file WAV completo
-            const wavFile = new Uint8Array(44 + dataSize);
-            
-            // Copia l'intestazione WAV
-            wavFile.set(new Uint8Array(Module.wavWriter.wavHeader), 0);
-
-            // Copia i dati audio dai chunk
-            let offset = 44;
-            for (let i = 0; i < Module.wavWriter.dataChunks.length; i++) {
-                wavFile.set(Module.wavWriter.dataChunks[i], offset);
-                offset += Module.wavWriter.dataChunks[i].length;
-            }
-
-            // Module.askFileName.ask();
-
-            // Crea un Blob per il file WAV
-            const blob = new Blob([wavFile], { type: 'audio/wav' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            console.log("EM_ASM close2");
-
-            link.download = Module.fileName; // Usa il nome del file memorizzato in Module
-            console.log("EM_ASM close3");
-            link.click(); // Avvia il download
-            console.log("EM_ASM close4");
-        });
-    }
-
-        // Funzione per chiedere il file all'utente e memorizzarlo in Module.fileName
-        void wasmAskFileName()
-        {
-            EM_ASM({
-                if (window.showSaveFilePicker)
+                function encodeWAV() {
+                    // Wav file parameters.
+                    const numChannels = Module.numChannels;
+                    const sampleRate = Module.sampleRate;
+                    const bitsPerSample = 16;  // 16-bit per sample
+                
+                    // Convert audio audio from float32 to int16
+                    let float32Data = Module.dataChunks;
+                    let int16Data = new Int16Array(float32Data.length);
+                
+                    // Clipping values from float32 to int16
+                    for (let i = 0; i < float32Data.length; i++) {
+                        let sample = float32Data[i];
+                        sample = Math.max(-1, Math.min(1, sample)); // -1 e 1 clipping
+                        int16Data[i] = sample < 0 ? sample * 32768 : sample * 32767; // Conversion to int16
+                    }
+                
+                    // Calcolate dimensions.
+                    const blockAlign = numChannels * bitsPerSample / 8;
+                    const byteRate = sampleRate * blockAlign;
+                    const dataSize = int16Data.length * bitsPerSample / 8;
+                    const totalFileSize = 44 + dataSize; // 44 byte header + dati audio
+                
+                    const wavBuffer = new ArrayBuffer(totalFileSize);
+                    const view = new DataView(wavBuffer);
+                
+                    // Writing RIFF header
+                    view.setUint32(0, 0x52494646, false); // "RIFF"
+                    view.setUint32(4, totalFileSize - 8, true); // Dimensione del file meno 8 byte
+                    view.setUint32(8, 0x57415645, false); // "WAVE"
+                
+                    // Writing fmt subchunk
+                    view.setUint32(12, 0x666d7420, false); // "fmt "
+                    view.setUint32(16, 16, true); // Subchunk size (16 per PCM)
+                    view.setUint16(20, 1, true); // Audio format (1 per PCM)
+                    view.setUint16(22, numChannels, true); // Channel number
+                    view.setUint32(24, sampleRate, true); // Sampling rate
+                    view.setUint32(28, byteRate, true); // Byte rate
+                    view.setUint16(32, blockAlign, true); // Block align (channels * sample bytes)
+                    view.setUint16(34, bitsPerSample, true); // Bits per sample
+                
+                    // Scrittura del subchunk data
+                    view.setUint32(36, 0x64617461, false); // "data"
+                    view.setUint32(40, dataSize, true); // audio data size
+                
+                    // Write audio data
+                    for (let i = 0; i < int16Data.length; i++) {
+                        view.setInt16(44 + i * 2, int16Data[i], true); // true means little-endian
+                    }
+                
+                    return wavBuffer;
+                }
+                
+                async function saveWavFile()
                 {
-                    const options = {};
-
-                    // Add the types property
-                    options.types = [ {
-                        description : 'WAV Files'
-                    } ];
-
-                    // Add the accept property
-                    options.types[0].accept = {'audio/wav' : ['.wav']};
-
-                    // Add the suggestedName property
-                    options.suggestedName = 'output.wav';
-
-                    window.showSaveFilePicker(options).then((fileHandle) => {
-                                                        Module.fileName = fileHandle.name;
-                                                        console.log('Saving to: ' + Module.fileName);
-                                                    })
-                        .catch((err) => {
-                            console.error('Errore nella selezione del file:', err);
-                        });
-                } else {
-                    // Soluzione di fallback per browser che non supportano showSaveFilePicker
-                    const fileName = 'output.wav'; // Nome file predefinito
-                    Module.fileName = fileName;
-
-                    // Funzione per salvare il file creato come Blob
-                    function saveBlobFile(content, fileName) {
-                        const blob = new Blob([content], { type: 'audio/wav' });
+                    const wavFile = encodeWAV();
+                    // Save the file using showSaveFilePicker (Chrome) or a fallback for unsupported browsers
+                    if (window.showSaveFilePicker)
+                    {
+                        try
+                        {
+                            const handle = await window.showSaveFilePicker({
+                                suggestedName : Module.fileName || 'output.wav',
+                                types : [ {
+                                    description : 'Audio WAV file',
+                                    accept : {'audio/wav' : ['.wav']},
+                                } ],
+                            });
+                            const writable = await handle.createWritable();
+                            await writable.write(wavFile);
+                            await writable.close();
+                        }
+                        catch (err)
+                        {
+                            console.error('Error saving file:', err);
+                        }
+                    }
+                    else
+                    {
+                        // Fallback for browsers that don't support showSaveFilePicker
+                        const blob = new Blob([wavFile],
+                                              { type: 'audio/wav' });
                         const link = document.createElement('a');
                         link.href = URL.createObjectURL(blob);
-                        link.download = fileName;
-
-                        // Simula un click sul link per forzare il download
+                        link.download = Module.fileName || 'output.wav';
                         link.click();
-
-                        // Libera l'oggetto URL per evitare perdite di memoria
                         URL.revokeObjectURL(link.href);
                     }
-
-                    // Creiamo un esempio di contenuto vuoto (il tuo file .wav sarà scritto qui)
-                    const wavContent = new Uint8Array(44); // Intestazione WAV vuota
-
-                    // Salva il file usando la funzione saveBlobFile
-                    saveBlobFile(wavContent, fileName);
                 }
+
+                saveWavFile();
             });
         }
 
