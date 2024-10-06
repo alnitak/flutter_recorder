@@ -239,17 +239,17 @@ std::vector<CaptureDevice> Capture::listCaptureDevices()
     // to give the user the opportunity to choose which device they'd prefer.
     for (ma_uint32 i = 0; i < captureCount; i++)
     {
-        printf("######%s %d - %s\n",
-               pCaptureInfos[i].isDefault ? " X" : "-",
-               i,
-               pCaptureInfos[i].name);
+        // printf("######%s %d - %s\n",
+        //        pCaptureInfos[i].isDefault ? " X" : "-",
+        //        i,
+        //        pCaptureInfos[i].name);
         CaptureDevice cd;
         cd.name = strdup(pCaptureInfos[i].name);
         cd.isDefault = pCaptureInfos[i].isDefault;
         cd.id = i;
         ret.push_back(cd);
     }
-    printf("***************** LIST DEVICES END\n");
+    // printf("***************** LIST DEVICES END\n");
     return ret;
 }
 

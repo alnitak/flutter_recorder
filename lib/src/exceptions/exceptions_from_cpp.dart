@@ -4,7 +4,6 @@ part of 'exceptions.dart';
 // / C++-side exceptions for the recorder /
 // ////////////////////////////////////////
 
-
 /// An exception that is thrown when the recorder failed to initialize.
 class RecorderInitializeFailedException extends RecorderCppException {
   /// Creates a new [RecorderInitializeFailedException].
@@ -27,7 +26,8 @@ class RecorderCaptureNotInitializedException extends RecorderCppException {
 }
 
 /// An exception that is thrown when recording failed to start.
-class RecorderFailedToInitializeRecordingException extends RecorderCppException {
+class RecorderFailedToInitializeRecordingException
+    extends RecorderCppException {
   /// Creates a new [RecorderFailedToInitializeRecordingException].
   const RecorderFailedToInitializeRecordingException([super.message]);
 

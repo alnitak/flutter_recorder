@@ -149,6 +149,8 @@ FFI_PLUGIN_EXPORT enum CaptureErrors init(int deviceID)
 
 FFI_PLUGIN_EXPORT void deinit()
 {
+    if (capture.isRecording)
+            capture.stopRecording();
     capture.dispose();
 }
 
@@ -176,6 +178,8 @@ FFI_PLUGIN_EXPORT enum CaptureErrors startListen()
 
 FFI_PLUGIN_EXPORT void stopListen()
 {
+    if (capture.isRecording)
+            capture.stopRecording();
     capture.stopListen();
 }
 
@@ -276,7 +280,6 @@ FFI_PLUGIN_EXPORT void getTexture2D(float **samples)
     {
         *samples = *capturedTexture2D;
         memset(*samples, 0, sizeof(float) * 512 * 256);
-        printf("capturedTexture2D not inited\n");
         return;
     }
     /// shift up 1 row

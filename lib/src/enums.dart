@@ -1,6 +1,6 @@
-/// CaptureDevice exposed to Dart
 // ignore_for_file: sort_constructors_first, public_member_api_docs
 
+/// CaptureDevice exposed to Dart
 final class CaptureDevice {
   /// Constructs a new [CaptureDevice].
   // ignore: avoid_positional_boolean_parameters

@@ -3,6 +3,7 @@
         android:label="flutter_recorder_example"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <uses-permission android:name="android.permission.RECORD_AUDIO" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

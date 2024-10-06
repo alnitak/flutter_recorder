@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_recorder/flutter_recorder.dart';
 import 'package:flutter_recorder_example/ui/bars.dart';
+import 'package:path_provider/path_provider.dart';
+// import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 void main() async {
-  runApp(const MyApp());
+  runApp(const MaterialApp(home: MyApp()));
 }
 
 class MyApp extends StatefulWidget {
@@ -18,6 +21,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final _recorder = Recorder.instance;
+  String? filePath;
   var thresholdDb = -20.0;
   var silenceDuration = 2.0;
   var secondsOfAudioToWriteBefore = 0.0;
@@ -39,264 +43,245 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    const spacerSmall = SizedBox(height: 10);
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Native Packages'),
-        ),
-        body: SingleChildScrollView(
-          child: Container(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              children: [
-                Wrap(
-                  runSpacing: 6,
-                  spacing: 6,
-                  children: [
-                    OutlinedButton(
-                      onPressed: () {
-                        final devices = _recorder.listCaptureDevices();
-                        debugPrint('\n-------- LIST DEVICES ---------');
-                        for (final d in devices) {
-                          debugPrint(
-                            '${d.id} - ${d.isDefault ? "DEFAULT " : ""}  '
-                            '${d.name}',
-                          );
-                        }
-                        debugPrint('-------------------------------\n');
-                      },
-                      child: const Text('listCaptureDevices'),
-                    ),
-                    OutlinedButton(
-                      onPressed: () {
-                        try {
-                          _recorder.init();
-                        } on Exception catch (e) {
-                          debugPrint('-------------- init() $e\n');
-                        }
-                      },
-                      child: const Text('init'),
-                    ),
-                    OutlinedButton(
-                      onPressed: () {
-                        _recorder.deinit();
-                        debugPrint('-------------- deinit()\n');
-                      },
-                      child: const Text('deinit'),
-                    ),
-                    OutlinedButton(
-                      onPressed: () {
-                        final e = _recorder.isDeviceInitialized();
-                        debugPrint('-------------- isDeviceInitialized() $e\n');
-                      },
-                      child: const Text('isDeviceInitialized'),
-                    ),
-                    OutlinedButton(
-                      onPressed: () {
-                        try {
-                          _recorder.startListen();
-                        } on Exception catch (e) {
-                          debugPrint('-------------- startListen() $e\n');
-                        }
-                      },
-                      child: const Text('startListen'),
-                    ),
-                    OutlinedButton(
-                      onPressed: () {
-                        final e = _recorder.isDeviceStartedListen();
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Native Packages'),
+      ),
+      body: SingleChildScrollView(
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            children: [
+              Wrap(
+                runSpacing: 6,
+                spacing: 6,
+                children: [
+                  OutlinedButton(
+                    onPressed: () {
+                      final devices = _recorder.listCaptureDevices();
+                      debugPrint('\n-------- LIST DEVICES ---------');
+                      for (final d in devices) {
                         debugPrint(
-                            '-------------- isDeviceStartedListen() $e\n');
-                      },
-                      child: const Text('isDeviceStartedListen'),
-                    ),
-                    spacerSmall,
-                    OutlinedButton(
-                      onPressed: () {
-                        final wave = _recorder.getWave();
-                        debugData(wave, 256);
-                      },
-                      child: const Text('getWave'),
-                    ),
-                    OutlinedButton(
-                      onPressed: () {
-                        final wave = _recorder.getFft();
-                        debugData(wave, 256);
-                      },
-                      child: const Text('getFft'),
-                    ),
-                    OutlinedButton(
-                      onPressed: () {
-                        final wave = _recorder.getTexture2D();
-                        debugData(wave, 256, startIndex: 0);
-                        debugData(wave, 256, startIndex: 256);
-                      },
-                      child: const Text('getTexture'),
-                    ),
-                    OutlinedButton(
-                      onPressed: () {
-                        _recorder.setSilenceDetection(
-                          enable: true,
-                          onSilenceChanged: (isSilent, decibel) {
-                            // print('SILENCE CHANGED: $isSilent, $decibel');
-                          },
+                          '${d.id} - ${d.isDefault ? "DEFAULT " : ""}  '
+                          '${d.name}',
                         );
-                        _recorder.setSilenceThresholdDb(-27);
-                        _recorder.setSilenceDuration(0.1);
-                        _recorder.setSecondsOfAudioToWriteBefore(0.0);
-                        setState(() {
-                          thresholdDb = -27;
-                          silenceDuration = 0.1;
-                          secondsOfAudioToWriteBefore = 0;
-                        });
-                      },
-                      child: const Text('setSilenceDetection ON -27 0.1'),
-                    ),
-                    OutlinedButton(
-                      onPressed: () {
-                        _recorder.setSilenceDetection(enable: false);
-                      },
-                      child: const Text('setSilenceDetection OFF'),
-                    ),
+                      }
+                      debugPrint('-------------------------------\n');
+                    },
+                    child: const Text('listCaptureDevices'),
+                  ),
+                  OutlinedButton(
+                    onPressed: () {
+                      try {
+                        _recorder.init();
+                        _recorder.startListen();
+                      } on Exception catch (e) {
+                        debugPrint('-------------- init() error: $e\n');
+                      }
+                    },
+                    child: const Text('init'),
+                  ),
+                  OutlinedButton(
+                    onPressed: () {
+                      _recorder.deinit();
+                    },
+                    child: const Text('deinit'),
+                  ),
+                  OutlinedButton(
+                    onPressed: () {
+                      _recorder.setSilenceDetection(
+                        enable: true,
+                        onSilenceChanged: (isSilent, decibel) {
+                          /// Here you can check if silence is changed.
+                          /// Or you can do the same thing with the Stream
+                          /// [Recorder.instance.silenceChangedEvents]
+                          // debugPrint('SILENCE CHANGED: $isSilent, $decibel');
+                        },
+                      );
+                      _recorder.setSilenceThresholdDb(-27);
+                      _recorder.setSilenceDuration(0.5);
+                      _recorder.setSecondsOfAudioToWriteBefore(0.0);
+                      setState(() {
+                        thresholdDb = -27;
+                        silenceDuration = 0.5;
+                        secondsOfAudioToWriteBefore = 0;
+                      });
+                    },
+                    child: const Text('setSilenceDetection ON -27, 0.5, 0.0'),
+                  ),
+                  OutlinedButton(
+                    onPressed: () {
+                      _recorder.setSilenceDetection(enable: false);
+                    },
+                    child: const Text('setSilenceDetection OFF'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      try {
+                        /// Asking for file path to store the audio file.
+                        /// On web platform, it will be asked internally
+                        /// from the browser.
+                        final downloadsDir = await getDownloadsDirectory();
+                        filePath = '${downloadsDir!.path}/flutter_recorder.wav';
+                        _recorder.startRecording(filePath!);
+                      } on Exception catch (e) {
+                        debugPrint('-------------- startRecording() $e\n');
+                      }
+                    },
+                    child: const Text('Start recording'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      _recorder.setPauseRecording(pause: true);
+                    },
+                    child: const Text('Pause recording'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      _recorder.setPauseRecording(pause: false);
+                    },
+                    child: const Text('UN-Pause recording'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      _recorder.stopRecording();
+                      debugPrint('Audio recorded to "$filePath"');
+                      showFileRecordedDialog(filePath!);
+                    },
+                    child: const Text('Stop recording'),
+                  ),
+                  /// Cannot open last recording on web. On Android and iOS
+                  /// it cannot be opened by third party apps since it is stored
+                  /// in app sandbox.
+                  if (!kIsWeb &&
+                      defaultTargetPlatform != TargetPlatform.android &&
+                      defaultTargetPlatform != TargetPlatform.iOS)
                     ElevatedButton(
-                      onPressed: () {
-                        try {
-                          _recorder.startRecording('/home/deimos/my_file.wav');
-                          // _recorder.startRecording('C:\\1\\my_file.wav');
-                        } on Exception catch (e) {
-                          debugPrint('-------------- startRecording() $e\n');
+                      onPressed: () async {
+                        if (filePath != null &&
+                            !await launchUrl(Uri.file(filePath!))) {
+                          throw Exception('Could not launch $filePath');
                         }
                       },
-                      child: const Text('Start recording'),
+                      child: const Text('Open last recording'),
                     ),
-                    ElevatedButton(
-                      onPressed: () {
-                        _recorder.setPauseRecording(pause: true);
-                      },
-                      child: const Text('Pause recording'),
+                ],
+              ),
+              const SizedBox(height: 10),
+              StreamBuilder(
+                stream: _recorder.silenceChangedEvents,
+                builder: (context, snapshot) {
+                  return ColoredBox(
+                    color: snapshot.hasData && snapshot.data!.isSilent
+                        ? Colors.green
+                        : Colors.red,
+                    child: SizedBox(
+                      width: 70,
+                      height: 50,
+                      child: Center(
+                        child: Text(_recorder.getVolumeDb().toStringAsFixed(1)),
+                      ),
                     ),
-                    ElevatedButton(
-                      onPressed: () {
-                        _recorder.setPauseRecording(pause: false);
-                      },
-                      child: const Text('UNPause recording'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () {
-                        _recorder.stopRecording();
-                      },
-                      child: const Text('Stop recording'),
-                    ),
-                  ],
-                ),
-                spacerSmall,
-                StreamBuilder(
-                  stream: _recorder.silenceChangedEvents,
-                  builder: (context, snapshot) {
-                    return ColoredBox(
-                      color: snapshot.hasData && snapshot.data!.isSilent
-                          ? Colors.green
-                          : Colors.red,
-                      child: SizedBox(
-                        width: 70,
-                        height: 50,
-                        child: Center(
-                          child:
-                              Text(_recorder.getVolumeDb().toStringAsFixed(1)),
+                  );
+                },
+              ),
+              Column(
+                children: [
+                  // Threshold dB slider
+                  Row(
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      Text('Threshold: ${thresholdDb.toStringAsFixed(1)}dB'),
+                      Expanded(
+                        child: Slider(
+                          value: thresholdDb,
+                          min: -100,
+                          max: 0,
+                          label: thresholdDb.toStringAsFixed(1),
+                          onChanged: (value) {
+                            _recorder.setSilenceThresholdDb(value);
+                            setState(() {
+                              thresholdDb = value;
+                            });
+                          },
                         ),
                       ),
-                    );
-                  },
-                ),
-                Column(
-                  children: [
-                    // Threshold dB slider
-                    Row(
-                      mainAxisSize: MainAxisSize.max,
-                      children: [
-                        Text('Threshold: ${thresholdDb.toStringAsFixed(1)}dB'),
-                        Expanded(
-                          child: Slider(
-                            value: thresholdDb,
-                            min: -100,
-                            max: 0,
-                            label: thresholdDb.toStringAsFixed(1),
-                            onChanged: (value) {
-                              _recorder.setSilenceThresholdDb(value);
-                              setState(() {
-                                thresholdDb = value;
-                              });
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
+                    ],
+                  ),
 
-                    // Silence duration slider
-                    Row(
-                      mainAxisSize: MainAxisSize.max,
-                      children: [
-                        Text('Silence duration: '
-                            '${silenceDuration.toStringAsFixed(1)}'),
-                        Expanded(
-                          child: Slider(
-                            value: silenceDuration,
-                            min: 0,
-                            max: 10,
-                            label: silenceDuration.toStringAsFixed(1),
-                            onChanged: (value) {
-                              _recorder.setSilenceDuration(value);
-                              setState(() {
-                                silenceDuration = value;
-                              });
-                            },
-                          ),
+                  // Silence duration slider
+                  Row(
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      Text('Silence duration: '
+                          '${silenceDuration.toStringAsFixed(1)}'),
+                      Expanded(
+                        child: Slider(
+                          value: silenceDuration,
+                          min: 0,
+                          max: 10,
+                          label: silenceDuration.toStringAsFixed(1),
+                          onChanged: (value) {
+                            _recorder.setSilenceDuration(value);
+                            setState(() {
+                              silenceDuration = value;
+                            });
+                          },
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  ),
 
-                    // Silence duration slider
-                    Row(
-                      mainAxisSize: MainAxisSize.max,
-                      children: [
-                        Text('write before: '
-                            '${secondsOfAudioToWriteBefore.toStringAsFixed(1)}'),
-                        Expanded(
-                          child: Slider(
-                            value: secondsOfAudioToWriteBefore,
-                            min: 0,
-                            max: 10,
-                            label: silenceDuration.toStringAsFixed(1),
-                            onChanged: (value) {
-                              _recorder.setSecondsOfAudioToWriteBefore(value);
-                              setState(() {
-                                secondsOfAudioToWriteBefore = value;
-                              });
-                            },
-                          ),
+                  // Silence duration slider
+                  Row(
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      Text('write before: '
+                          '${secondsOfAudioToWriteBefore.toStringAsFixed(1)}'),
+                      Expanded(
+                        child: Slider(
+                          value: secondsOfAudioToWriteBefore,
+                          min: 0,
+                          max: 10,
+                          label: silenceDuration.toStringAsFixed(1),
+                          onChanged: (value) {
+                            _recorder.setSecondsOfAudioToWriteBefore(value);
+                            setState(() {
+                              secondsOfAudioToWriteBefore = value;
+                            });
+                          },
                         ),
-                      ],
-                    ),
-                  ],
-                ),
-                const Bars(),
-              ],
-            ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const Bars(),
+            ],
           ),
         ),
       ),
     );
   }
 
-  void debugData(Float32List data, int width, {int startIndex = 0}) {
-    final buf = StringBuffer();
-    buf.write('DART from $startIndex: ');
-    for (var i = startIndex; i < width + startIndex; i++) {
-      buf
-        ..write(data[i].toStringAsFixed(3))
-        ..write(' ');
-    }
-    buf.writeln();
-    debugPrint(buf.toString());
+  Future<void> showFileRecordedDialog(String filePath) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // user must tap button!
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Recording saved!'),
+          content: Text('Audio saved to:\n$filePath'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('ok'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 }

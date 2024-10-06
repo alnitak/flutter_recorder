@@ -1,92 +1,53 @@
 # flutter_recorder
 
-A new Flutter FFI plugin project.
+A low-level audio recorder plugin which uses miniaudio as backend and supporting all the platforms. It can detect silence and save to WAV audio format.
 
-## Getting Started
+## Setup permissions
+After setting up permission for you Android, MacOS or iOS, in your app, you will need to ask for permission to use the microphonem maybe using [permission_handler](https://pub.dev/packages/permission_handler) plugin.
+https://pub.dev/packages/permission_handler
 
-This project is a starting point for a Flutter
-[FFI plugin](https://flutter.dev/to/ffi-package),
-a specialized package that includes native code directly invoked with Dart FFI.
-
-## Project structure
-
-This template uses the following structure:
-
-* `src`: Contains the native source code, and a CmakeFile.txt file for building
-  that source code into a dynamic library.
-
-* `lib`: Contains the Dart code that defines the API of the plugin, and which
-  calls into the native code using `dart:ffi`.
-
-* platform folders (`android`, `ios`, `windows`, etc.): Contains the build files
-  for building and bundling the native code library with the platform application.
-
-## Building and bundling native code
-
-The `pubspec.yaml` specifies FFI plugins as follows:
-
-```yaml
-  plugin:
-    platforms:
-      some_platform:
-        ffiPlugin: true
+#### Android
+Add the permission in the `AndroidManifest.xml`.
+```
+<uses-permission android:name="android.permission.RECORD_AUDIO" />
 ```
 
-This configuration invokes the native build for the various target platforms
-and bundles the binaries in Flutter applications using these FFI plugins.
-
-This can be combined with dartPluginClass, such as when FFI is used for the
-implementation of one platform in a federated plugin:
-
-```yaml
-  plugin:
-    implements: some_other_plugin
-    platforms:
-      some_platform:
-        dartPluginClass: SomeClass
-        ffiPlugin: true
+#### MacOS, iOS
+Add the permission in `Runner/Info.plist`.
+```
+<key>NSMicrophoneUsageDescription</key>
+<string>Some message to describe why you need this permission</string>
 ```
 
-A plugin can have both FFI and method channels:
-
-```yaml
-  plugin:
-    platforms:
-      some_platform:
-        pluginClass: SomeName
-        ffiPlugin: true
+#### Web
+Add this in `web/index.html` under the `<head>` tag.
+```
+<script src="assets/packages/flutter_recorder/web/libflutter_recorder_plugin.js" defer></script>
 ```
 
-The native build systems that are invoked by FFI (and method channel) plugins are:
+## Usage
+1. if you are running on Android, MacOS or iOS, ask the permission to use the microphone:
+```
+import 'package:permission_handler/permission_handler.dart';
+[...]
+if (defaultTargetPlatform == TargetPlatform.android ||
+    defaultTargetPlatform == TargetPlatform.iOS ||
+    defaultTargetPlatform == TargetPlatform.macOS) {
+    Permission.microphone.request().isGranted.then((value) async {
+    if (!value) {
+        await [Permission.microphone].request();
+    }
+});
+```
+2. Initialize the capture device and start listening to it:
+```
+try {
+    Recorder.instance.init();
+    Recorder.instance.startListen();
+} on Exception catch (e) {
+    debugPrint('init() error: $e\n');
+}
+```
 
-* For Android: Gradle, which invokes the Android NDK for native builds.
-  * See the documentation in android/build.gradle.
-* For iOS and MacOS: Xcode, via CocoaPods.
-  * See the documentation in ios/flutter_recorder.podspec.
-  * See the documentation in macos/flutter_recorder.podspec.
-* For Linux and Windows: CMake.
-  * See the documentation in linux/CMakeLists.txt.
-  * See the documentation in windows/CMakeLists.txt.
-
-## Binding to native code
-
-To use the native code, bindings in Dart are needed.
-To avoid writing these by hand, they are generated from the header file
-(`src/flutter_recorder.h`) by `package:ffigen`.
-Regenerate the bindings by running `dart run ffigen --config ffigen.yaml`.
-
-## Invoking native code
-
-Very short-running native functions can be directly invoked from any isolate.
-For example, see `sum` in `lib/flutter_recorder.dart`.
-
-Longer-running functions should be invoked on a helper isolate to avoid
-dropping frames in Flutter applications.
-For example, see `sumAsync` in `lib/flutter_recorder.dart`.
-
-## Flutter help
-
-For help getting started with Flutter, view our
-[online documentation](https://docs.flutter.dev), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-
+## TODOs
+add package:log

@@ -1,4 +1,5 @@
-// ignore_for_file: omit_local_variable_types, avoid_positional_boolean_parameters, public_member_api_docs
+// ignore_for_file: omit_local_variable_types
+// ignore_for_file: avoid_positional_boolean_parameters, public_member_api_docs
 
 import 'dart:async';
 import 'dart:convert';

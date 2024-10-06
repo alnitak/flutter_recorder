@@ -1,4 +1,5 @@
-// ignore_for_file: omit_local_variable_types, avoid_positional_boolean_parameters
+// ignore_for_file: omit_local_variable_types
+// ignore_for_file: avoid_positional_boolean_parameters
 
 import 'dart:typed_data';
 
@@ -124,8 +125,7 @@ interface class Recorder {
   /// List available input devices. Useful on desktop to choose
   /// which input device to use.
   List<CaptureDevice> listCaptureDevices() {
-    final ret = <CaptureDevice>[];
-    _recoreder.impl.listCaptureDevices();
+    final ret = _recoreder.impl.listCaptureDevices();
 
     return ret;
   }
