@@ -29,7 +29,6 @@ class RecorderController {
 
 @internal
 class RecorderFfi extends RecorderImpl {
-
   /// Controller to listen to silence changed event.
   late final StreamController<SilenceState> silenceChangedEventController =
       StreamController.broadcast();

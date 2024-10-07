@@ -75,7 +75,7 @@ external void wasmListCaptureDevices(
   int deviceIdPtr,
   int isDefaultPtr,
   int nDevicePtr,
-  );
+);
 
 @JS('Module._freeListCaptureDevices')
 external void wasmFreeListCaptureDevices(
@@ -83,7 +83,7 @@ external void wasmFreeListCaptureDevices(
   int deviceIdPtr,
   int isDefaultPtr,
   int nDevicePtr,
-  );
+);
 
 @JS('Module._init')
 external int wasmInit(int deviceID);

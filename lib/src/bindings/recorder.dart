@@ -133,7 +133,6 @@ abstract class RecorderImpl {
   @mustBeOverridden
   void setFftSmoothing(double smooth);
 
-  
   /// Return a 256 float array containing FFT data in the range [-1.0, 1.0]
   /// not clamped.@mustBeOverridden
   Float32List getFft();

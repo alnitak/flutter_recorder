@@ -378,4 +378,3 @@ typedef dartSilenceChangedCallback_tFunction = ffi.Void Function(
     ffi.Pointer<ffi.Bool>, ffi.Pointer<ffi.Float>);
 typedef DartdartSilenceChangedCallback_tFunction = void Function(
     ffi.Pointer<ffi.Bool>, ffi.Pointer<ffi.Float>);
-

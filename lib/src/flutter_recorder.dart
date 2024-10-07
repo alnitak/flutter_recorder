@@ -170,9 +170,9 @@ interface class Recorder {
   }
 
   /// Start recording.
-  /// 
+  ///
   /// [completeFilePath] complete file path to save the recording.
-  /// This is mandatory on all platforms but on the Web. 
+  /// This is mandatory on all platforms but on the Web.
   /// NOTE: when running on the  Web, [completeFilePath] is ignored and
   /// just stopping the recording the browser will ask to save the file.
   ///
