@@ -10,7 +10,6 @@
             "type": "dart",
             "program": "lib/main.dart",
             "cwd": "${workspaceFolder}/example"
-
         },
         {
             "name": "example profile",
@@ -43,7 +42,7 @@
             "type": "cppvsdbg",
             "request": "launch",
             "args": [],
-            "program": "${workspaceFolder}/example/build/windows/x64//runner/Debug/flutter_recorder_example.exe",
+            "program": "${workspaceFolder}/example/build/windows/x64/runner/Debug/flutter_recorder_example.exe",
             "cwd": "${workspaceFolder}"
         },
         {

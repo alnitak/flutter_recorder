@@ -67,7 +67,7 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
             children: [
               /// FFT
               ColoredBox(
-                color: Colors.black,
+                color: const Color.fromARGB(255, 55, 55, 55),
                 child: RepaintBoundary(
                   child: ClipRRect(
                     child: CustomPaint(
@@ -82,7 +82,7 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
 
               /// Wave
               ColoredBox(
-                color: Colors.black,
+                color: const Color.fromARGB(255, 55, 55, 55),
                 child: RepaintBoundary(
                   child: ClipRRect(
                     child: CustomPaint(

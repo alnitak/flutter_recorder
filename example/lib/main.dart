@@ -3,13 +3,18 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_recorder/flutter_recorder.dart';
 import 'package:flutter_recorder_example/ui/bars.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
-// import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 void main() async {
-  runApp(const MaterialApp(home: MyApp()));
+  runApp(
+    MaterialApp(
+      darkTheme: ThemeData.dark(),
+      theme: ThemeData.dark(),
+      home: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {
@@ -123,7 +128,7 @@ class _MyAppState extends State<MyApp> {
                         /// from the browser.
                         final downloadsDir = await getDownloadsDirectory();
                         filePath = '${downloadsDir!.path}/flutter_recorder.wav';
-                        _recorder.startRecording(filePath!);
+                        _recorder.startRecording(completeFilePath: filePath!);
                       } on Exception catch (e) {
                         debugPrint('-------------- startRecording() $e\n');
                       }
@@ -150,21 +155,6 @@ class _MyAppState extends State<MyApp> {
                     },
                     child: const Text('Stop recording'),
                   ),
-                  /// Cannot open last recording on web. On Android and iOS
-                  /// it cannot be opened by third party apps since it is stored
-                  /// in app sandbox.
-                  if (!kIsWeb &&
-                      defaultTargetPlatform != TargetPlatform.android &&
-                      defaultTargetPlatform != TargetPlatform.iOS)
-                    ElevatedButton(
-                      onPressed: () async {
-                        if (filePath != null &&
-                            !await launchUrl(Uri.file(filePath!))) {
-                          throw Exception('Could not launch $filePath');
-                        }
-                      },
-                      child: const Text('Open last recording'),
-                    ),
                 ],
               ),
               const SizedBox(height: 10),
@@ -236,13 +226,13 @@ class _MyAppState extends State<MyApp> {
                   Row(
                     mainAxisSize: MainAxisSize.max,
                     children: [
-                      Text('write before: '
+                      Text('Write before: '
                           '${secondsOfAudioToWriteBefore.toStringAsFixed(1)}'),
                       Expanded(
                         child: Slider(
                           value: secondsOfAudioToWriteBefore,
                           min: 0,
-                          max: 10,
+                          max: 5,
                           label: silenceDuration.toStringAsFixed(1),
                           onChanged: (value) {
                             _recorder.setSecondsOfAudioToWriteBefore(value);
@@ -274,7 +264,16 @@ class _MyAppState extends State<MyApp> {
           content: Text('Audio saved to:\n$filePath'),
           actions: <Widget>[
             TextButton(
-              child: const Text('ok'),
+              child: const Text('open'),
+              onPressed: () async {
+                OpenFilex.open(
+                  filePath,
+                  type: 'audio/wav',
+                );
+              },
+            ),
+            TextButton(
+              child: const Text('close'),
               onPressed: () {
                 Navigator.of(context).pop();
               },

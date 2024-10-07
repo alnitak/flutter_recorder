@@ -36,7 +36,7 @@ class VuMeter extends StatelessWidget {
           Container(
             width: width,
             height: height * vuMeter,
-            color: Colors.black,
+            color: const Color.fromARGB(255, 55, 55, 55),
           ),
           Align(
             alignment: Alignment.bottomLeft,

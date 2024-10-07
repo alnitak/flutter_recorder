@@ -99,11 +99,13 @@ interface class Recorder {
     _recoreder.impl.setSilenceThresholdDb(silenceThresholdDb);
   }
 
-  /// Set silence duration in seconds.
+  /// Set the value in seconds of silence after which silence is considered
+  /// as such.
   ///
   /// [silenceDuration] the duration of silence in seconds. If the volume
-  /// remains silent for this duration, the callback will be triggered. Default
-  /// to 2 seconds.
+  /// remains silent for this duration, the [SilenceCallback] callback will be
+  /// triggered or the Stream [silenceChangedEvents] will emit silence state.
+  /// Default to 2 seconds.
   void setSilenceDuration(double silenceDuration) {
     _recoreder.impl.setSilenceDuration(silenceDuration);
   }
@@ -168,11 +170,16 @@ interface class Recorder {
   }
 
   /// Start recording.
+  /// 
+  /// [completeFilePath] complete file path to save the recording.
+  /// This is mandatory on all platforms but on the Web. 
+  /// NOTE: when running on the  Web, [completeFilePath] is ignored and
+  /// just stopping the recording the browser will ask to save the file.
   ///
   /// Throws [RecorderCaptureNotInitializedException].
   /// Throws [RecorderFailedToInitializeRecordingException].
-  void startRecording(String path) {
-    _recoreder.impl.startRecording(path);
+  void startRecording({String completeFilePath = ''}) {
+    _recoreder.impl.startRecording(completeFilePath);
   }
 
   /// Pause recording.
@@ -205,7 +212,8 @@ interface class Recorder {
     return _recoreder.impl.getFft();
   }
 
-  /// Return a 256 float array containing wave data in the range [-1.0, 1.0].
+  /// Return a 256 float array containing wave data in the range [-1.0, 1.0]
+  /// not clamped.
   Float32List getWave() {
     return _recoreder.impl.getWave();
   }
@@ -217,6 +225,7 @@ interface class Recorder {
   }
 
   /// Get the current volume in dB. Returns -100 if the capture is not inited.
+  /// 0 is the max volume the capture device can handle.
   double getVolumeDb() {
     return _recoreder.impl.getVolumeDb();
   }

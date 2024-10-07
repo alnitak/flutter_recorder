@@ -14,7 +14,7 @@ class WavePainter extends CustomPainter {
 
     for (var i = 0; i < 256; i++) {
       late final double barHeight;
-      barHeight = size.height * waveData[i];
+      barHeight = size.height * waveData[i] * 3;
       canvas.drawRect(
         Rect.fromLTWH(
           barWidth * i,
