@@ -9,11 +9,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 void main() async {
   runApp(
-    MaterialApp(
-      darkTheme: ThemeData.dark(),
-      theme: ThemeData.dark(),
-      home: const MyApp(),
-    ),
+    const MaterialApp(home: MyApp()),
   );
 }
 
@@ -63,15 +59,7 @@ class _MyAppState extends State<MyApp> {
                 children: [
                   OutlinedButton(
                     onPressed: () {
-                      final devices = _recorder.listCaptureDevices();
-                      debugPrint('\n-------- LIST CAPTURE DEVICES ---------');
-                      for (final d in devices) {
-                        debugPrint(
-                          '${d.id} - ${d.isDefault ? "DEFAULT " : ""}  '
-                          '${d.name}',
-                        );
-                      }
-                      debugPrint('-------------------------------\n');
+                      showDeviceListDialog();
                     },
                     child: const Text('listCaptureDevices'),
                   ),
@@ -280,7 +268,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> showFileRecordedDialog(String filePath) async {
     return showDialog<void>(
       context: context,
-      barrierDismissible: false, // user must tap button!
+      barrierDismissible: true,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Recording saved!'),
@@ -295,6 +283,34 @@ class _MyAppState extends State<MyApp> {
                 );
               },
             ),
+            TextButton(
+              child: const Text('close'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> showDeviceListDialog() async {
+    final devices = _recorder.listCaptureDevices();
+    String devicesString = devices.asMap().entries.map((entry) {
+      return '${entry.value.id} - ${entry.value.isDefault ? 'DEFAULT' : ''}:'
+          ' ${entry.value.name}';
+    }).join('\n\n');
+
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Recording saved!'),
+          content: Text(devicesString),
+          actions: <Widget>[
+            const Text(''),
             TextButton(
               child: const Text('close'),
               onPressed: () {

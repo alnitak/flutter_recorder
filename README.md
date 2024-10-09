@@ -8,19 +8,18 @@ A low-level audio recorder plugin which uses miniaudio as backend and supporting
 |:-:|:-:|:-:|:-:|:-:|:-:|
 |💙|💙|💙|💙|💙|💙|
 
-## Select features:
-- Support all the platforms
-- High performance using miniaudio C library with FFI
-- Record audio in WAV format with pause support
-- Choose recording device
-- Silence catch detection via callback or Stream
-- Set the threshold for what is considered "silence"
-- Set the duration of silence after which the recorder pauses
-- Set the amount of time to keep before the recording starts again
-- Get volume, audio and FFT data in real-time
+## 🌟 Key Features:
+- 🖥️ **Cross-platform**: Supports Linux, Windows, Android, MacOS, iOS, and web.
+- ⚡ **High performance**: Built using the fast and efficient miniaudio C library with FFI.
+- 🎙️ **WAV Recording with Pause**: Record in WAV format with pause functionality.
+- 🎛️ **Device Flexibility**: Choose your recording device.
+- 🔇 **Silence Detection**: Automatically detects silence via callback or Stream.
+- 📊 **Customizable Silence Threshold**: Define what’s considered “silence” for your recordings.
+- ⏱️ **Adjustable Pause Timing**: Set how long silence lasts before pausing, and how soon to resume recording.
+- 🔊 **Real-time Audio Metrics**: Access volume, audio wave, and FFT data in real-time.
 
-## Setup permissions
-After setting up permission for your Android, MacOS, or iOS, in your app, you will need to ask for permission to use the microphone for example using [permission_handler](https://pub.dev/packages/permission_handler) plugin.
+## 🚀 Setup Permissions
+After setting up permission for you Android, MacOS or iOS, in your app, you will need to ask for permission to use the microphonem maybe using [permission_handler](https://pub.dev/packages/permission_handler) plugin.
 https://pub.dev/packages/permission_handler
 
 #### Android
@@ -42,7 +41,7 @@ Add this in `web/index.html` under the `<head>` tag.
 <script src="assets/packages/flutter_recorder/web/libflutter_recorder_plugin.js" defer></script>
 ```
 
-## Usage
+## 🛠️ Usage Example
 ```dart
 import 'package:permission_handler/permission_handler.dart';
 [...]
@@ -72,10 +71,12 @@ Recorder.instance.startRecording(completeFilePath: 'audioCompleteFilenameWithPat
 /// Stop recording:
 Recorder.instance.stopRecording();
 ```
-Using `Recorder.instance.listCaptureDevices()` you can have a list of available capture devices and then pass the optional `deviceID` to `Recorder.instance.init()`.
+**Tip:** Use `Recorder.instance.listCaptureDevices()` to see available devices and pass an optional `deviceID` to `Recorder.instance.init()`.
 
----
-It is possible to detect silence and skip it while recording:
+### 🔇 Silence Detection Example
+
+Want to skip the silence? Here’s how to configure it:
+
 ```dart
 Recorder.instance.setSilenceDetection(
     enable: true,
@@ -92,8 +93,10 @@ Recorder.instance.setSilenceDuration(0.5);
 /// Set seconds of audio to write before starting recording again after silence.
 Recorder.instance.setSecondsOfAudioToWriteBefore(0.0);
 ```
----
-It is also possible to get audio data, FFT, and volume:
+
+### 📊 Audio, FFT, and Volume Data
+You can also access raw audio data and volume information like this:
+
 ```dart
 /// Get the current volume in dB in the [-100, 0] range.
 double volume = Recorder.instance.getVolumeDb();
@@ -102,4 +105,5 @@ Float32List waveAudio = Recorder.instance.getWave();
 /// Return a 256 float array containing FFT data in the range [-1.0, 1.0] not clamped.
 Float32List fftAudio = Recorder.instance.getFft();
 ```
+
 ![Image](https://github.com/alnitak/flutter_recorder/raw/main/images/audio_data.png)
