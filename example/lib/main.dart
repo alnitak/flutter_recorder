@@ -64,7 +64,7 @@ class _MyAppState extends State<MyApp> {
                   OutlinedButton(
                     onPressed: () {
                       final devices = _recorder.listCaptureDevices();
-                      debugPrint('\n-------- LIST DEVICES ---------');
+                      debugPrint('\n-------- LIST CAPTURE DEVICES ---------');
                       for (final d in devices) {
                         debugPrint(
                           '${d.id} - ${d.isDefault ? "DEFAULT " : ""}  '
@@ -79,12 +79,21 @@ class _MyAppState extends State<MyApp> {
                     onPressed: () {
                       try {
                         _recorder.init();
-                        _recorder.startListen();
                       } on Exception catch (e) {
                         debugPrint('-------------- init() error: $e\n');
                       }
                     },
                     child: const Text('init'),
+                  ),
+                  OutlinedButton(
+                    onPressed: () {
+                      try {
+                        _recorder.startListen();
+                      } on Exception catch (e) {
+                        debugPrint('-------------- startListen() error: $e\n');
+                      }
+                    },
+                    child: const Text('start listen'),
                   ),
                   OutlinedButton(
                     onPressed: () {
@@ -120,15 +129,27 @@ class _MyAppState extends State<MyApp> {
                     },
                     child: const Text('setSilenceDetection OFF'),
                   ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                runSpacing: 6,
+                spacing: 6,
+                children: [
                   ElevatedButton(
                     onPressed: () async {
                       try {
                         /// Asking for file path to store the audio file.
                         /// On web platform, it will be asked internally
                         /// from the browser.
-                        final downloadsDir = await getDownloadsDirectory();
-                        filePath = '${downloadsDir!.path}/flutter_recorder.wav';
-                        _recorder.startRecording(completeFilePath: filePath!);
+                        if (!kIsWeb) {
+                          final downloadsDir = await getDownloadsDirectory();
+                          filePath =
+                              '${downloadsDir!.path}/flutter_recorder.wav';
+                          _recorder.startRecording(completeFilePath: filePath!);
+                        } else {
+                          _recorder.startRecording();
+                        }
                       } on Exception catch (e) {
                         debugPrint('-------------- startRecording() $e\n');
                       }
@@ -150,8 +171,10 @@ class _MyAppState extends State<MyApp> {
                   ElevatedButton(
                     onPressed: () {
                       _recorder.stopRecording();
-                      debugPrint('Audio recorded to "$filePath"');
-                      showFileRecordedDialog(filePath!);
+                      if (!kIsWeb) {
+                        debugPrint('Audio recorded to "$filePath"');
+                        showFileRecordedDialog(filePath!);
+                      }
                     },
                     child: const Text('Stop recording'),
                   ),

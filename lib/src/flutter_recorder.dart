@@ -157,6 +157,9 @@ interface class Recorder {
   }
 
   /// Start listening to the device.
+  /// 
+  /// WEB NOTE: it's preferable to call this method after the user accepted
+  /// the recording permission.
   ///
   /// Throws [RecorderCaptureNotInitializedException].
   /// Throws [RecorderFailedToStartDeviceException].

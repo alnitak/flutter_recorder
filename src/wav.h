@@ -63,7 +63,7 @@ namespace WriteAudio
 #else
         // JS implementation for the web platform.
     
-        // Initialize WAV file.
+        // Initialize WAV parameters.
         CaptureErrors init(const char *fileName, ma_device_config deviceConfig)
         {
             // Store parameters to the WASM Module.
