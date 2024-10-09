@@ -2,6 +2,23 @@
 
 A low-level audio recorder plugin which uses miniaudio as backend and supporting all the platforms. It can detect silence and save to WAV audio file. Audio wave and FFT data can be get in real-time as for the volume level.
 
+[![style: very good analysis](https://img.shields.io/badge/style-very_good_analysis-B22C89.svg)](https://pub.dev/packages/very_good_analysis)
+
+|Linux|Windows|Android|MacOS (under test)|iOS (under test)|web|
+|:-:|:-:|:-:|:-:|:-:|:-:|
+|💙|💙|💙|💙|💙|💙|
+
+## Select features:
+- Support all the platforms
+- High performance using miniaudio C library with FFI
+- Record audio in WAV format with pause support
+- Choose recording device
+- Silence catch detection via callback or Stream
+- Set the threshold for what is considered "silence"
+- Set the duration of silence after which the recorder pauses
+- Set the amount of time to keep before the recording starts again
+- Get volume, audio and FFT data in real-time
+
 ## Setup permissions
 After setting up permission for you Android, MacOS or iOS, in your app, you will need to ask for permission to use the microphonem maybe using [permission_handler](https://pub.dev/packages/permission_handler) plugin.
 https://pub.dev/packages/permission_handler
@@ -46,6 +63,8 @@ try {
 } on Exception catch (e) {
     debugPrint('init() error: $e\n');
 }
+/// On Web platform it is better to initialize and wait the user to give
+/// mic permission. Then use `startListen()` when it's needed.
 
 //Start recording:
 Recorder.instance.startRecording(completeFilePath: 'audioCompleteFilenameWithPath.wav`);
