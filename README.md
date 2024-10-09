@@ -20,7 +20,7 @@ A low-level audio recorder plugin which uses miniaudio as backend and supporting
 - Get volume, audio and FFT data in real-time
 
 ## Setup permissions
-After setting up permission for you Android, MacOS or iOS, in your app, you will need to ask for permission to use the microphonem maybe using [permission_handler](https://pub.dev/packages/permission_handler) plugin.
+After setting up permission for your Android, MacOS, or iOS, in your app, you will need to ask for permission to use the microphone for example using [permission_handler](https://pub.dev/packages/permission_handler) plugin.
 https://pub.dev/packages/permission_handler
 
 #### Android
@@ -75,7 +75,7 @@ Recorder.instance.stopRecording();
 Using `Recorder.instance.listCaptureDevices()` you can have a list of available capture devices and then pass the optional `deviceID` to `Recorder.instance.init()`.
 
 ---
-It is possible to detect silence and skipping it while recording:
+It is possible to detect silence and skip it while recording:
 ```dart
 Recorder.instance.setSilenceDetection(
     enable: true,
@@ -93,7 +93,7 @@ Recorder.instance.setSilenceDuration(0.5);
 Recorder.instance.setSecondsOfAudioToWriteBefore(0.0);
 ```
 ---
-It is also possible to get audio data, FFT and volume:
+It is also possible to get audio data, FFT, and volume:
 ```dart
 /// Get the current volume in dB in the [-100, 0] range.
 double volume = Recorder.instance.getVolumeDb();
@@ -102,3 +102,4 @@ Float32List waveAudio = Recorder.instance.getWave();
 /// Return a 256 float array containing FFT data in the range [-1.0, 1.0] not clamped.
 Float32List fftAudio = Recorder.instance.getFft();
 ```
+![Image](https://github.com/alnitak/flutter_recorder/raw/main/images/audio_data.png)
