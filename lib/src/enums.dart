@@ -56,3 +56,17 @@ enum CaptureErrors {
         _ => throw ArgumentError('Unknown value for CaptureErrors: $value'),
       };
 }
+
+/// The channels to be used while initializing the player.
+enum RecorderChannels {
+  /// One channel.
+  mono(1),
+
+  /// Two channels.
+  stereo(2);
+
+  const RecorderChannels(this.count);
+
+  /// The channels count.
+  final int count;
+}

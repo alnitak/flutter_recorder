@@ -30,8 +30,13 @@ public:
     ///     can be acquired with [listCaptureDevices].
     ///     If [deviceID] is -1, the default will be used
     /// @param deviceID the device ID chosen to be initialized
+    /// @param sampleRate the sample rate
+    /// @param channels the number of channels
     /// @return `captureNoError` if no error or else `captureInitFailed`
-    CaptureErrors init(int deviceID);
+    CaptureErrors init(
+        int deviceID,
+        unsigned int sampleRate,
+        unsigned int channels);
 
     /// @brief Must be called when there is no more need of the capture or when closing the app
     void dispose();
@@ -61,7 +66,7 @@ public:
     float getVolumeDb();
 
     ma_device_config deviceConfig;
-    
+
     /// Wheter or not the callback is detecting silence.
     bool isDetectingSilence;
 

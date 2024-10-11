@@ -133,11 +133,24 @@ interface class Recorder {
   }
 
   /// Initialize input device with [deviceID].
+  /// 
+  /// [deviceID] the id of the input device. If -1, the default OS input
+  /// device is used.
+  /// [sampleRate] sample rate in Hz. Default to 22050.
+  /// [channels] number of channels. Default to [RecorderChannels.mono].
   ///
   /// Thows [RecorderInitializeFailedException] if something goes wrong, ie. no
   /// device found with [deviceID] id.
-  void init({int deviceID = -1}) {
-    _recoreder.impl.init(deviceID: deviceID);
+  void init({
+    int deviceID = -1,
+    int sampleRate = 22050,
+    RecorderChannels channels = RecorderChannels.mono,
+  }) {
+    _recoreder.impl.init(
+      deviceID: deviceID,
+      sampleRate: sampleRate,
+      channels: channels,
+    );
     _recoreder.impl.setDartEventCallbacks();
   }
 
@@ -157,7 +170,7 @@ interface class Recorder {
   }
 
   /// Start listening to the device.
-  /// 
+  ///
   /// WEB NOTE: it's preferable to call this method after the user accepted
   /// the recording permission.
   ///

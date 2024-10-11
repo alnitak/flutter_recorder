@@ -18,36 +18,35 @@
 Capture capture;
 std::unique_ptr<Analyzer> analyzerCapture = std::make_unique<Analyzer>(256);
 
-
 dartSilenceChangedCallback_t dartSilenceChangedCallback;
 dartSilenceChangedCallback_t nativeSilenceChangedCallback;
 
-    //////////////////////////////////////////////////////////////
-    /// WEB WORKER
+//////////////////////////////////////////////////////////////
+/// WEB WORKER
 
 #ifdef __EMSCRIPTEN__
-    /// Create the web worker and store a global "Module.workerUri" in JS.
-    FFI_PLUGIN_EXPORT void createWorkerInWasm()
-    {
-        EM_ASM({
-            if (!Module.wasmWorker)
-            {
-                // Create a new Worker from the URI
-                var workerUri = "assets/packages/flutter_recorder/web/worker.dart.js";
-                Module.wasmWorker = new Worker(workerUri);
-                console.log("EM_ASM creating web worker! " + workerUri + "  " + Module.wasmWorker);
-            }
-            else
-            {
-                console.log("EM_ASM web worker already created!");
-            }
-        });
-    }
+/// Create the web worker and store a global "Module.workerUri" in JS.
+FFI_PLUGIN_EXPORT void createWorkerInWasm()
+{
+    EM_ASM({
+        if (!Module.wasmWorker)
+        {
+            // Create a new Worker from the URI
+            var workerUri = "assets/packages/flutter_recorder/web/worker.dart.js";
+            Module.wasmWorker = new Worker(workerUri);
+            console.log("EM_ASM creating web worker! " + workerUri + "  " + Module.wasmWorker);
+        }
+        else
+        {
+            console.log("EM_ASM web worker already created!");
+        }
+    });
+}
 
-    /// Post a message with the web worker.
-    FFI_PLUGIN_EXPORT void sendToWorker(const char *message, bool isSilent, float energyDb)
-    {
-        EM_ASM({
+/// Post a message with the web worker.
+FFI_PLUGIN_EXPORT void sendToWorker(const char *message, bool isSilent, float energyDb)
+{
+    EM_ASM({
             if (Module.wasmWorker)
             {
                 // console.log("EM_ASM posting message \"" + UTF8ToString($0) + 
@@ -63,9 +62,8 @@ dartSilenceChangedCallback_t nativeSilenceChangedCallback;
             {
                 console.error('Worker not found.');
             } }, message, isSilent, energyDb);
-    }
+}
 #endif
-
 
 void silenceChangedCallback(bool *isSilent, float *energyDb)
 {
@@ -141,16 +139,19 @@ FFI_PLUGIN_EXPORT void freeListCaptureDevices(
     }
 }
 
-FFI_PLUGIN_EXPORT enum CaptureErrors init(int deviceID)
+FFI_PLUGIN_EXPORT enum CaptureErrors init(
+    int deviceID,
+    unsigned int sampleRate,
+    unsigned int channels)
 {
-    CaptureErrors res = capture.init(deviceID);
+    CaptureErrors res = capture.init(deviceID, sampleRate, channels);
     return res;
 }
 
 FFI_PLUGIN_EXPORT void deinit()
 {
     if (capture.isRecording)
-            capture.stopRecording();
+        capture.stopRecording();
     capture.dispose();
 }
 
@@ -179,7 +180,7 @@ FFI_PLUGIN_EXPORT enum CaptureErrors startListen()
 FFI_PLUGIN_EXPORT void stopListen()
 {
     if (capture.isRecording)
-            capture.stopRecording();
+        capture.stopRecording();
     capture.stopListen();
 }
 

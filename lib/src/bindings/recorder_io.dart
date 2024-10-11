@@ -168,8 +168,12 @@ class RecorderFfi extends RecorderImpl {
   }
 
   @override
-  void init({int deviceID = -1}) {
-    final error = _bindings.init(deviceID);
+  void init({
+    int deviceID = -1,
+    int sampleRate = 22050,
+    RecorderChannels channels = RecorderChannels.mono,
+  }) {
+    final error = _bindings.init(deviceID, sampleRate, channels.count);
     if (error != CaptureErrors.captureNoError) {
       throw RecorderCppException.fromRecorderError(error);
     }

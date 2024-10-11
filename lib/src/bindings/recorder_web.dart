@@ -152,8 +152,12 @@ class RecorderWeb extends RecorderImpl {
   }
 
   @override
-  void init({int deviceID = -1}) {
-    final error = wasmInit(deviceID);
+  void init({
+    int deviceID = -1,
+    int sampleRate = 22050,
+    RecorderChannels channels = RecorderChannels.mono,
+  }) {
+    final error = wasmInit(deviceID, sampleRate, channels.count);
     if (CaptureErrors.fromValue(error) != CaptureErrors.captureNoError) {
       throw RecorderCppException.fromRecorderError(
         CaptureErrors.fromValue(error),

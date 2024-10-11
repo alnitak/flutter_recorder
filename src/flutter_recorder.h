@@ -30,7 +30,10 @@ extern "C"
         int **isDefault,
         int n_devices);
 
-    FFI_PLUGIN_EXPORT enum CaptureErrors init(int deviceID);
+    FFI_PLUGIN_EXPORT enum CaptureErrors init(
+        int deviceID,
+        unsigned int sampleRate,
+        unsigned int channels);
 
     FFI_PLUGIN_EXPORT void deinit();
 

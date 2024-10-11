@@ -127,15 +127,21 @@ class FlutterRecorderBindings {
 
   CaptureErrors init(
     int deviceID,
+    int sampleRate,
+    int channels,
   ) {
     return CaptureErrors.fromValue(_init(
       deviceID,
+      sampleRate,
+      channels,
     ));
   }
 
-  late final _initPtr =
-      _lookup<ffi.NativeFunction<ffi.UnsignedInt Function(ffi.Int)>>('init');
-  late final _init = _initPtr.asFunction<int Function(int)>();
+  late final _initPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.UnsignedInt Function(
+              ffi.Int, ffi.UnsignedInt, ffi.UnsignedInt)>>('init');
+  late final _init = _initPtr.asFunction<int Function(int, int, int)>();
 
   void deinit() {
     return _deinit();

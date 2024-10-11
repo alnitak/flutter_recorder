@@ -253,7 +253,10 @@ std::vector<CaptureDevice> Capture::listCaptureDevices()
     return ret;
 }
 
-CaptureErrors Capture::init(int deviceID)
+CaptureErrors Capture::init(
+    int deviceID,
+    unsigned int sampleRate,
+    unsigned int channels)
 {
     if (mInited)
         return captureInitFailed;
@@ -266,8 +269,8 @@ CaptureErrors Capture::init(int deviceID)
         deviceConfig.capture.pDeviceID = &pCaptureInfos[deviceID].id;
     }
     deviceConfig.capture.format = ma_format_f32;
-    deviceConfig.capture.channels = 1;
-    deviceConfig.sampleRate = 22050;
+    deviceConfig.capture.channels = channels;
+    deviceConfig.sampleRate = sampleRate;
     deviceConfig.dataCallback = data_callback;
     deviceConfig.pUserData = this;
 
@@ -284,7 +287,10 @@ CaptureErrors Capture::init(int deviceID)
 void Capture::dispose()
 {
     mInited = false;
+    wav.close();
     circularBuffer.reset();
+    isRecording = false;
+
     ma_device_uninit(&device);
 }
 

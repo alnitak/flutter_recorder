@@ -80,7 +80,11 @@ abstract class RecorderImpl {
   /// Thows [RecorderInitializeFailedException] if something goes wrong, ie. no
   /// device found with [deviceID] id.
   @mustBeOverridden
-  void init({int deviceID = -1});
+  void init({
+    int deviceID = -1,
+    int sampleRate = 22050,
+    RecorderChannels channels = RecorderChannels.mono,
+  });
 
   /// Dispose capture device.
   @mustBeOverridden
