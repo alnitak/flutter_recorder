@@ -18,6 +18,8 @@ A low-level audio recorder plugin which uses miniaudio as backend and supporting
 - ⏱️ **Adjustable Pause Timing**: Set how long silence lasts before pausing, and how soon to resume recording.
 - 🔊 **Real-time Audio Metrics**: Access volume, audio wave, and FFT data in real-time.
 
+[A web example compiled in WASM.](https://marcobavagnoli.com/flutter_recorder/)
+
 ## 🚀 Setup Permissions
 After setting up permission for you Android, MacOS or iOS, in your app, you will need to ask for permission to use the microphonem maybe using [permission_handler](https://pub.dev/packages/permission_handler) plugin.
 https://pub.dev/packages/permission_handler
