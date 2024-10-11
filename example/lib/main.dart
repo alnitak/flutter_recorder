@@ -66,7 +66,10 @@ class _MyAppState extends State<MyApp> {
                   OutlinedButton(
                     onPressed: () {
                       try {
-                        _recorder.init(sampleRate: 44100, channels: RecorderChannels.stereo);
+                        _recorder.init(
+                          sampleRate: 44100,
+                          channels: RecorderChannels.stereo,
+                        );
                       } on Exception catch (e) {
                         debugPrint('-------------- init() error: $e\n');
                       }

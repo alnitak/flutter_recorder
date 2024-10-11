@@ -133,7 +133,7 @@ interface class Recorder {
   }
 
   /// Initialize input device with [deviceID].
-  /// 
+  ///
   /// [deviceID] the id of the input device. If -1, the default OS input
   /// device is used.
   /// [sampleRate] sample rate in Hz. Default to 22050.

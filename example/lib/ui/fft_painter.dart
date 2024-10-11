@@ -11,8 +11,7 @@ class FftPainter extends CustomPainter {
     final fftData = Recorder.instance.getFft();
     final barWidth = size.width / 256;
 
-    final paint = Paint()
-      ..color = Colors.yellow;
+    final paint = Paint()..color = Colors.yellow;
 
     for (var i = 0; i < 256; i++) {
       late final double barHeight;
