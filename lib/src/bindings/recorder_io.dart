@@ -147,8 +147,8 @@ class RecorderFfi extends RecorderImpl {
       ret.add(CaptureDevice(s, n == 1, id));
     }
 
-    /// Free allocated memory done in C.
-    /// This work on all platforms but not on win.
+    // Free allocated memory is done in C.
+    // This work on all platforms but not on win.
     // for (int i = 0; i < ndev; i++) {
     //   calloc.free(devices.elementAt(i).value.ref.name);
     //   calloc.free(devices.elementAt(i).value);

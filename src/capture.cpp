@@ -7,7 +7,7 @@
 #include <cmath>
 #include <atomic>
 #include <time.h>
-#include "soloud_fft.h"
+#include "fft/soloud_fft.h"
 
 #ifdef _IS_WIN_
 #define CLOCK_REALTIME 0
@@ -264,7 +264,8 @@ CaptureErrors Capture::init(
     deviceConfig.periodSizeInFrames = BUFFER_SIZE;
     if (deviceID != -1)
     {
-        if (listCaptureDevices().size() == 0)
+        auto devices = listCaptureDevices();
+        if (devices.size() == 0 || deviceID >= devices.size())
             return captureInitFailed;
         deviceConfig.capture.pDeviceID = &pCaptureInfos[deviceID].id;
     }

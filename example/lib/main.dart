@@ -301,7 +301,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> showDeviceListDialog() async {
     final devices = _recorder.listCaptureDevices();
     String devicesString = devices.asMap().entries.map((entry) {
-      return '${entry.value.id} - ${entry.value.isDefault ? 'DEFAULT' : ''}:'
+      return '${entry.value.id} ${entry.value.isDefault ? 'DEFAULT' : ''} - '
           ' ${entry.value.name}';
     }).join('\n\n');
 
