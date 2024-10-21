@@ -30,8 +30,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     if (defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.iOS ||
-        defaultTargetPlatform == TargetPlatform.macOS) {
+        defaultTargetPlatform == TargetPlatform.iOS) {
       Permission.microphone.request().isGranted.then((value) async {
         if (!value) {
           await [Permission.microphone].request();
