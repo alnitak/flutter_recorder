@@ -1,4 +1,5 @@
 #include "miniaudio.h"
+#include "enums.h"
 
 #include <iostream>
 
@@ -71,13 +72,42 @@ namespace WriteAudio
         // Initialize WAV parameters.
         CaptureErrors init(const char *fileName, ma_device_config deviceConfig)
         {
+            // ma_format_unknown = 0
+            // ma_format_u8      = 1
+            // ma_format_s16     = 2
+            // ma_format_s24     = 3
+            // ma_format_s32     = 4
+            // ma_format_f32     = 5
+            
             // Store parameters to the WASM Module.
             EM_ASM({
+                let format;
+                switch ($2) {
+                    case 5:
+                        format = 'f32';
+                        break;
+                    case 4:
+                        format = 's32';
+                        break;
+                    case 3:
+                        format = 's24';
+                        break;
+                    case 2:
+                        format = 's16';
+                        break;
+                    case 1:
+                        format = 'u8';
+                        break;
+                    default:
+                        format = 'unknown';
+                        break;
+                }
+                console.log("EM_ASM init wav! " + $0 + "  " + $1 + "  " + format);
                 Module.dataChunks = [];
                 Module.fileName = "output.wav";
                 Module.numChannels = $0;
                 Module.sampleRate = $1; 
-            }, deviceConfig.capture.channels, deviceConfig.sampleRate);
+                Module.format = format; }, deviceConfig.capture.channels, deviceConfig.sampleRate, deviceConfig.capture.format);
 
             isRecording = true;
             return captureNoError;
@@ -92,7 +122,24 @@ namespace WriteAudio
                     return;
                 }
         
-                let buffer = HEAPF32.subarray($0 / 4, ($0 / 4) + $1 * Module.numChannels);
+                let buffer;
+                switch (Module.format) {
+                    case 'u8':
+                        buffer = HEAPU8.subarray($0, $0 + $1 * Module.numChannels);
+                        break;
+                    case 's16':
+                        buffer = HEAP16.subarray($0 / 2, ($0 / 2) + $1 * Module.numChannels);
+                        break;
+                    case 's24':
+                        buffer = HEAPU8.subarray($0, $0 + $1 * Module.numChannels * 3);
+                        break;
+                    case 's32':
+                        buffer = HEAP32.subarray($0 / 4, ($0 / 4) + $1 * Module.numChannels);
+                        break;
+                    case 'f32':
+                    default:
+                        buffer = HEAPF32.subarray($0 / 4, ($0 / 4) + $1 * Module.numChannels);
+                }
         
                 if (!Module.dataChunks) {
                     Module.dataChunks = [];
@@ -110,56 +157,87 @@ namespace WriteAudio
                 EM_ASM({
                     function encodeWAV()
                     {
-                        // Wav file parameters.
                         const numChannels = Module.numChannels;
                         const sampleRate = Module.sampleRate;
-                        const bitsPerSample = 16; // 16-bit per sample
-                        console.log("******** numChannels: " + numChannels + ", sampleRate: " + sampleRate + ", bitsPerSample: " + bitsPerSample);
+                        let bitsPerSample;
+                        let audioData;
+                        let formatCode = 1;  // Default to PCM
 
-                        // Convert audio audio from float32 to int16
-                        let float32Data = Module.dataChunks;
-                        let int16Data = new Int16Array(float32Data.length);
-
-                        // Clipping values from float32 to int16
-                        for (let i = 0; i < float32Data.length; i++)
-                        {
-                            let sample = float32Data[i];
-                            sample = Math.max(-1, Math.min(1, sample));                  // -1 e 1 clipping
-                            int16Data[i] = sample < 0 ? sample * 32768 : sample * 32767; // Conversion to int16
+                        switch (Module.format) {
+                            case 'u8':
+                                bitsPerSample = 8;
+                                audioData = new Uint8Array(Module.dataChunks);
+                                break;
+                            case 's16':
+                                bitsPerSample = 16;
+                                audioData = new Int16Array(Module.dataChunks);
+                                break;
+                            case 's24':
+                                bitsPerSample = 24;
+                                audioData = new Uint8Array(Module.dataChunks);
+                                break;
+                            case 's32':
+                                bitsPerSample = 32;
+                                audioData = new Int32Array(Module.dataChunks);
+                                break;
+                            case 'f32':
+                                bitsPerSample = 32;
+                                formatCode = 3;  // Floating-point PCM format
+                                audioData = new Float32Array(Module.dataChunks);
+                                break;
+                            default:
+                                throw new Error("Formato non supportato");
                         }
 
-                        // Calcolate dimensions.
-                        const blockAlign = numChannels * bitsPerSample / 8;
+                        const blockAlign = numChannels * (bitsPerSample / 8);
                         const byteRate = sampleRate * blockAlign;
-                        const dataSize = int16Data.length * bitsPerSample / 8;
-                        const totalFileSize = 44 + dataSize; // 44 byte header + dati audio
+                        let dataSize = audioData.length * (bitsPerSample / 8);
+                        const totalFileSize = 44 + dataSize;
+                        if (Module.format == 's24') {
+                            // If we are using s24 `audioData` is a Uint8Array which reflects the `dataSize`.
+                            dataSize = audioData.length;
+                        }
 
                         const wavBuffer = new ArrayBuffer(totalFileSize);
                         const view = new DataView(wavBuffer);
 
                         // Writing RIFF header
                         view.setUint32(0, 0x52494646, false);       // "RIFF"
-                        view.setUint32(4, totalFileSize - 8, true); // Dimensione del file meno 8 byte
+                        view.setUint32(4, totalFileSize - 8, true); // File size minus 8 bytes
                         view.setUint32(8, 0x57415645, false);       // "WAVE"
 
                         // Writing fmt subchunk
                         view.setUint32(12, 0x666d7420, false);   // "fmt "
-                        view.setUint32(16, 16, true);            // Subchunk size (16 per PCM)
-                        view.setUint16(20, 1, true);             // Audio format (1 per PCM)
-                        view.setUint16(22, numChannels, true);   // Channel number
-                        view.setUint32(24, sampleRate, true);    // Sampling rate
+                        view.setUint32(16, 16, true);            // PCM subchunk size
+                        view.setUint16(20, formatCode, true);             // Audio format (1 for PCM)
+                        view.setUint16(22, numChannels, true);   // Number of channels
+                        view.setUint32(24, sampleRate, true);    // Sample rate
                         view.setUint32(28, byteRate, true);      // Byte rate
-                        view.setUint16(32, blockAlign, true);    // Block align (channels * sample bytes)
+                        view.setUint16(32, blockAlign, true);    // Block align
                         view.setUint16(34, bitsPerSample, true); // Bits per sample
 
-                        // Scrittura del subchunk data
+                        // Data subchunk
                         view.setUint32(36, 0x64617461, false); // "data"
-                        view.setUint32(40, dataSize, true);    // audio data size
+                        view.setUint32(40, dataSize, true);    // Data chunk size
 
-                        // Write audio data
-                        for (let i = 0; i < int16Data.length; i++)
-                        {
-                            view.setInt16(44 + i * 2, int16Data[i], true); // true means little-endian
+                        // Writing audio data
+                        for (let i = 0; i < audioData.length; i++) {
+                            if (bitsPerSample === 8) {
+                                view.setUint8(44 + i, audioData[i]);
+                            } else if (bitsPerSample === 16) {
+                                view.setInt16(44 + i * 2, audioData[i], true);
+                            } else if (bitsPerSample === 24) {
+                                // view.setUint8(44 + i * 3, audioData[i * 3]);
+                                // view.setUint8(44 + i * 3 + 1, audioData[i * 3 + 1]);
+                                // view.setUint8(44 + i * 3 + 2, audioData[i * 3 + 2]);
+                                view.setUint8(44 + i, audioData[i]);
+                            } else if (bitsPerSample === 32) {
+                                if (Module.format === 'f32') {
+                                    view.setFloat32(44 + i * 4, audioData[i], true);
+                                } else {
+                                    view.setInt32(44 + i * 4, audioData[i], true);
+                                }
+                            }
                         }
 
                         return wavBuffer;
@@ -168,32 +246,20 @@ namespace WriteAudio
                     async function saveWavFile()
                     {
                         const wavFile = encodeWAV();
-                        // Save the file using showSaveFilePicker (Chrome) or a fallback for unsupported browsers
-                        if (window.showSaveFilePicker)
-                        {
-                            try
-                            {
+                        if (window.showSaveFilePicker) {
+                            try {
                                 const handle = await window.showSaveFilePicker({
                                     suggestedName : Module.fileName || 'output.wav',
-                                    types : [ {
-                                        description : 'Audio WAV file',
-                                        accept : {'audio/wav' : ['.wav']},
-                                    } ],
+                                    types : [ { description : 'Audio WAV file', accept : {'audio/wav' : ['.wav']} } ],
                                 });
                                 const writable = await handle.createWritable();
                                 await writable.write(wavFile);
                                 await writable.close();
-                            }
-                            catch (err)
-                            {
+                            } catch (err) {
                                 console.error('Error saving file:', err);
                             }
-                        }
-                        else
-                        {
-                            // Fallback for browsers that don't support showSaveFilePicker
-                            const blob = new Blob([wavFile],
-                                                  { type: 'audio/wav' });
+                        } else {
+                            const blob = new Blob([wavFile], { type: 'audio/wav' });
                             const link = document.createElement('a');
                             link.href = URL.createObjectURL(blob);
                             link.download = Module.fileName || 'output.wav';

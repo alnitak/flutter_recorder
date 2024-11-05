@@ -86,7 +86,7 @@ external void wasmFreeListCaptureDevices(
 );
 
 @JS('Module._init')
-external int wasmInit(int deviceID, int sampleRate, int channels);
+external int wasmInit(int deviceID, int format, int sampleRate, int channels);
 
 @JS('Module._deinit')
 external void wasmDeinit();

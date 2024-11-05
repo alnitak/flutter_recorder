@@ -154,10 +154,11 @@ class RecorderWeb extends RecorderImpl {
   @override
   void init({
     int deviceID = -1,
+    PCMFormat format = PCMFormat.s16le,
     int sampleRate = 22050,
     RecorderChannels channels = RecorderChannels.mono,
   }) {
-    final error = wasmInit(deviceID, sampleRate, channels.count);
+    final error = wasmInit(deviceID, format.value, sampleRate, channels.count);
     if (CaptureErrors.fromValue(error) != CaptureErrors.captureNoError) {
       throw RecorderCppException.fromRecorderError(
         CaptureErrors.fromValue(error),

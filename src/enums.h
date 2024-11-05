@@ -21,4 +21,13 @@ typedef enum CaptureErrors
 
 } CaptureErrorsInternal_t;
 
+typedef enum PCMFormat
+{
+    pcm_u8,
+    pcm_s16,
+    pcm_s24,
+    pcm_s32,
+    pcm_f32
+} PCMFormatInternal_t;
+
 #endif // ENUMS_H

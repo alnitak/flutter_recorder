@@ -139,10 +139,11 @@ FFI_PLUGIN_EXPORT void freeListCaptureDevices(
 
 FFI_PLUGIN_EXPORT enum CaptureErrors init(
     int deviceID,
+    int pcmFormat,
     unsigned int sampleRate,
     unsigned int channels)
 {
-    CaptureErrors res = capture.init(deviceID, sampleRate, channels);
+    CaptureErrors res = capture.init(deviceID, (PCMFormat)pcmFormat, sampleRate, channels);
     return res;
 }
 

@@ -82,6 +82,7 @@ abstract class RecorderImpl {
   @mustBeOverridden
   void init({
     int deviceID = -1,
+    PCMFormat format = PCMFormat.s16le,
     int sampleRate = 22050,
     RecorderChannels channels = RecorderChannels.mono,
   });

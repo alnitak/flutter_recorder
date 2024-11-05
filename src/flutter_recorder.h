@@ -32,6 +32,7 @@ extern "C"
 
     FFI_PLUGIN_EXPORT enum CaptureErrors init(
         int deviceID,
+        int pcmFormat,
         unsigned int sampleRate,
         unsigned int channels);
 

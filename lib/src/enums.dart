@@ -70,3 +70,34 @@ enum RecorderChannels {
   /// The channels count.
   final int count;
 }
+
+/// The PCM format
+enum PCMFormat {
+  /// 8-bit signed, little-endian.
+  s8(0),
+
+  /// 16-bit signed, little-endian.
+  s16le(1),
+
+  /// 24-bit signed, little-endian.
+  s24le(2),
+
+  /// 32-bit signed, little-endian.
+  s32le(3),
+
+  /// 32-bit float, little-endian.
+  f32le(4);
+
+  final int value;
+
+  const PCMFormat(this.value);
+
+  static PCMFormat fromValue(int value) => switch (value) {
+        0 => s8,
+        1 => s16le,
+        2 => s24le,
+        3 => s32le,
+        4 => f32le,
+        _ => throw ArgumentError('Unknown value for PCMFormat: $value'),
+      };
+}

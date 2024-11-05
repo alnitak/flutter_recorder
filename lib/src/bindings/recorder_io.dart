@@ -169,10 +169,16 @@ class RecorderFfi extends RecorderImpl {
   @override
   void init({
     int deviceID = -1,
+    PCMFormat format = PCMFormat.s16le,
     int sampleRate = 22050,
     RecorderChannels channels = RecorderChannels.mono,
   }) {
-    final error = _bindings.init(deviceID, sampleRate, channels.count);
+    final error = _bindings.init(
+      deviceID,
+      format.value,
+      sampleRate,
+      channels.count,
+    );
     if (error != CaptureErrors.captureNoError) {
       throw RecorderCppException.fromRecorderError(error);
     }

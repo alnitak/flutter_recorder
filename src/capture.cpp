@@ -255,6 +255,7 @@ std::vector<CaptureDevice> Capture::listCaptureDevices()
 
 CaptureErrors Capture::init(
     int deviceID,
+    PCMFormat pcmFormat,
     unsigned int sampleRate,
     unsigned int channels)
 {
@@ -269,7 +270,28 @@ CaptureErrors Capture::init(
             return captureInitFailed;
         deviceConfig.capture.pDeviceID = &pCaptureInfos[deviceID].id;
     }
-    deviceConfig.capture.format = ma_format_f32;
+    ma_format format;
+    switch (pcmFormat)
+    {
+    case PCMFormat::pcm_u8:
+        format = ma_format_u8;
+        break;
+    case PCMFormat::pcm_s16:
+        format = ma_format_s16;
+        break;
+    case PCMFormat::pcm_s24:
+        format = ma_format_s24;
+        break;
+    case PCMFormat::pcm_s32:
+        format = ma_format_s32;
+        break;
+    case PCMFormat::pcm_f32:
+        format = ma_format_f32;
+        break;
+    default:
+        return captureInitFailed;
+    }
+    deviceConfig.capture.format = format;
     deviceConfig.capture.channels = channels;
     deviceConfig.sampleRate = sampleRate;
     deviceConfig.dataCallback = data_callback;

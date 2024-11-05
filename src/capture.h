@@ -30,11 +30,13 @@ public:
     ///     can be acquired with [listCaptureDevices].
     ///     If [deviceID] is -1, the default will be used
     /// @param deviceID the device ID chosen to be initialized
+    /// @param pcmFormat the PCM format
     /// @param sampleRate the sample rate
     /// @param channels the number of channels
     /// @return `captureNoError` if no error or else `captureInitFailed`
     CaptureErrors init(
         int deviceID,
+        PCMFormat pcmFormat,
         unsigned int sampleRate,
         unsigned int channels);
 

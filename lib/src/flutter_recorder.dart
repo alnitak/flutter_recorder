@@ -136,6 +136,7 @@ interface class Recorder {
   ///
   /// [deviceID] the id of the input device. If -1, the default OS input
   /// device is used.
+  /// [format] PCM format. Default to [PCMFormat.s16le].
   /// [sampleRate] sample rate in Hz. Default to 22050.
   /// [channels] number of channels. Default to [RecorderChannels.mono].
   ///
@@ -143,11 +144,13 @@ interface class Recorder {
   /// device found with [deviceID] id.
   void init({
     int deviceID = -1,
+    PCMFormat format = PCMFormat.s16le,
     int sampleRate = 22050,
     RecorderChannels channels = RecorderChannels.mono,
   }) {
     _recoreder.impl.init(
       deviceID: deviceID,
+      format: format,
       sampleRate: sampleRate,
       channels: channels,
     );

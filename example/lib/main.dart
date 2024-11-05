@@ -66,8 +66,9 @@ class _MyAppState extends State<MyApp> {
                     onPressed: () {
                       try {
                         _recorder.init(
-                          sampleRate: 44100,
-                          channels: RecorderChannels.stereo,
+                          format: PCMFormat.s16le,
+                          sampleRate: 22050,
+                          channels: RecorderChannels.mono,
                         );
                       } on Exception catch (e) {
                         debugPrint('-------------- init() error: $e\n');
@@ -259,7 +260,7 @@ class _MyAppState extends State<MyApp> {
                   ),
                 ],
               ),
-              const Bars(),
+              // const Bars(),
             ],
           ),
         ),
