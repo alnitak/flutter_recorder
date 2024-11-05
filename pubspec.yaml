@@ -4,7 +4,7 @@ description: >-
   backend and supporting all the platforms. It can detect
   volume level and silence and save to WAV audio file. Audio
   wave and FFT data can be get in real-time as for the volume level.
-version: 0.9.0
+version: 0.9.1
 issue_tracker: https://github.com/alnitak/flutter_recorder/issues
 homepage: https://github.com/alnitak/flutter_recorder
 maintainer: Marco Bavagnoli (@lildeimos)

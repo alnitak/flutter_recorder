@@ -1,3 +1,6 @@
-## 0.0.1
+## 0.9.1
 
-* TODO: Describe initial release.
+* breaking change: 
+  - renamed `startListen` to `start`
+  - renamed `stopListen` to `stop`
+  - renamed `isDeviceStartedListen` to `isDeviceStarted`
