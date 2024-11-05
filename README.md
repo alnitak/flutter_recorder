@@ -57,15 +57,15 @@ if (defaultTargetPlatform == TargetPlatform.android ||
     }
 });
 
-/// Initialize the capture device and start listening to it:
+/// Initialize the capture device and start it:
 try {
     Recorder.instance.init();
-    Recorder.instance.startListen();
+    Recorder.instance.start();
 } on Exception catch (e) {
     debugPrint('init() error: $e\n');
 }
 /// On Web platform it is better to initialize and wait the user to give
-/// mic permission. Then use `startListen()` when it's needed.
+/// mic permission. Then use `start()` when it's needed.
 
 //Start recording:
 Recorder.instance.startRecording(completeFilePath: 'audioCompleteFilenameWithPath.wav`);
