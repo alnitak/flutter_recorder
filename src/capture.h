@@ -43,11 +43,11 @@ public:
 
     bool isInited();
 
-    bool isDeviceStartedListen();
+    bool isDeviceStarted();
 
-    CaptureErrors startListen();
+    CaptureErrors start();
 
-    void stopListen();
+    void stop();
 
     void setSilenceDetection(bool enable);
 
@@ -95,8 +95,6 @@ private:
     ma_device_info *pCaptureInfos;
     ma_uint32 captureCount;
     ma_result result;
-    // ma_encoder_config encoderConfig;
-    // ma_encoder encoder;
     ma_device device;
 
     /// true when the capture device is initialized.

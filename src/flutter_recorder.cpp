@@ -158,28 +158,28 @@ FFI_PLUGIN_EXPORT int isInited()
     return capture.isInited() ? 1 : 0;
 }
 
-FFI_PLUGIN_EXPORT int isDeviceStartedListen()
+FFI_PLUGIN_EXPORT int isDeviceStarted()
 {
-    return capture.isDeviceStartedListen();
+    return capture.isDeviceStarted();
 }
 
 FFI_PLUGIN_EXPORT int isCaptureStarted()
 {
-    return capture.isDeviceStartedListen() ? 1 : 0;
+    return capture.isDeviceStarted() ? 1 : 0;
 }
 
-FFI_PLUGIN_EXPORT enum CaptureErrors startListen()
+FFI_PLUGIN_EXPORT enum CaptureErrors start()
 {
     if (!capture.isInited())
         return captureNotInited;
-    return capture.startListen();
+    return capture.start();
 }
 
-FFI_PLUGIN_EXPORT void stopListen()
+FFI_PLUGIN_EXPORT void stop()
 {
     if (capture.isRecording)
         capture.stopRecording();
-    capture.stopListen();
+    capture.stop();
 }
 
 FFI_PLUGIN_EXPORT void setSilenceDetection(bool enable)

@@ -177,13 +177,13 @@ class RecorderWeb extends RecorderImpl {
   }
 
   @override
-  bool isDeviceStartedListen() {
-    return wasmIsDeviceStartedListen() == 1;
+  bool isDeviceStarted() {
+    return wasmIsDeviceStarted() == 1;
   }
 
   @override
-  void startListen() {
-    final error = wasmStartListen();
+  void start() {
+    final error = wasmStart();
     if (CaptureErrors.fromValue(error) != CaptureErrors.captureNoError) {
       throw RecorderCppException.fromRecorderError(
         CaptureErrors.fromValue(error),
@@ -192,8 +192,8 @@ class RecorderWeb extends RecorderImpl {
   }
 
   @override
-  void stopListen() {
-    wasmStopListen();
+  void stop() {
+    wasmStop();
   }
 
   @override

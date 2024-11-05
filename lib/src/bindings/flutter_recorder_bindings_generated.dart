@@ -159,30 +159,30 @@ class FlutterRecorderBindings {
       _lookup<ffi.NativeFunction<ffi.Int Function()>>('isInited');
   late final _isInited = _isInitedPtr.asFunction<int Function()>();
 
-  int isDeviceStartedListen() {
-    return _isDeviceStartedListen();
+  int isDeviceStarted() {
+    return _isDeviceStarted();
   }
 
-  late final _isDeviceStartedListenPtr =
-      _lookup<ffi.NativeFunction<ffi.Int Function()>>('isDeviceStartedListen');
-  late final _isDeviceStartedListen =
-      _isDeviceStartedListenPtr.asFunction<int Function()>();
+  late final _isDeviceStartedPtr =
+      _lookup<ffi.NativeFunction<ffi.Int Function()>>('isDeviceStarted');
+  late final _isDeviceStarted =
+      _isDeviceStartedPtr.asFunction<int Function()>();
 
-  CaptureErrors startListen() {
-    return CaptureErrors.fromValue(_startListen());
+  CaptureErrors start() {
+    return CaptureErrors.fromValue(_start());
   }
 
-  late final _startListenPtr =
-      _lookup<ffi.NativeFunction<ffi.UnsignedInt Function()>>('startListen');
-  late final _startListen = _startListenPtr.asFunction<int Function()>();
+  late final _startPtr =
+      _lookup<ffi.NativeFunction<ffi.UnsignedInt Function()>>('start');
+  late final _start = _startPtr.asFunction<int Function()>();
 
-  void stopListen() {
-    return _stopListen();
+  void stop() {
+    return _stop();
   }
 
-  late final _stopListenPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function()>>('stopListen');
-  late final _stopListen = _stopListenPtr.asFunction<void Function()>();
+  late final _stopPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function()>>('stop');
+  late final _stop = _stopPtr.asFunction<void Function()>();
 
   void setSilenceDetection(
     bool enable,

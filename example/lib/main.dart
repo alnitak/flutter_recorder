@@ -78,12 +78,12 @@ class _MyAppState extends State<MyApp> {
                   OutlinedButton(
                     onPressed: () {
                       try {
-                        _recorder.startListen();
+                        _recorder.start();
                       } on Exception catch (e) {
-                        debugPrint('-------------- startListen() error: $e\n');
+                        debugPrint('-------------- start() error: $e\n');
                       }
                     },
-                    child: const Text('start listen'),
+                    child: const Text('start'),
                   ),
                   OutlinedButton(
                     onPressed: () {

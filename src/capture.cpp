@@ -300,13 +300,13 @@ bool Capture::isInited()
     return mInited;
 }
 
-bool Capture::isDeviceStartedListen()
+bool Capture::isDeviceStarted()
 {
     ma_device_state result = ma_device_get_state(&device);
     return result == ma_device_state_started;
 }
 
-CaptureErrors Capture::startListen()
+CaptureErrors Capture::start()
 {
     if (!mInited)
         return captureNotInited;
@@ -321,7 +321,7 @@ CaptureErrors Capture::startListen()
     return captureNoError;
 }
 
-void Capture::stopListen()
+void Capture::stop()
 {
     ma_device_uninit(&device);
     mInited = false;

@@ -94,20 +94,20 @@ abstract class RecorderImpl {
   @mustBeOverridden
   bool isDeviceInitialized();
 
-  /// Whether listen to the device is started.
+  /// Whether the device is started.
   @mustBeOverridden
-  bool isDeviceStartedListen();
+  bool isDeviceStarted();
 
-  /// Start listening to the device.
+  /// Start the device.
   ///
   /// Throws [RecorderCaptureNotInitializedException].
   /// Throws [RecorderFailedToStartDeviceException].
   @mustBeOverridden
-  void startListen();
+  void start();
 
-  /// Stop listening to the device.
+  /// Stop the device.
   @mustBeOverridden
-  void stopListen();
+  void stop();
 
   /// Start recording.
   ///

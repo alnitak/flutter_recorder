@@ -94,14 +94,14 @@ external void wasmDeinit();
 @JS('Module._isInited')
 external int wasmIsDeviceInitialized();
 
-@JS('Module._isDeviceStartedListen')
-external int wasmIsDeviceStartedListen();
+@JS('Module._isDeviceStarted')
+external int wasmIsDeviceStarted();
 
-@JS('Module._startListen')
-external int wasmStartListen();
+@JS('Module._start')
+external int wasmStart();
 
-@JS('Module._stopListen')
-external void wasmStopListen();
+@JS('Module._stop')
+external void wasmStop();
 
 @JS('Module._startRecording')
 external int wasmStartRecording(int pathPtr);

@@ -190,21 +190,21 @@ class RecorderFfi extends RecorderImpl {
   }
 
   @override
-  bool isDeviceStartedListen() {
-    return _bindings.isDeviceStartedListen() == 1;
+  bool isDeviceStarted() {
+    return _bindings.isDeviceStarted() == 1;
   }
 
   @override
-  void startListen() {
-    final error = _bindings.startListen();
+  void start() {
+    final error = _bindings.start();
     if (error != CaptureErrors.captureNoError) {
       throw RecorderCppException.fromRecorderError(error);
     }
   }
 
   @override
-  void stopListen() {
-    _bindings.stopListen();
+  void stop() {
+    _bindings.stop();
   }
 
   @override

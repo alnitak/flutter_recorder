@@ -164,25 +164,25 @@ interface class Recorder {
     return _recoreder.impl.isDeviceInitialized();
   }
 
-  /// Whether listen to the device is started.
-  bool isDeviceStartedListen() {
-    return _recoreder.impl.isDeviceStartedListen();
+  /// Whether the device is started.
+  bool isDeviceStarted() {
+    return _recoreder.impl.isDeviceStarted();
   }
 
-  /// Start listening to the device.
+  /// Start the device.
   ///
   /// WEB NOTE: it's preferable to call this method after the user accepted
   /// the recording permission.
   ///
   /// Throws [RecorderCaptureNotInitializedException].
   /// Throws [RecorderFailedToStartDeviceException].
-  void startListen() {
-    _recoreder.impl.startListen();
+  void start() {
+    _recoreder.impl.start();
   }
 
-  /// Stop listening to the device.
-  void stopListen() {
-    _recoreder.impl.stopListen();
+  /// Stop the device.
+  void stop() {
+    _recoreder.impl.stop();
   }
 
   /// Start recording.

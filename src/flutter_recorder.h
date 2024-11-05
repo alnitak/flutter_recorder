@@ -39,11 +39,11 @@ extern "C"
 
     FFI_PLUGIN_EXPORT int isInited();
 
-    FFI_PLUGIN_EXPORT int isDeviceStartedListen();
+    FFI_PLUGIN_EXPORT int isDeviceStarted();
 
-    FFI_PLUGIN_EXPORT enum CaptureErrors startListen();
+    FFI_PLUGIN_EXPORT enum CaptureErrors start();
 
-    FFI_PLUGIN_EXPORT void stopListen();
+    FFI_PLUGIN_EXPORT void stop();
 
     FFI_PLUGIN_EXPORT void setSilenceDetection(bool enable);
 
