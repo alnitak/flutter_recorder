@@ -64,7 +64,6 @@ class RecorderFfi extends RecorderImpl {
     ffi.Pointer<ffi.Bool> silence,
     ffi.Pointer<ffi.Float> db,
   ) {
-    // print('SILENCE CHANGED: ${silence.value}, ${db.value}');
     _silenceCallback?.call(silence.value, db.value);
     silenceChangedEventController.add(
       (isSilent: silence.value, decibel: db.value),

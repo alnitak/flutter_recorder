@@ -49,8 +49,6 @@ FFI_PLUGIN_EXPORT void sendToWorker(const char *message, bool isSilent, float en
     EM_ASM({
             if (Module.wasmWorker)
             {
-                // console.log("EM_ASM posting message \"" + UTF8ToString($0) + 
-                //     "\" with isSilent=" + $1 + "  and energyDb=" + $2);
                 // Send the message
                 Module.wasmWorker.postMessage(JSON.stringify({
                     "message" : UTF8ToString($0),
