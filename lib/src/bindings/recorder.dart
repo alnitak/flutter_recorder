@@ -81,10 +81,10 @@ abstract class RecorderImpl {
   /// device found with [deviceID] id.
   @mustBeOverridden
   void init({
-    int deviceID = -1,
-    PCMFormat format = PCMFormat.s16le,
-    int sampleRate = 22050,
-    RecorderChannels channels = RecorderChannels.mono,
+    required int deviceID,
+    required PCMFormat format,
+    required int sampleRate,
+    required RecorderChannels channels,
   });
 
   /// Dispose capture device.

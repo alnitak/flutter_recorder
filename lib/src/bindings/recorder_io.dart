@@ -168,10 +168,10 @@ class RecorderFfi extends RecorderImpl {
 
   @override
   void init({
-    int deviceID = -1,
-    PCMFormat format = PCMFormat.s16le,
-    int sampleRate = 22050,
-    RecorderChannels channels = RecorderChannels.mono,
+    required int deviceID,
+    required PCMFormat format,
+    required int sampleRate,
+    required RecorderChannels channels,
   }) {
     final error = _bindings.init(
       deviceID,

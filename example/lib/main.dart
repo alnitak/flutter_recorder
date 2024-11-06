@@ -21,6 +21,9 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  final format = PCMFormat.f32le;
+  final sampleRate = 22050;
+  final channels = RecorderChannels.mono;
   final _recorder = Recorder.instance;
   String? filePath;
   var thresholdDb = -20.0;
@@ -66,9 +69,9 @@ class _MyAppState extends State<MyApp> {
                     onPressed: () {
                       try {
                         _recorder.init(
-                          format: PCMFormat.s16le,
-                          sampleRate: 22050,
-                          channels: RecorderChannels.mono,
+                          format: format,
+                          sampleRate: sampleRate,
+                          channels: channels,
                         );
                       } on Exception catch (e) {
                         debugPrint('-------------- init() error: $e\n');
@@ -260,7 +263,7 @@ class _MyAppState extends State<MyApp> {
                   ),
                 ],
               ),
-              // const Bars(),
+              if (format == PCMFormat.f32le) const Bars(),
             ],
           ),
         ),

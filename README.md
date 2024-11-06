@@ -12,6 +12,7 @@ A low-level audio recorder plugin that uses miniaudio as the backend and support
 - 🖥️ **Cross-platform**: Supports Linux, Windows, Android, MacOS, iOS, and web.
 - ⚡ **High performance**: Built using the fast and efficient miniaudio C library with FFI.
 - 🎙️ **WAV Recording with Pause**: Record in WAV format with pause functionality.
+- ⚙️ **Choose Data Type**: samplerate, mono or stereo, audio format (s8, s16le, s24le, s32le or f32le).
 - 🎛️ **Device Flexibility**: Choose your recording device.
 - 🔇 **Silence Detection**: Automatically detects silence via callback or Stream.
 - 📊 **Customizable Silence Threshold**: Define what’s considered “silence” for your recordings.
