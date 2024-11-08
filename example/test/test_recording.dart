@@ -49,7 +49,6 @@ Future<int> main() async {
   }
 
   for (final n in fromTo) {
-
       // Wheter to write the .raw file in the listener.
       isFirstFormat = n.$2.name == 'u8';
 

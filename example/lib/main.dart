@@ -9,9 +9,19 @@ import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+/// Demostrate how to use flutter_recorder.
+///
+/// The silence detection and the visualizer works when using [PCMFormat.f32].
 void main() async {
   runApp(
-    const MaterialApp(home: MyApp()),
+    MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(
+          title: Text('Flutter Recorder'),
+        ),
+        body: MyApp(),
+      ),
+    ),
   );
 }
 
@@ -23,7 +33,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  final format = PCMFormat.u8;
+  Directory? savingDir;
+  final format = PCMFormat.s16le;
   final sampleRate = 22050;
   final channels = RecorderChannels.mono;
   final _recorder = Recorder.instance;
@@ -46,6 +57,16 @@ class _MyAppState extends State<MyApp> {
       });
     }
 
+    getDownloadsDirectory().then((dir) {
+      if (dir == null) {
+        debugPrint('Cannot get download directory!');
+        return;
+      }
+      savingDir = Directory('${dir.path}/flutter_recorder');
+      savingDir?.createSync();
+      if (context.mounted) setState(() {});
+    });
+
     /// Listen to audio data stream. The data is received in Uint8List.
     _recorder.uint8ListStream.listen((data) {
       /// Write the PCM data to file. It can then be imported with the correct
@@ -56,282 +77,288 @@ class _MyAppState extends State<MyApp> {
         data.rawData,
         mode: FileMode.writeOnlyAppend,
       );
-      debugPrint('uint8List: ${data.length}');
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Flutter Recorder'),
-      ),
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            children: [
-              /// List capture devices, init, start, deinit
-              Wrap(
-                runSpacing: 6,
-                spacing: 6,
-                children: [
-                  OutlinedButton(
-                    onPressed: () {
-                      showDeviceListDialog();
-                    },
-                    child: const Text('listCaptureDevices'),
-                  ),
-                  OutlinedButton(
-                    onPressed: () {
-                      try {
-                        _recorder.init(
-                          format: format,
-                          sampleRate: sampleRate,
-                          channels: channels,
-                        );
-                      } on Exception catch (e) {
-                        debugPrint('-------------- init() error: $e\n');
-                      }
-                    },
-                    child: const Text('init'),
-                  ),
-                  OutlinedButton(
-                    onPressed: () {
-                      try {
-                        _recorder.start();
-                      } on Exception catch (e) {
-                        debugPrint('-------------- start() error: $e\n');
-                      }
-                    },
-                    child: const Text('start'),
-                  ),
-                  OutlinedButton(
-                    onPressed: () {
-                      _recorder.deinit();
-                    },
-                    child: const Text('deinit'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
+    if (savingDir == null) {
+      return const Placeholder(
+        strokeWidth: 0.5,
+        child: Padding(
+          padding: EdgeInsets.all(30.0),
+          child: Text('No download directory'),
+        ),
+      );
+    }
 
-              /// Recording
-              Wrap(
-                runSpacing: 6,
-                spacing: 6,
-                children: [
-                  ElevatedButton(
-                    onPressed: () async {
-                      try {
-                        /// Asking for file path to store the audio file.
-                        /// On web platform, it will be asked internally
-                        /// from the browser.
-                        if (!kIsWeb) {
-                          final downloadsDir = await getDownloadsDirectory();
-                          filePath =
-                              '${downloadsDir!.path}/flutter_recorder.wav';
-                          _recorder.startRecording(completeFilePath: filePath!);
-                        } else {
-                          _recorder.startRecording();
-                        }
-                      } on Exception catch (e) {
-                        debugPrint('-------------- startRecording() $e\n');
-                      }
-                    },
-                    child: const Text('Start recording'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      _recorder.setPauseRecording(pause: true);
-                    },
-                    child: const Text('Pause recording'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      _recorder.setPauseRecording(pause: false);
-                    },
-                    child: const Text('UN-Pause recording'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      _recorder.stopRecording();
+    return Align(
+      alignment: Alignment.topCenter,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          children: [
+            /// List capture devices, init, start, deinit
+            Wrap(
+              runSpacing: 6,
+              spacing: 6,
+              children: [
+                OutlinedButton(
+                  onPressed: () {
+                    showDeviceListDialog();
+                  },
+                  child: const Text('listCaptureDevices'),
+                ),
+                OutlinedButton(
+                  onPressed: () {
+                    try {
+                      _recorder.init(
+                        format: format,
+                        sampleRate: sampleRate,
+                        channels: channels,
+                      );
+                    } on Exception catch (e) {
+                      debugPrint('-------------- init() error: $e\n');
+                    }
+                  },
+                  child: const Text('init'),
+                ),
+                OutlinedButton(
+                  onPressed: () {
+                    try {
+                      _recorder.start();
+                    } on Exception catch (e) {
+                      debugPrint('-------------- start() error: $e\n');
+                    }
+                  },
+                  child: const Text('start'),
+                ),
+                OutlinedButton(
+                  onPressed: () {
+                    _recorder.deinit();
+                  },
+                  child: const Text('deinit'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            /// Recording
+            Wrap(
+              runSpacing: 6,
+              spacing: 6,
+              children: [
+                ElevatedButton(
+                  onPressed: () async {
+                    try {
+                      /// Asking for file path to store the audio file.
+                      /// On web platform, it will be asked internally
+                      /// from the browser.
                       if (!kIsWeb) {
-                        debugPrint('Audio recorded to "$filePath"');
-                        showFileRecordedDialog(filePath!);
+                        final downloadsDir = await getDownloadsDirectory();
+                        filePath = '${downloadsDir!.path}/flutter_recorder.wav';
+                        _recorder.startRecording(completeFilePath: filePath!);
+                      } else {
+                        _recorder.startRecording();
                       }
-                    },
-                    child: const Text('Stop recording'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
+                    } on Exception catch (e) {
+                      debugPrint('-------------- startRecording() $e\n');
+                    }
+                  },
+                  child: const Text('Start recording'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    _recorder.setPauseRecording(pause: true);
+                  },
+                  child: const Text('Pause recording'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    _recorder.setPauseRecording(pause: false);
+                  },
+                  child: const Text('UN-Pause recording'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    _recorder.stopRecording();
+                    if (!kIsWeb) {
+                      debugPrint('Audio recorded to "$filePath"');
+                      showFileRecordedDialog(filePath!);
+                    }
+                  },
+                  child: const Text('Stop recording'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
 
-              /// Streaming
-              Wrap(
-                runSpacing: 6,
-                spacing: 6,
+            /// Streaming
+            Wrap(
+              runSpacing: 6,
+              spacing: 6,
+              children: [
+                CircularProgressIndicator(),
+                OutlinedButton(
+                  onPressed: () {
+                    _recorder.startStreamingData();
+                    file = File(
+                        '${savingDir?.path}/fr_${sampleRate}_${format.name}_${channels.count}.pcm');
+                    try {
+                      file?.deleteSync();
+                    } catch (e) {}
+                  },
+                  child: const Text('start stream'),
+                ),
+                OutlinedButton(
+                  onPressed: () {
+                    _recorder.stopStreamingData();
+                    if (!kIsWeb) {
+                      debugPrint('Audio recorded to "${file?.path}"');
+                      showFileRecordedDialog(file!.path);
+                    }
+                  },
+                  child: const Text('stop stream'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            /// The silence detection is available only with f32 format and
+            /// the visualization is adapted only with that format.
+            if (format == PCMFormat.u8)
+              Column(
                 children: [
-                  OutlinedButton(
-                    onPressed: () {
-                      _recorder.startStreamingData();
-                      file = File(
-                          '/home/deimos/fr_${sampleRate}_${format.name}_${channels.count}.pcm');
-                      try {
-                        file?.deleteSync();
-                      } catch (e) {}
-                    },
-                    child: const Text('start stream'),
-                  ),
-                  OutlinedButton(
-                    onPressed: () {
-                      _recorder.stopStreamingData();
-                    },
-                    child: const Text('stop stream'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-
-              /// The silence detection is available only with f32 format and
-              /// the visualization is adapted only with that format.
-              if (format == PCMFormat.f32le)
-                Column(
-                  children: [
-                    Column(
-                      children: [
-                        StreamBuilder(
-                          stream: _recorder.silenceChangedEvents,
-                          builder: (context, snapshot) {
-                            return ColoredBox(
-                              color: snapshot.hasData && snapshot.data!.isSilent
-                                  ? Colors.green
-                                  : Colors.red,
-                              child: SizedBox(
-                                width: 70,
-                                height: 50,
-                                child: Center(
-                                  child: Text(_recorder
-                                      .getVolumeDb()
-                                      .toStringAsFixed(1)),
-                                ),
+                  Column(
+                    children: [
+                      StreamBuilder(
+                        stream: _recorder.silenceChangedEvents,
+                        builder: (context, snapshot) {
+                          return ColoredBox(
+                            color: snapshot.hasData && snapshot.data!.isSilent
+                                ? Colors.green
+                                : Colors.red,
+                            child: SizedBox(
+                              width: 70,
+                              height: 50,
+                              child: Center(
+                                child: Text(
+                                    _recorder.getVolumeDb().toStringAsFixed(1)),
                               ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          runSpacing: 6,
-                          spacing: 6,
-                          children: [
-                            OutlinedButton(
-                              onPressed: () {
-                                _recorder.setSilenceDetection(
-                                  enable: true,
-                                  onSilenceChanged: (isSilent, decibel) {
-                                    /// Here you can check if silence is changed.
-                                    /// Or you can do the same thing with the Stream
-                                    /// [Recorder.instance.silenceChangedEvents]
-                                    // debugPrint('SILENCE CHANGED: $isSilent, $decibel');
-                                  },
-                                );
-                                _recorder.setSilenceThresholdDb(-27);
-                                _recorder.setSilenceDuration(0.5);
-                                _recorder.setSecondsOfAudioToWriteBefore(0.0);
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        runSpacing: 6,
+                        spacing: 6,
+                        children: [
+                          OutlinedButton(
+                            onPressed: () {
+                              _recorder.setSilenceDetection(
+                                enable: true,
+                                onSilenceChanged: (isSilent, decibel) {
+                                  /// Here you can check if silence is changed.
+                                  /// Or you can do the same thing with the Stream
+                                  /// [Recorder.instance.silenceChangedEvents]
+                                  // debugPrint('SILENCE CHANGED: $isSilent, $decibel');
+                                },
+                              );
+                              _recorder.setSilenceThresholdDb(-27);
+                              _recorder.setSilenceDuration(0.5);
+                              _recorder.setSecondsOfAudioToWriteBefore(0.0);
+                              setState(() {
+                                thresholdDb = -27;
+                                silenceDuration = 0.5;
+                                secondsOfAudioToWriteBefore = 0;
+                              });
+                            },
+                            child: const Text(
+                                'setSilenceDetection ON -27, 0.5, 0.0'),
+                          ),
+                          OutlinedButton(
+                            onPressed: () {
+                              _recorder.setSilenceDetection(enable: false);
+                            },
+                            child: const Text('setSilenceDetection OFF'),
+                          ),
+                        ],
+                      ),
+                      // Threshold dB slider
+                      Row(
+                        mainAxisSize: MainAxisSize.max,
+                        children: [
+                          Text(
+                              'Threshold: ${thresholdDb.toStringAsFixed(1)}dB'),
+                          Expanded(
+                            child: Slider(
+                              value: thresholdDb,
+                              min: -100,
+                              max: 0,
+                              label: thresholdDb.toStringAsFixed(1),
+                              onChanged: (value) {
+                                _recorder.setSilenceThresholdDb(value);
                                 setState(() {
-                                  thresholdDb = -27;
-                                  silenceDuration = 0.5;
-                                  secondsOfAudioToWriteBefore = 0;
+                                  thresholdDb = value;
                                 });
                               },
-                              child: const Text(
-                                  'setSilenceDetection ON -27, 0.5, 0.0'),
                             ),
-                            OutlinedButton(
-                              onPressed: () {
-                                _recorder.setSilenceDetection(enable: false);
+                          ),
+                        ],
+                      ),
+
+                      // Silence duration slider
+                      Row(
+                        mainAxisSize: MainAxisSize.max,
+                        children: [
+                          Text('Silence duration: '
+                              '${silenceDuration.toStringAsFixed(1)}'),
+                          Expanded(
+                            child: Slider(
+                              value: silenceDuration,
+                              min: 0,
+                              max: 10,
+                              label: silenceDuration.toStringAsFixed(1),
+                              onChanged: (value) {
+                                _recorder.setSilenceDuration(value);
+                                setState(() {
+                                  silenceDuration = value;
+                                });
                               },
-                              child: const Text('setSilenceDetection OFF'),
                             ),
-                          ],
-                        ),
-                        // Threshold dB slider
-                        Row(
-                          mainAxisSize: MainAxisSize.max,
-                          children: [
-                            Text(
-                                'Threshold: ${thresholdDb.toStringAsFixed(1)}dB'),
-                            Expanded(
-                              child: Slider(
-                                value: thresholdDb,
-                                min: -100,
-                                max: 0,
-                                label: thresholdDb.toStringAsFixed(1),
-                                onChanged: (value) {
-                                  _recorder.setSilenceThresholdDb(value);
-                                  setState(() {
-                                    thresholdDb = value;
-                                  });
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
+                      ),
 
-                        // Silence duration slider
-                        Row(
-                          mainAxisSize: MainAxisSize.max,
-                          children: [
-                            Text('Silence duration: '
-                                '${silenceDuration.toStringAsFixed(1)}'),
-                            Expanded(
-                              child: Slider(
-                                value: silenceDuration,
-                                min: 0,
-                                max: 10,
-                                label: silenceDuration.toStringAsFixed(1),
-                                onChanged: (value) {
-                                  _recorder.setSilenceDuration(value);
-                                  setState(() {
-                                    silenceDuration = value;
-                                  });
-                                },
-                              ),
+                      // Silence duration slider
+                      Row(
+                        mainAxisSize: MainAxisSize.max,
+                        children: [
+                          Text('Write before: '
+                              '${secondsOfAudioToWriteBefore.toStringAsFixed(1)}'),
+                          Expanded(
+                            child: Slider(
+                              value: secondsOfAudioToWriteBefore,
+                              min: 0,
+                              max: 5,
+                              label: silenceDuration.toStringAsFixed(1),
+                              onChanged: (value) {
+                                _recorder.setSecondsOfAudioToWriteBefore(value);
+                                setState(() {
+                                  secondsOfAudioToWriteBefore = value;
+                                });
+                              },
                             ),
-                          ],
-                        ),
-
-                        // Silence duration slider
-                        Row(
-                          mainAxisSize: MainAxisSize.max,
-                          children: [
-                            Text('Write before: '
-                                '${secondsOfAudioToWriteBefore.toStringAsFixed(1)}'),
-                            Expanded(
-                              child: Slider(
-                                value: secondsOfAudioToWriteBefore,
-                                min: 0,
-                                max: 5,
-                                label: silenceDuration.toStringAsFixed(1),
-                                onChanged: (value) {
-                                  _recorder
-                                      .setSecondsOfAudioToWriteBefore(value);
-                                  setState(() {
-                                    secondsOfAudioToWriteBefore = value;
-                                  });
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const Bars(),
-                  ],
-                ),
-            ],
-          ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const Bars(),
+                ],
+              ),
+          ],
         ),
       ),
     );
