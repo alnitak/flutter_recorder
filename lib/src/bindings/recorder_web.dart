@@ -3,9 +3,11 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:js_interop';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_recorder/src/audio_data_container.dart';
 import 'package:flutter_recorder/src/bindings/js_extension.dart';
 import 'package:flutter_recorder/src/bindings/recorder.dart';
 import 'package:flutter_recorder/src/enums.dart';
@@ -29,7 +31,6 @@ class RecorderController {
 /// Use this class to _capture_ audio (such as from a microphone).
 @internal
 class RecorderWeb extends RecorderImpl {
-
   SilenceCallback? _silenceCallback;
 
   /// Create the worker in the WASM Module and listen for events coming
@@ -41,7 +42,7 @@ class RecorderWeb extends RecorderImpl {
     // create the worker in the WASM `Module`.
     wasmCreateWorkerInWasm();
 
-    wasmSetDartEventCallback(0);
+    wasmSetDartEventCallback(0, 0);
 
     // Here the `Module.wasmModule` binded to a local [WorkerController]
     // is used in the main isolate to listen for events coming from native.
@@ -50,19 +51,21 @@ class RecorderWeb extends RecorderImpl {
     final workerController = WorkerController()..setWasmWorker(wasmWorker);
     workerController.onReceive().listen(
       (event) {
-        /// The [event] coming from `web/worker.dart.js` is of String type.
-        /// Only `voiceEndedCallback` event in web for now.
-        // print('recorder_web: Received $event\n');
+        /// The [event] coming from `web/worker.dart.js` is of Map type.
         switch (event) {
-          case String():
-            final decodedMap = jsonDecode(event) as Map;
-            if (decodedMap['message'] == 'silenceChangedCallback') {
-              final silence = (decodedMap['isSilent'] as int) == 1;
-              final db = decodedMap['energyDb'] as double;
+          case Map():
+            if (event['message'] == 'silenceChangedCallback') {
+              final silence = (event['isSilent'] as int) == 1;
+              final db = event['energyDb'] as double;
               _silenceCallback?.call(silence, db);
               silenceChangedEventController.add(
                 (isSilent: silence, decibel: db),
               );
+            }
+          
+            if (event['message'] == 'streamDataCallback') {
+              final audioData = Uint8List.fromList(event['data'] as Uint8List);
+              uint8ListController.add(AudioDataContainer(audioData));
             }
         }
       },
@@ -194,6 +197,16 @@ class RecorderWeb extends RecorderImpl {
   @override
   void stop() {
     wasmStop();
+  }
+
+  @override
+  void startStreamingData() {
+    wasmStartStreamingData();
+  }
+
+  @override
+  void stopStreamingData() {
+    wasmStopStreamingData();
   }
 
   @override

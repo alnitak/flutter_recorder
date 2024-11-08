@@ -45,23 +45,43 @@ FFI_PLUGIN_EXPORT void createWorkerInWasm()
     });
 }
 
-/// Post a message with the web worker.
-FFI_PLUGIN_EXPORT void sendToWorker(const char *message, bool isSilent, float energyDb)
+/// Post a new silence event message with the web worker.
+FFI_PLUGIN_EXPORT void sendSilenceEventToWorker(const char *message, bool isSilent, float energyDb)
 {
     EM_ASM({
             if (Module.wasmWorker)
             {
                 // Send the message
-                Module.wasmWorker.postMessage(JSON.stringify({
-                    "message" : UTF8ToString($0),
-                    "isSilent" : $1,
-                    "energyDb" : $2,
-                }));
+                Module.wasmWorker.postMessage({
+                    message : UTF8ToString($0),
+                    isSilent : $1,
+                    energyDb : $2,
+                });
             }
             else
             {
                 console.error('Worker not found.');
             } }, message, isSilent, energyDb);
+}
+
+/// Post a stream of audio data with the web worker.
+FFI_PLUGIN_EXPORT void sendStreamToWorker(const char *message, unsigned char *audioData, int audioDataLength)
+{
+    EM_ASM({
+            if (Module.wasmWorker)
+            {
+                // Convert audioData to Uint8Array for JavaScript compatibility
+                const audioDataArray = new Uint8Array(Module.HEAPU8.subarray($1, $1 + $2));
+                // Send the message and data
+                Module.wasmWorker.postMessage({
+                    message : UTF8ToString($0),
+                    data : audioDataArray,
+                });
+            }
+            else
+            {
+                console.error('Worker not found.');
+            } }, message, audioData, audioDataLength);
 }
 #endif
 
@@ -71,7 +91,7 @@ void silenceChangedCallback(bool *isSilent, float *energyDb)
     // Calling JavaScript from C/C++
     // https://emscripten.org/docs/porting/connecting_cpp_and_javascript/Interacting-with-code.html#interacting-with-code-call-javascript-from-native
     // emscripten_run_script("voiceEndedCallbackJS('1234')");
-    sendToWorker("silenceChangedCallback", *isSilent, *energyDb);
+    sendSilenceEventToWorker("silenceChangedCallback", *isSilent, *energyDb);
 #endif
     if (dartSilenceChangedCallback != nullptr)
         dartSilenceChangedCallback(isSilent, energyDb);
@@ -80,7 +100,7 @@ void silenceChangedCallback(bool *isSilent, float *energyDb)
 void streamDataCallback(unsigned char *samples, int numSamples)
 {
 #ifdef __EMSCRIPTEN__
-    sendToWorker("streamDataCallback", samples, numSamples);
+    sendStreamToWorker("streamDataCallback", samples, numSamples);
 #endif
     if (dartStreamDataCallback != nullptr)
         dartStreamDataCallback(samples, numSamples);

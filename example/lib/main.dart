@@ -34,7 +34,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   Directory? savingDir;
-  final format = PCMFormat.s16le;
+  final format = PCMFormat.f32le;
   final sampleRate = 22050;
   final channels = RecorderChannels.mono;
   final _recorder = Recorder.instance;
@@ -57,41 +57,23 @@ class _MyAppState extends State<MyApp> {
       });
     }
 
-    getDownloadsDirectory().then((dir) {
-      if (dir == null) {
-        debugPrint('Cannot get download directory!');
-        return;
-      }
-      savingDir = Directory('${dir.path}/flutter_recorder');
-      savingDir?.createSync();
-      if (context.mounted) setState(() {});
-    });
-
     /// Listen to audio data stream. The data is received in Uint8List.
     _recorder.uint8ListStream.listen((data) {
       /// Write the PCM data to file. It can then be imported with the correct
       /// parameters with for example Audacity.
-      file?.writeAsBytesSync(
-        // If you want a conversion, call one of the `to*List` methods.
-        // data.toF32List(from: format).buffer.asUint8List(),
-        data.rawData,
-        mode: FileMode.writeOnlyAppend,
-      );
+      if (!kIsWeb) {
+        file?.writeAsBytesSync(
+          // If you want a conversion, call one of the `to*List` methods.
+          // data.toF32List(from: format).buffer.asUint8List(),
+          data.rawData,
+          mode: FileMode.writeOnlyAppend,
+        );
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (savingDir == null) {
-      return const Placeholder(
-        strokeWidth: 0.5,
-        child: Padding(
-          padding: EdgeInsets.all(30.0),
-          child: Text('No download directory'),
-        ),
-      );
-    }
-
     return Align(
       alignment: Alignment.topCenter,
       child: SingleChildScrollView(
@@ -200,13 +182,26 @@ class _MyAppState extends State<MyApp> {
               children: [
                 CircularProgressIndicator(),
                 OutlinedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     _recorder.startStreamingData();
-                    file = File(
-                        '${savingDir?.path}/fr_${sampleRate}_${format.name}_${channels.count}.pcm');
-                    try {
-                      file?.deleteSync();
-                    } catch (e) {}
+
+                    if (!kIsWeb) {
+                      savingDir = await getDownloadsDirectory();
+                      if (savingDir == null) {
+                        debugPrint('Cannot get download directory!');
+                        return;
+                      }
+                      savingDir =
+                          Directory('${savingDir!.path}/flutter_recorder');
+                      savingDir!.createSync();
+
+                      file = File(
+                          '${savingDir?.path}/fr_${sampleRate}_${format.name}_'
+                          '${channels.count}.pcm');
+                      try {
+                        file?.deleteSync();
+                      } catch (e) {}
+                    }
                   },
                   child: const Text('start stream'),
                 ),
@@ -226,7 +221,7 @@ class _MyAppState extends State<MyApp> {
 
             /// The silence detection is available only with f32 format and
             /// the visualization is adapted only with that format.
-            if (format == PCMFormat.u8)
+            if (format == PCMFormat.f32le)
               Column(
                 children: [
                   Column(
