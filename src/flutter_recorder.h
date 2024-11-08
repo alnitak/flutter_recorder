@@ -14,7 +14,8 @@ extern "C"
     FFI_PLUGIN_EXPORT void createWorkerInWasm();
 
     FFI_PLUGIN_EXPORT void setDartEventCallback(
-        dartSilenceChangedCallback_t silence_changed_callback);
+        dartSilenceChangedCallback_t silence_changed_callback,
+        dartStreamDataCallback_t stream_data_callback);
 
     FFI_PLUGIN_EXPORT void nativeFree(void *pointer);
 
@@ -46,10 +47,14 @@ extern "C"
 
     FFI_PLUGIN_EXPORT void stop();
 
+    FFI_PLUGIN_EXPORT void startStreamingData();
+
+    FFI_PLUGIN_EXPORT void stopStreamingData();
+
     FFI_PLUGIN_EXPORT void setSilenceDetection(bool enable);
 
     FFI_PLUGIN_EXPORT void setSilenceThresholdDb(float silenceThresholdDb);
-    
+
     FFI_PLUGIN_EXPORT void setSilenceDuration(float silenceDuration);
 
     FFI_PLUGIN_EXPORT void setSecondsOfAudioToWriteBefore(float secondsOfAudioToWriteBefore);

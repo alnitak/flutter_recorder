@@ -29,14 +29,6 @@ class RecorderController {
 /// Use this class to _capture_ audio (such as from a microphone).
 @internal
 class RecorderWeb extends RecorderImpl {
-  /// Controller to listen to silence changed event.
-  late final StreamController<SilenceState> silenceChangedEventController =
-      StreamController.broadcast();
-
-  /// Listener for silence changed.
-  @override
-  Stream<SilenceState> get silenceChangedEvents =>
-      silenceChangedEventController.stream;
 
   SilenceCallback? _silenceCallback;
 
@@ -164,12 +156,19 @@ class RecorderWeb extends RecorderImpl {
         CaptureErrors.fromValue(error),
       );
     }
+    super.init(
+      deviceID: deviceID,
+      format: format,
+      sampleRate: sampleRate,
+      channels: channels,
+    );
   }
 
   @override
   void deinit() {
     _silenceCallback = null;
     wasmDeinit();
+    super.deinit();
   }
 
   @override

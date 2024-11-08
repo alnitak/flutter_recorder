@@ -20,6 +20,8 @@ std::unique_ptr<Analyzer> analyzerCapture = std::make_unique<Analyzer>(256);
 
 dartSilenceChangedCallback_t dartSilenceChangedCallback;
 dartSilenceChangedCallback_t nativeSilenceChangedCallback;
+dartStreamDataCallback_t dartStreamDataCallback;
+dartStreamDataCallback_t nativeStreamDataCallback;
 
 //////////////////////////////////////////////////////////////
 /// WEB WORKER
@@ -75,12 +77,25 @@ void silenceChangedCallback(bool *isSilent, float *energyDb)
         dartSilenceChangedCallback(isSilent, energyDb);
 }
 
+void streamDataCallback(unsigned char *samples, int numSamples)
+{
+#ifdef __EMSCRIPTEN__
+    sendToWorker("streamDataCallback", samples, numSamples);
+#endif
+    if (dartStreamDataCallback != nullptr)
+        dartStreamDataCallback(samples, numSamples);
+}
+
 /// Set a Dart functions to call when an event occurs.
 FFI_PLUGIN_EXPORT void setDartEventCallback(
-    dartSilenceChangedCallback_t silence_changed_callback)
+    dartSilenceChangedCallback_t silence_changed_callback,
+    dartStreamDataCallback_t stream_data_callback)
 {
     dartSilenceChangedCallback = silence_changed_callback;
     nativeSilenceChangedCallback = silenceChangedCallback;
+
+    dartStreamDataCallback = stream_data_callback;
+    nativeStreamDataCallback = streamDataCallback;
 }
 
 FFI_PLUGIN_EXPORT void nativeFree(void *pointer)
@@ -181,6 +196,20 @@ FFI_PLUGIN_EXPORT void stop()
     if (capture.isRecording)
         capture.stopRecording();
     capture.stop();
+}
+
+FFI_PLUGIN_EXPORT void startStreamingData()
+{
+    if (!capture.isInited())
+        return;
+    capture.startStreamingData();
+}
+
+FFI_PLUGIN_EXPORT void stopStreamingData()
+{
+    if (!capture.isInited())
+        return;
+    capture.stopStreamingData();
 }
 
 FFI_PLUGIN_EXPORT void setSilenceDetection(bool enable)

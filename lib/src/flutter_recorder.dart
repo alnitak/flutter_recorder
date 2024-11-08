@@ -4,6 +4,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_recorder/src/audio_data_container.dart';
 import 'package:flutter_recorder/src/bindings/recorder.dart';
 import 'package:flutter_recorder/src/enums.dart';
 import 'package:flutter_recorder/src/exceptions/exceptions.dart';
@@ -67,6 +68,12 @@ interface class Recorder {
   /// Listening to silence state changes.
   Stream<SilenceState> get silenceChangedEvents =>
       _recoreder.impl.silenceChangedEvents;
+
+  /// Listen to audio data.
+  /// 
+  /// The streaming must be enable calling [startStreamingData].
+  Stream<AudioDataContainer> get uint8ListStream =>
+      _recoreder.impl.uint8ListStream;
 
   /// Enable or disable silence detection.
   ///
@@ -186,6 +193,16 @@ interface class Recorder {
   /// Stop the device.
   void stop() {
     _recoreder.impl.stop();
+  }
+
+  /// Start streaming data.
+  void startStreamingData() {
+    _recoreder.impl.startStreamingData();
+  }
+
+  /// Stop streaming data.
+  void stopStreamingData() {
+    _recoreder.impl.stopStreamingData();
   }
 
   /// Start recording.

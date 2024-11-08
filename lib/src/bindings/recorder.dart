@@ -1,7 +1,9 @@
 // ignore_for_file: avoid_positional_boolean_parameters
 
+import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:flutter_recorder/src/audio_data_container.dart';
 import 'package:flutter_recorder/src/enums.dart';
 import 'package:flutter_recorder/src/exceptions/exceptions.dart';
 import 'package:flutter_recorder/src/flutter_recorder.dart';
@@ -12,16 +14,36 @@ export 'package:flutter_recorder/src/bindings/recorder_io.dart'
 
 /// Use this class to _capture_ audio (such as from a microphone).
 abstract class RecorderImpl {
-  /// Set Dart functions to call when an event occurs.
-  ///
-  /// On the web, only the `voiceEndedCallback` is supported. On the other
-  /// platform there are also `fileLoadedCallback` and `stateChangedCallback`.
-  @mustBeOverridden
-  void setDartEventCallbacks();
+  /// The device ID used to initialize the device.
+  int? deviceID;
+
+  ///  PCM format used to initialize the device.
+  PCMFormat? format;
+
+  /// Sample rate used to initialize the device.
+  int? sampleRate;
+
+  /// Channels used to initialize the device.
+  RecorderChannels? channels;
+
+  /// Controller to listen to silence changed event.
+  late final StreamController<SilenceState> silenceChangedEventController =
+      StreamController.broadcast();
 
   /// Stream of silence state changes.
+  Stream<SilenceState> get silenceChangedEvents =>
+      silenceChangedEventController.stream;
+
+  /// Controller for audio data types.
+  late final uint8ListController =
+      StreamController<AudioDataContainer>.broadcast();
+
+  /// Streams for audio data types.
+  Stream<AudioDataContainer> get uint8ListStream => uint8ListController.stream;
+
+  /// Set Dart functions to call when an event occurs.
   @mustBeOverridden
-  Stream<SilenceState> get silenceChangedEvents;
+  void setDartEventCallbacks();
 
   /// Enable or disable silence detection.
   ///
@@ -80,16 +102,28 @@ abstract class RecorderImpl {
   /// Thows [RecorderInitializeFailedException] if something goes wrong, ie. no
   /// device found with [deviceID] id.
   @mustBeOverridden
+  @mustCallSuper
   void init({
     required int deviceID,
     required PCMFormat format,
     required int sampleRate,
     required RecorderChannels channels,
-  });
+  }) {
+    this.deviceID = deviceID;
+    this.format = format;
+    this.sampleRate = sampleRate;
+    this.channels = channels;
+  }
 
   /// Dispose capture device.
   @mustBeOverridden
-  void deinit();
+  @mustCallSuper
+  void deinit() {
+    deviceID = null;
+    format = null;
+    sampleRate = null;
+    channels = null;
+  }
 
   /// Whether the device is initialized.
   @mustBeOverridden
@@ -109,6 +143,14 @@ abstract class RecorderImpl {
   /// Stop the device.
   @mustBeOverridden
   void stop();
+
+  /// Start streaming data.
+  @mustBeOverridden
+  void startStreamingData();
+
+  /// Stop streaming data.
+  @mustBeOverridden
+  void stopStreamingData();
 
   /// Start recording.
   ///

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -21,7 +23,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  final format = PCMFormat.f32le;
+  final format = PCMFormat.u8;
   final sampleRate = 22050;
   final channels = RecorderChannels.mono;
   final _recorder = Recorder.instance;
@@ -30,8 +32,11 @@ class _MyAppState extends State<MyApp> {
   var silenceDuration = 2.0;
   var secondsOfAudioToWriteBefore = 0.0;
 
+  File? file;
+
   @override
   void initState() {
+    super.initState();
     if (defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS) {
       Permission.microphone.request().isGranted.then((value) async {
@@ -41,20 +46,33 @@ class _MyAppState extends State<MyApp> {
       });
     }
 
-    super.initState();
+    /// Listen to audio data stream. The data is received in Uint8List.
+    _recorder.uint8ListStream.listen((data) {
+      /// Write the PCM data to file. It can then be imported with the correct
+      /// parameters with for example Audacity.
+      file?.writeAsBytesSync(
+        // If you want a conversion, call one of the `to*List` methods.
+        // data.toF32List(from: format).buffer.asUint8List(),
+        data.rawData,
+        mode: FileMode.writeOnlyAppend,
+      );
+      debugPrint('uint8List: ${data.length}');
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Native Packages'),
+        title: const Text('Flutter Recorder'),
       ),
-      body: SingleChildScrollView(
-        child: Container(
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(10),
           child: Column(
             children: [
+              /// List capture devices, init, start, deinit
               Wrap(
                 runSpacing: 6,
                 spacing: 6,
@@ -95,37 +113,11 @@ class _MyAppState extends State<MyApp> {
                     },
                     child: const Text('deinit'),
                   ),
-                  OutlinedButton(
-                    onPressed: () {
-                      _recorder.setSilenceDetection(
-                        enable: true,
-                        onSilenceChanged: (isSilent, decibel) {
-                          /// Here you can check if silence is changed.
-                          /// Or you can do the same thing with the Stream
-                          /// [Recorder.instance.silenceChangedEvents]
-                          // debugPrint('SILENCE CHANGED: $isSilent, $decibel');
-                        },
-                      );
-                      _recorder.setSilenceThresholdDb(-27);
-                      _recorder.setSilenceDuration(0.5);
-                      _recorder.setSecondsOfAudioToWriteBefore(0.0);
-                      setState(() {
-                        thresholdDb = -27;
-                        silenceDuration = 0.5;
-                        secondsOfAudioToWriteBefore = 0;
-                      });
-                    },
-                    child: const Text('setSilenceDetection ON -27, 0.5, 0.0'),
-                  ),
-                  OutlinedButton(
-                    onPressed: () {
-                      _recorder.setSilenceDetection(enable: false);
-                    },
-                    child: const Text('setSilenceDetection OFF'),
-                  ),
                 ],
               ),
               const SizedBox(height: 10),
+
+              /// Recording
               Wrap(
                 runSpacing: 6,
                 spacing: 6,
@@ -175,95 +167,169 @@ class _MyAppState extends State<MyApp> {
                 ],
               ),
               const SizedBox(height: 10),
-              StreamBuilder(
-                stream: _recorder.silenceChangedEvents,
-                builder: (context, snapshot) {
-                  return ColoredBox(
-                    color: snapshot.hasData && snapshot.data!.isSilent
-                        ? Colors.green
-                        : Colors.red,
-                    child: SizedBox(
-                      width: 70,
-                      height: 50,
-                      child: Center(
-                        child: Text(_recorder.getVolumeDb().toStringAsFixed(1)),
-                      ),
-                    ),
-                  );
-                },
-              ),
-              Column(
+
+              /// Streaming
+              Wrap(
+                runSpacing: 6,
+                spacing: 6,
                 children: [
-                  // Threshold dB slider
-                  Row(
-                    mainAxisSize: MainAxisSize.max,
-                    children: [
-                      Text('Threshold: ${thresholdDb.toStringAsFixed(1)}dB'),
-                      Expanded(
-                        child: Slider(
-                          value: thresholdDb,
-                          min: -100,
-                          max: 0,
-                          label: thresholdDb.toStringAsFixed(1),
-                          onChanged: (value) {
-                            _recorder.setSilenceThresholdDb(value);
-                            setState(() {
-                              thresholdDb = value;
-                            });
-                          },
-                        ),
-                      ),
-                    ],
+                  OutlinedButton(
+                    onPressed: () {
+                      _recorder.startStreamingData();
+                      file = File(
+                          '/home/deimos/fr_${sampleRate}_${format.name}_${channels.count}.pcm');
+                      try {
+                        file?.deleteSync();
+                      } catch (e) {}
+                    },
+                    child: const Text('start stream'),
                   ),
-
-                  // Silence duration slider
-                  Row(
-                    mainAxisSize: MainAxisSize.max,
-                    children: [
-                      Text('Silence duration: '
-                          '${silenceDuration.toStringAsFixed(1)}'),
-                      Expanded(
-                        child: Slider(
-                          value: silenceDuration,
-                          min: 0,
-                          max: 10,
-                          label: silenceDuration.toStringAsFixed(1),
-                          onChanged: (value) {
-                            _recorder.setSilenceDuration(value);
-                            setState(() {
-                              silenceDuration = value;
-                            });
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // Silence duration slider
-                  Row(
-                    mainAxisSize: MainAxisSize.max,
-                    children: [
-                      Text('Write before: '
-                          '${secondsOfAudioToWriteBefore.toStringAsFixed(1)}'),
-                      Expanded(
-                        child: Slider(
-                          value: secondsOfAudioToWriteBefore,
-                          min: 0,
-                          max: 5,
-                          label: silenceDuration.toStringAsFixed(1),
-                          onChanged: (value) {
-                            _recorder.setSecondsOfAudioToWriteBefore(value);
-                            setState(() {
-                              secondsOfAudioToWriteBefore = value;
-                            });
-                          },
-                        ),
-                      ),
-                    ],
+                  OutlinedButton(
+                    onPressed: () {
+                      _recorder.stopStreamingData();
+                    },
+                    child: const Text('stop stream'),
                   ),
                 ],
               ),
-              if (format == PCMFormat.f32le) const Bars(),
+              const SizedBox(height: 10),
+
+              /// The silence detection is available only with f32 format and
+              /// the visualization is adapted only with that format.
+              if (format == PCMFormat.f32le)
+                Column(
+                  children: [
+                    Column(
+                      children: [
+                        StreamBuilder(
+                          stream: _recorder.silenceChangedEvents,
+                          builder: (context, snapshot) {
+                            return ColoredBox(
+                              color: snapshot.hasData && snapshot.data!.isSilent
+                                  ? Colors.green
+                                  : Colors.red,
+                              child: SizedBox(
+                                width: 70,
+                                height: 50,
+                                child: Center(
+                                  child: Text(_recorder
+                                      .getVolumeDb()
+                                      .toStringAsFixed(1)),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          runSpacing: 6,
+                          spacing: 6,
+                          children: [
+                            OutlinedButton(
+                              onPressed: () {
+                                _recorder.setSilenceDetection(
+                                  enable: true,
+                                  onSilenceChanged: (isSilent, decibel) {
+                                    /// Here you can check if silence is changed.
+                                    /// Or you can do the same thing with the Stream
+                                    /// [Recorder.instance.silenceChangedEvents]
+                                    // debugPrint('SILENCE CHANGED: $isSilent, $decibel');
+                                  },
+                                );
+                                _recorder.setSilenceThresholdDb(-27);
+                                _recorder.setSilenceDuration(0.5);
+                                _recorder.setSecondsOfAudioToWriteBefore(0.0);
+                                setState(() {
+                                  thresholdDb = -27;
+                                  silenceDuration = 0.5;
+                                  secondsOfAudioToWriteBefore = 0;
+                                });
+                              },
+                              child: const Text(
+                                  'setSilenceDetection ON -27, 0.5, 0.0'),
+                            ),
+                            OutlinedButton(
+                              onPressed: () {
+                                _recorder.setSilenceDetection(enable: false);
+                              },
+                              child: const Text('setSilenceDetection OFF'),
+                            ),
+                          ],
+                        ),
+                        // Threshold dB slider
+                        Row(
+                          mainAxisSize: MainAxisSize.max,
+                          children: [
+                            Text(
+                                'Threshold: ${thresholdDb.toStringAsFixed(1)}dB'),
+                            Expanded(
+                              child: Slider(
+                                value: thresholdDb,
+                                min: -100,
+                                max: 0,
+                                label: thresholdDb.toStringAsFixed(1),
+                                onChanged: (value) {
+                                  _recorder.setSilenceThresholdDb(value);
+                                  setState(() {
+                                    thresholdDb = value;
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Silence duration slider
+                        Row(
+                          mainAxisSize: MainAxisSize.max,
+                          children: [
+                            Text('Silence duration: '
+                                '${silenceDuration.toStringAsFixed(1)}'),
+                            Expanded(
+                              child: Slider(
+                                value: silenceDuration,
+                                min: 0,
+                                max: 10,
+                                label: silenceDuration.toStringAsFixed(1),
+                                onChanged: (value) {
+                                  _recorder.setSilenceDuration(value);
+                                  setState(() {
+                                    silenceDuration = value;
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Silence duration slider
+                        Row(
+                          mainAxisSize: MainAxisSize.max,
+                          children: [
+                            Text('Write before: '
+                                '${secondsOfAudioToWriteBefore.toStringAsFixed(1)}'),
+                            Expanded(
+                              child: Slider(
+                                value: secondsOfAudioToWriteBefore,
+                                min: 0,
+                                max: 5,
+                                label: silenceDuration.toStringAsFixed(1),
+                                onChanged: (value) {
+                                  _recorder
+                                      .setSecondsOfAudioToWriteBefore(value);
+                                  setState(() {
+                                    secondsOfAudioToWriteBefore = value;
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const Bars(),
+                  ],
+                ),
             ],
           ),
         ),

@@ -51,6 +51,9 @@ public:
 
     void stop();
 
+    void startStreamingData();
+    void stopStreamingData();
+
     void setSilenceDetection(bool enable);
 
     void setSilenceThresholdDb(float silenceThresholdDb);
@@ -90,6 +93,12 @@ public:
     /// true when the capture device is paused.
     bool isRecordingPaused;
 
+    /// true when the capture device is streaming data.
+    bool isStreamingData;
+
+    /// the number of bytes per sample
+    int bytesPerSample;
+
 private:
     ma_context context;
     ma_device_info *pPlaybackInfos;
@@ -101,6 +110,7 @@ private:
 
     /// true when the capture device is initialized.
     bool mInited;
+
 };
 
 #endif // CAPTURE_H
