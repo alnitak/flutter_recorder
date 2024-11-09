@@ -9,9 +9,13 @@ import 'package:meta/meta.dart';
 /// is stored into [rawData] and its format is the one used when initializing
 /// the recorder.
 /// This class also provide methods to convert the data to other formats based
-/// on the original recorder format.
+/// on the original recorder format. For example to convert to `Int8List` the
+/// data when the recorder is initialized with `PCMFormat.f32le`, you have to
+/// use [toS8List] method. Be aware that the conversion is compute expensive and
+/// should be avoided if possible initializing the recorder with the format
+/// desired.
 class AudioDataContainer {
-  /// The class which is used by the Stram to listen to the audio data.
+  /// The class which is used by the Stream to listen to the audio data.
   AudioDataContainer(this.u8Data);
 
   /// Raw audio data in Uint8List format.

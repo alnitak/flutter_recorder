@@ -12,6 +12,7 @@ import 'package:permission_handler/permission_handler.dart';
 /// Demostrate how to use flutter_recorder.
 ///
 /// The silence detection and the visualizer works when using [PCMFormat.f32].
+/// Writing audio stream to file is not implemented on Web.
 void main() async {
   runApp(
     MaterialApp(
@@ -61,6 +62,7 @@ class _MyAppState extends State<MyApp> {
     _recorder.uint8ListStream.listen((data) {
       /// Write the PCM data to file. It can then be imported with the correct
       /// parameters with for example Audacity.
+      /// Not testing on Web platform.
       if (!kIsWeb) {
         file?.writeAsBytesSync(
           // If you want a conversion, call one of the `to*List` methods.

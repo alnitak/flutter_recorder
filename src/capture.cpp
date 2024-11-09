@@ -169,6 +169,9 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
 
     Capture *userData = (Capture *)pDevice->pUserData;
 
+    if (userData->deviceConfig.capture.format == ma_format_f32)
+        calculateEnergy(captured, frameCount);
+
     // Stream the audio data?
     if (userData->isStreamingData)
     {
@@ -185,7 +188,6 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
     if (userData->isDetectingSilence && userData->deviceConfig.capture.format == ma_format_f32)
     {
         detectSilence(userData);
-        calculateEnergy(captured, frameCount);
 
         // Copy current buffer to circularBuffer
         if (delayed_silence_started && userData->isRecording && userData->secondsOfAudioToWriteBefore > 0) {
@@ -202,8 +204,6 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
     {
         if (userData->isRecording && !userData->isRecordingPaused)
         {
-            if (userData->deviceConfig.capture.format == ma_format_f32)
-                calculateEnergy(captured, frameCount);
             userData->wav.write(captured, frameCount);
         }
     }
