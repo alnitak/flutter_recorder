@@ -5,7 +5,7 @@ import 'package:meta/meta.dart';
 
 /// Class that contain the streamed audio data.
 ///
-/// The data is received a `Uint8List` whatever the format is. This raw data
+/// The data receives a `Uint8List` whatever the format is. This raw data
 /// is stored into [rawData] and its format is the one used when initializing
 /// the recorder.
 /// This class also provide methods to convert the data to other formats based
