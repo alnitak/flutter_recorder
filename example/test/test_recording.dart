@@ -2,6 +2,7 @@
 
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_recorder/flutter_recorder.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -9,6 +10,7 @@ File? file;
 File? fileRaw;
 PCMFormat fromFormat = PCMFormat.u8;
 PCMFormat toFormat = PCMFormat.u8;
+
 /// Wrte .raw file only on 1st loop
 bool isFirstFormat = false;
 
@@ -49,49 +51,52 @@ Future<int> main() async {
   }
 
   for (final n in fromTo) {
-      // Wheter to write the .raw file in the listener.
-      isFirstFormat = n.$2.name == 'u8';
+    // Wheter to write the .raw file in the listener.
+    isFirstFormat = n.$2.name == 'u8';
 
-      fromFormat = n.$1;
-      toFormat = n.$2;
+    fromFormat = n.$1;
+    toFormat = n.$2;
 
-      file = File('${downloadsDir.path}/fr_${sampleRate}_'
-          '${n.$1.name}_'
-          '${channels.count}_'
-          'to_${n.$2.name}'
-          '.pcm');
-      try {
-        file?.deleteSync();
-      } catch (e) {}
-
-      fileRaw = File('${downloadsDir.path}/fr_${sampleRate}_'
-          '${n.$1.name}_'
-          '${channels.count}'
-          '.raw');
-      try {
-        file?.deleteSync();
-      } catch (e) {}
-
-      recorder.init(
-        format: fromFormat,
-        sampleRate: sampleRate,
-        channels: channels,
-      );
-
-      recorder.start();
-
-      recorder.startStreamingData();
-
-      await Future.delayed(const Duration(seconds: 3));
-
-      recorder.stopStreamingData();
-
-      recorder.stop();
-
-      recorder.deinit();
-      await Future.delayed(const Duration(seconds: 1));
+    file = File('${downloadsDir.path}/fr_${sampleRate}_'
+        '${n.$1.name}_'
+        '${channels.count}_'
+        'to_${n.$2.name}'
+        '.pcm');
+    try {
+      file?.deleteSync();
+    } catch (e) {
+      debugPrint('Error deleting file: $e');
     }
 
+    fileRaw = File('${downloadsDir.path}/fr_${sampleRate}_'
+        '${n.$1.name}_'
+        '${channels.count}'
+        '.raw');
+    try {
+      file?.deleteSync();
+    } catch (e) {
+      debugPrint('Error deleting file: $e');
+    }
+
+    recorder.init(
+      format: fromFormat,
+      sampleRate: sampleRate,
+      channels: channels,
+    );
+
+    recorder.start();
+
+    recorder.startStreamingData();
+
+    await Future.delayed(const Duration(seconds: 3));
+
+    recorder.stopStreamingData();
+
+    recorder.stop();
+
+    recorder.deinit();
+    await Future.delayed(const Duration(seconds: 1));
+  }
 
   exit(0);
 }
@@ -99,9 +104,9 @@ Future<int> main() async {
 void write(AudioDataContainer data) {
   if (isFirstFormat) {
     fileRaw?.writeAsBytesSync(
-    data.rawData,
-    mode: FileMode.writeOnlyAppend,
-  );
+      data.rawData,
+      mode: FileMode.writeOnlyAppend,
+    );
   }
   file?.writeAsBytesSync(
     switch (toFormat) {

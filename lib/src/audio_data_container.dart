@@ -4,7 +4,7 @@ import 'package:flutter_recorder/src/enums.dart';
 import 'package:meta/meta.dart';
 
 /// Class that contain the streamed audio data.
-/// 
+///
 /// The data is received a `Uint8List` whatever the format is. This raw data
 /// is stored into [rawData] and its format is the one used when initializing
 /// the recorder.

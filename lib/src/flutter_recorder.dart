@@ -70,7 +70,7 @@ interface class Recorder {
       _recoreder.impl.silenceChangedEvents;
 
   /// Listen to audio data.
-  /// 
+  ///
   /// The streaming must be enable calling [startStreamingData].
   Stream<AudioDataContainer> get uint8ListStream =>
       _recoreder.impl.uint8ListStream;

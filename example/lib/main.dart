@@ -202,7 +202,9 @@ class _MyAppState extends State<MyApp> {
                           '${channels.count}.pcm');
                       try {
                         file?.deleteSync();
-                      } catch (e) {}
+                      } catch (e) {
+                        debugPrint('Error deleting file: $e');
+                      }
                     }
                   },
                   child: const Text('start stream'),

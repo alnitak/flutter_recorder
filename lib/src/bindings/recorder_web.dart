@@ -1,9 +1,6 @@
 // ignore_for_file: omit_local_variable_types
 // ignore_for_file: avoid_positional_boolean_parameters, public_member_api_docs
 
-import 'dart:async';
-import 'dart:convert';
-import 'dart:js_interop';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
@@ -62,7 +59,7 @@ class RecorderWeb extends RecorderImpl {
                 (isSilent: silence, decibel: db),
               );
             }
-          
+
             if (event['message'] == 'streamDataCallback') {
               final audioData = Uint8List.fromList(event['data'] as Uint8List);
               uint8ListController.add(AudioDataContainer(audioData));

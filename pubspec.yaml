@@ -1,9 +1,8 @@
 name: flutter_recorder
 description: >-
   A low-level audio recorder plugin which uses miniaudio as
-  backend and supporting all the platforms. It can detect
-  volume level and silence and save to WAV audio file. Audio
-  wave and FFT data can be get in real-time as for the volume level.
+  backend. Detect silence and save to WAV audio file. Audio
+  wave, FFT and volume level can be get in real-time.
 version: 0.9.1
 issue_tracker: https://github.com/alnitak/flutter_recorder/issues
 homepage: https://github.com/alnitak/flutter_recorder
@@ -22,7 +21,7 @@ topics:
 
 screenshots:
   - description: "recording"
-    path: images/recording.jpg
+    path: images/recorder.png
 
 environment:
   sdk: ^3.5.1
