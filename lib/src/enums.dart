@@ -73,8 +73,8 @@ enum RecorderChannels {
 
 /// The PCM format
 enum PCMFormat {
-  /// 8-bit signed, little-endian.
-  s8(0),
+  /// 8-bit unsigned.
+  u8(0),
 
   /// 16-bit signed, little-endian.
   s16le(1),
@@ -93,7 +93,7 @@ enum PCMFormat {
   const PCMFormat(this.value);
 
   static PCMFormat fromValue(int value) => switch (value) {
-        0 => s8,
+        0 => u8,
         1 => s16le,
         2 => s24le,
         3 => s32le,

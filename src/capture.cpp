@@ -168,14 +168,30 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
     memcpy(capturedBuffer, captured, sizeof(float) * BUFFER_SIZE);
 
     Capture *userData = (Capture *)pDevice->pUserData;
-    calculateEnergy(captured, frameCount);
-    if (userData->isDetectingSilence)
+
+    if (userData->deviceConfig.capture.format == ma_format_f32)
+        calculateEnergy(captured, frameCount);
+
+    // Stream the audio data?
+    if (userData->isStreamingData)
+    {
+        if (nativeStreamDataCallback != nullptr)
+        {
+            nativeStreamDataCallback(
+                (unsigned char*)captured,
+                frameCount * userData->bytesPerSample * userData->deviceConfig.capture.channels
+            );
+        }
+    }
+
+    // Detect silence only when using float32
+    if (userData->isDetectingSilence && userData->deviceConfig.capture.format == ma_format_f32)
     {
         detectSilence(userData);
 
         // Copy current buffer to circularBuffer
         if (delayed_silence_started && userData->isRecording && userData->secondsOfAudioToWriteBefore > 0) {
-             std::vector<float> values(captured, captured + frameCount);
+            std::vector<float> values(captured, captured + frameCount);
             circularBuffer.get()->push(values);
         }
 
@@ -203,6 +219,7 @@ Capture::Capture() : isDetectingSilence(false),
                      secondsOfAudioToWriteBefore(0.0f),
                      isRecording(false),
                      isRecordingPaused(false),
+                     isStreamingData(false),
                      mInited(false)
 {
     memset(waveData, 0, sizeof(float) * 256);
@@ -275,18 +292,23 @@ CaptureErrors Capture::init(
     {
     case PCMFormat::pcm_u8:
         format = ma_format_u8;
+        bytesPerSample = 1;
         break;
     case PCMFormat::pcm_s16:
         format = ma_format_s16;
+        bytesPerSample = 2;
         break;
     case PCMFormat::pcm_s24:
         format = ma_format_s24;
+        bytesPerSample = 3;
         break;
     case PCMFormat::pcm_s32:
         format = ma_format_s32;
+        bytesPerSample = 4;
         break;
     case PCMFormat::pcm_f32:
         format = ma_format_f32;
+        bytesPerSample = 4;
         break;
     default:
         return captureInitFailed;
@@ -347,6 +369,16 @@ void Capture::stop()
 {
     ma_device_uninit(&device);
     mInited = false;
+}
+
+void Capture::startStreamingData()
+{
+    isStreamingData = true;
+}
+
+void Capture::stopStreamingData()
+{
+    isStreamingData = false;
 }
 
 void Capture::setSilenceDetection(bool enable)

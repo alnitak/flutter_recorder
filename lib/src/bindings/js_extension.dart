@@ -43,7 +43,7 @@ external JSFunction wasmCccall(
 external void wasmCreateWorkerInWasm();
 
 @JS('Module._setDartEventCallback')
-external void wasmSetDartEventCallback(int callbackPtr);
+external void wasmSetDartEventCallback(int callbackPtr, int callbackPtr2);
 
 @JS('Module._sendToWorker')
 external void wasmSendToWorker(int message, int value);
@@ -102,6 +102,12 @@ external int wasmStart();
 
 @JS('Module._stop')
 external void wasmStop();
+
+@JS('Module._startStreamingData')
+external void wasmStartStreamingData();
+
+@JS('Module._stopStreamingData')
+external void wasmStopStreamingData();
 
 @JS('Module._startRecording')
 external int wasmStartRecording(int pathPtr);

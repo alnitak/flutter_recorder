@@ -2,7 +2,7 @@ A low-level audio recorder plugin that uses miniaudio as the backend and support
 
 [![style: very good analysis](https://img.shields.io/badge/style-very_good_analysis-B22C89.svg)](https://pub.dev/packages/very_good_analysis)
 
-|Linux|Windows|Android|MacOS (under test)|iOS (under test)|web|
+|Linux|Windows|Android|MacOS (under test)|iOS (under test)|web (WASM compatible)|
 |:-:|:-:|:-:|:-:|:-:|:-:|
 |💙|💙|💙|💙|💙|💙|
 
@@ -14,6 +14,7 @@ A low-level audio recorder plugin that uses miniaudio as the backend and support
 - 🎙️ **WAV Recording with Pause**: Record in WAV format with pause functionality.
 - ⚙️ **Choose Data Type**: samplerate, mono or stereo, audio format (s8, s16le, s24le, s32le or f32le).
 - 🎛️ **Device Flexibility**: Choose your recording device.
+- 📢 **Stream audio data**: Listen to PCM audio data stream.
 - 🔇 **Silence Detection**: Automatically detects silence via callback or Stream.
 - 📊 **Customizable Silence Threshold**: Define what’s considered “silence” for your recordings.
 - ⏱️ **Adjustable Pause Timing**: Set how long silence lasts before pausing, and how soon to resume recording.
@@ -74,7 +75,10 @@ Recorder.instance.startRecording(completeFilePath: 'audioCompleteFilenameWithPat
 /// Stop recording:
 Recorder.instance.stopRecording();
 ```
-**Tip:** Use `Recorder.instance.listCaptureDevices()` to see available devices and pass an optional `deviceID` to `Recorder.instance.init()`.
+**Tip**: Use `Recorder.instance.listCaptureDevices()` to see available devices and pass an optional `deviceID` to `init()`.
+**Tip2**: Use the `format`, `sampleRate` and `channels` with the `init()` method to define recorder parameters.
+**Tip3**: When recording with silence detection and want to record a little bit before the threshold db is reached, use the `setSecondsOfAudioToWriteBefore()` method.
+
 
 ### 🔇 Silence Detection Example
 
@@ -110,3 +114,25 @@ Float32List fftAudio = Recorder.instance.getFft();
 ```
 
 ![Image](https://github.com/alnitak/flutter_recorder/raw/main/images/audio_data.png)
+***NOTE: this is only available when initializing the recorder with `PCMFormat.f32le` format.***
+
+### 📢 Audio data stream 
+
+
+```dart
+/// Listen to audio data stream. The data is received in Uint8List.
+Recorder.instance.uint8ListStream.listen((data) {
+    /// the [data] is of type `AudioDataContainer` and, whatever format is passed to
+    /// the `init()` method, it is available with [data.rawData] which is of `Uint8List`
+    /// type. This is useful if we want to write into a file.
+    /// It is possible to convert audio data to the desired format using one of the
+    /// `data.to[*]List` methods. Be aware that the conversion is compute expensive and
+    /// should be avoided if possible initializing the recorder with the format
+    /// desired.
+});
+
+/// Start streaming:
+Recorder.instance.startStreamingData();
+/// Stop streaming:
+Recorder.instance.stopStreamingData();
+```

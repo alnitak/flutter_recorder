@@ -1,13 +1,13 @@
 // ignore_for_file: omit_local_variable_types
 // ignore_for_file: avoid_positional_boolean_parameters, public_member_api_docs
 
-import 'dart:async';
 import 'dart:ffi' as ffi;
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_recorder/src/audio_data_container.dart';
 import 'package:flutter_recorder/src/bindings/flutter_recorder_bindings_generated.dart';
 import 'package:flutter_recorder/src/bindings/recorder.dart';
 import 'package:flutter_recorder/src/enums.dart';
@@ -29,15 +29,6 @@ class RecorderController {
 
 @internal
 class RecorderFfi extends RecorderImpl {
-  /// Controller to listen to silence changed event.
-  late final StreamController<SilenceState> silenceChangedEventController =
-      StreamController.broadcast();
-
-  /// Listener for silence changed.
-  @override
-  Stream<SilenceState> get silenceChangedEvents =>
-      silenceChangedEventController.stream;
-
   static const String _libName = 'flutter_recorder';
 
   /// The dynamic library in which the symbols for [FlutterRecorderBindings]
@@ -70,6 +61,15 @@ class RecorderFfi extends RecorderImpl {
     );
   }
 
+  void _streamDataCallback(
+    ffi.Pointer<ffi.UnsignedChar> data,
+    int dataLength,
+  ) {
+    uint8ListController.add(
+      AudioDataContainer(data.cast<ffi.Uint8>().asTypedList(dataLength)),
+    );
+  }
+
   @override
   void setDartEventCallbacks() {
     // Create a NativeCallable for the Dart functions
@@ -78,7 +78,15 @@ class RecorderFfi extends RecorderImpl {
       _silenceChangedCallback,
     );
 
-    _bindings.setDartEventCallback(nativeSilenceChangedCallable.nativeFunction);
+    final nativeStreamDataCallable =
+        ffi.NativeCallable<dartStreamDataCallback_tFunction>.listener(
+      _streamDataCallback,
+    );
+
+    _bindings.setDartEventCallback(
+      nativeSilenceChangedCallable.nativeFunction,
+      nativeStreamDataCallable.nativeFunction,
+    );
   }
 
   @override
@@ -182,12 +190,19 @@ class RecorderFfi extends RecorderImpl {
     if (error != CaptureErrors.captureNoError) {
       throw RecorderCppException.fromRecorderError(error);
     }
+    super.init(
+      deviceID: deviceID,
+      format: format,
+      sampleRate: sampleRate,
+      channels: channels,
+    );
   }
 
   @override
   void deinit() {
     _silenceCallback = null;
     _bindings.deinit();
+    super.deinit();
   }
 
   @override
@@ -211,6 +226,16 @@ class RecorderFfi extends RecorderImpl {
   @override
   void stop() {
     _bindings.stop();
+  }
+
+  @override
+  void startStreamingData() {
+    _bindings.startStreamingData();
+  }
+
+  @override
+  void stopStreamingData() {
+    _bindings.stopStreamingData();
   }
 
   @override

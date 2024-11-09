@@ -2569,8 +2569,8 @@ else if((s&3)===0)q.au().ad(0,new A.a5(r))},
 $S:17}
 A.cK.prototype={
 $1(a){var s,r
-if(typeof a=="string")try{s=t.m.a(self)
-A.et(s,"postMessage",A.fX(a),null,null,null)}catch(r){A.h0("Received data from WASM worker but it's not a String!\n")}},
+try{s=t.m.a(self)
+A.et(s,"postMessage",A.fX(a==null?t.K.a(a):a),null,null,null)}catch(r){A.h0("Received data from WASM worker but it's not a String!\n")}},
 $S:4};(function aliases(){var s=J.K.prototype
 s.aj=s.h
 s=A.a3.prototype

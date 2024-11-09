@@ -43,17 +43,20 @@ class FlutterRecorderBindings {
 
   void setDartEventCallback(
     dartSilenceChangedCallback_t silence_changed_callback,
+    dartStreamDataCallback_t stream_data_callback,
   ) {
     return _setDartEventCallback(
       silence_changed_callback,
+      stream_data_callback,
     );
   }
 
   late final _setDartEventCallbackPtr = _lookup<
-          ffi.NativeFunction<ffi.Void Function(dartSilenceChangedCallback_t)>>(
-      'setDartEventCallback');
-  late final _setDartEventCallback = _setDartEventCallbackPtr
-      .asFunction<void Function(dartSilenceChangedCallback_t)>();
+      ffi.NativeFunction<
+          ffi.Void Function(dartSilenceChangedCallback_t,
+              dartStreamDataCallback_t)>>('setDartEventCallback');
+  late final _setDartEventCallback = _setDartEventCallbackPtr.asFunction<
+      void Function(dartSilenceChangedCallback_t, dartStreamDataCallback_t)>();
 
   void nativeFree(
     ffi.Pointer<ffi.Void> pointer,
@@ -185,6 +188,24 @@ class FlutterRecorderBindings {
   late final _stopPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function()>>('stop');
   late final _stop = _stopPtr.asFunction<void Function()>();
+
+  void startStreamingData() {
+    return _startStreamingData();
+  }
+
+  late final _startStreamingDataPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function()>>('startStreamingData');
+  late final _startStreamingData =
+      _startStreamingDataPtr.asFunction<void Function()>();
+
+  void stopStreamingData() {
+    return _stopStreamingData();
+  }
+
+  late final _stopStreamingDataPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function()>>('stopStreamingData');
+  late final _stopStreamingData =
+      _stopStreamingDataPtr.asFunction<void Function()>();
 
   void setSilenceDetection(
     bool enable,
@@ -386,3 +407,9 @@ typedef dartSilenceChangedCallback_tFunction = ffi.Void Function(
     ffi.Pointer<ffi.Bool>, ffi.Pointer<ffi.Float>);
 typedef DartdartSilenceChangedCallback_tFunction = void Function(
     ffi.Pointer<ffi.Bool>, ffi.Pointer<ffi.Float>);
+typedef dartStreamDataCallback_t
+    = ffi.Pointer<ffi.NativeFunction<dartStreamDataCallback_tFunction>>;
+typedef dartStreamDataCallback_tFunction = ffi.Void Function(
+    ffi.Pointer<ffi.UnsignedChar> data, ffi.Int dataLength);
+typedef DartdartStreamDataCallback_tFunction = void Function(
+    ffi.Pointer<ffi.UnsignedChar> data, int dataLength);
