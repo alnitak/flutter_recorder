@@ -20,7 +20,7 @@ topics:
   - visualizer
 
 screenshots:
-  - description: "recording"
+  - description: "flutter_recording logo"
     path: images/recorder.png
 
 environment:
