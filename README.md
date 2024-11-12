@@ -114,6 +114,7 @@ Float32List fftAudio = Recorder.instance.getFft();
 ```
 
 ![Image](https://github.com/alnitak/flutter_recorder/raw/main/images/audio_data.png)
+
 ***NOTE: this is only available when initializing the recorder with `PCMFormat.f32le` format.***
 
 ### 📢 Audio data stream 
