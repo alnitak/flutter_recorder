@@ -212,10 +212,6 @@ class _MyAppState extends State<MyApp> {
                 OutlinedButton(
                   onPressed: () {
                     _recorder.stopStreamingData();
-                    if (!kIsWeb) {
-                      debugPrint('Audio recorded to "${file?.path}"');
-                      showFileRecordedDialog(file!.path);
-                    }
                   },
                   child: const Text('stop stream'),
                 ),
