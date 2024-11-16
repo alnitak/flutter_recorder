@@ -367,8 +367,7 @@ CaptureErrors Capture::start()
 
 void Capture::stop()
 {
-    ma_device_uninit(&device);
-    mInited = false;
+    ma_device_stop(&device);
 }
 
 void Capture::startStreamingData()
