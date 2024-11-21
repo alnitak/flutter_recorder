@@ -309,4 +309,59 @@ class RecorderFfi extends RecorderImpl {
     calloc.free(volume);
     return v;
   }
+
+  @override
+  int isFilterActive(FilterType filterType) {
+    return _bindings.isFilterActive(filterType);
+  }
+
+  @override
+  void addFilter(FilterType filterType) {
+    final error = _bindings.addFilter(filterType);
+    if (error != CaptureErrors.captureNoError) {
+      throw RecorderCppException.fromRecorderError(error);
+    }
+  }
+
+  @override
+  CaptureErrors removeFilter(FilterType filterType) {
+    final error = _bindings.removeFilter(filterType);
+    if (error != CaptureErrors.captureNoError) {
+      throw RecorderCppException.fromRecorderError(error);
+    }
+    return error;
+  }
+
+  @override
+  List<String> getFilterParamNames(FilterType filterType) {
+    final ffi.Pointer<ffi.Pointer<ffi.Char>> names =
+        calloc(ffi.sizeOf<ffi.Pointer<ffi.Pointer<ffi.Char>>>() * 30);
+    final ffi.Pointer<ffi.Int> paramsCount = calloc(ffi.sizeOf<ffi.Int>());
+    _bindings.getFilterParamNames(filterType, names, paramsCount);
+    final List<String> ret = [];
+    for (var i = 0; i < paramsCount.value; i++) {
+      final s1 = (names + i).value;
+      final s = s1.cast<Utf8>().toDartString();
+      ret.add(s);
+      _bindings.nativeFree(s1.cast<ffi.Void>());
+    }
+    calloc
+      ..free(names)
+      ..free(paramsCount);
+    return ret;
+  }
+
+  @override
+  void setFilterParamValue(
+    FilterType filterType,
+    int attributeId,
+    double value,
+  ) {
+    _bindings.setFilterParams(filterType, attributeId, value);
+  }
+
+  @override
+  double getFilterParamValue(FilterType filterType, int attributeId) {
+    return _bindings.getFilterParams(filterType, attributeId);
+  }
 }

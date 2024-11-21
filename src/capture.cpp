@@ -223,7 +223,7 @@ Capture::Capture() : isDetectingSilence(false),
                      mInited(false)
 {
     memset(waveData, 0, sizeof(float) * 256);
-};
+}
 
 Capture::~Capture()
 {

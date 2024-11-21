@@ -399,6 +399,104 @@ class FlutterRecorderBindings {
           'setFftSmoothing');
   late final _setFftSmoothing =
       _setFftSmoothingPtr.asFunction<void Function(double)>();
+
+  /// //////////////////////
+  /// FILTERS
+  /// //////////////////////
+  int isFilterActive(
+    FilterType filterType,
+  ) {
+    return _isFilterActive(
+      filterType.value,
+    );
+  }
+
+  late final _isFilterActivePtr =
+      _lookup<ffi.NativeFunction<ffi.Int Function(ffi.UnsignedInt)>>(
+          'isFilterActive');
+  late final _isFilterActive =
+      _isFilterActivePtr.asFunction<int Function(int)>();
+
+  CaptureErrors addFilter(
+    FilterType filterType,
+  ) {
+    return CaptureErrors.fromValue(_addFilter(
+      filterType.value,
+    ));
+  }
+
+  late final _addFilterPtr =
+      _lookup<ffi.NativeFunction<ffi.UnsignedInt Function(ffi.UnsignedInt)>>(
+          'addFilter');
+  late final _addFilter = _addFilterPtr.asFunction<int Function(int)>();
+
+  CaptureErrors removeFilter(
+    FilterType filterType,
+  ) {
+    return CaptureErrors.fromValue(_removeFilter(
+      filterType.value,
+    ));
+  }
+
+  late final _removeFilterPtr =
+      _lookup<ffi.NativeFunction<ffi.UnsignedInt Function(ffi.UnsignedInt)>>(
+          'removeFilter');
+  late final _removeFilter = _removeFilterPtr.asFunction<int Function(int)>();
+
+  void getFilterParamNames(
+    FilterType filterType,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> names,
+    ffi.Pointer<ffi.Int> paramsCount,
+  ) {
+    return _getFilterParamNames(
+      filterType.value,
+      names,
+      paramsCount,
+    );
+  }
+
+  late final _getFilterParamNamesPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.UnsignedInt, ffi.Pointer<ffi.Pointer<ffi.Char>>,
+              ffi.Pointer<ffi.Int>)>>('getFilterParamNames');
+  late final _getFilterParamNames = _getFilterParamNamesPtr.asFunction<
+      void Function(
+          int, ffi.Pointer<ffi.Pointer<ffi.Char>>, ffi.Pointer<ffi.Int>)>();
+
+  void setFilterParams(
+    FilterType filterType,
+    int attributeId,
+    double value,
+  ) {
+    return _setFilterParams(
+      filterType.value,
+      attributeId,
+      value,
+    );
+  }
+
+  late final _setFilterParamsPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(
+              ffi.UnsignedInt, ffi.Int, ffi.Float)>>('setFilterParams');
+  late final _setFilterParams =
+      _setFilterParamsPtr.asFunction<void Function(int, int, double)>();
+
+  double getFilterParams(
+    FilterType filterType,
+    int attributeId,
+  ) {
+    return _getFilterParams(
+      filterType.value,
+      attributeId,
+    );
+  }
+
+  late final _getFilterParamsPtr =
+      _lookup<ffi.NativeFunction<ffi.Float Function(ffi.UnsignedInt, ffi.Int)>>(
+          'getFilterParams');
+  late final _getFilterParams =
+      _getFilterParamsPtr.asFunction<double Function(int, int)>();
 }
 
 typedef dartSilenceChangedCallback_t
@@ -413,3 +511,17 @@ typedef dartStreamDataCallback_tFunction = ffi.Void Function(
     ffi.Pointer<ffi.UnsignedChar> data, ffi.Int dataLength);
 typedef DartdartStreamDataCallback_tFunction = void Function(
     ffi.Pointer<ffi.UnsignedChar> data, int dataLength);
+
+enum FilterType {
+  autogain(0),
+  echoCancellation(1);
+
+  final int value;
+  const FilterType(this.value);
+
+  static FilterType fromValue(int value) => switch (value) {
+        0 => autogain,
+        1 => echoCancellation,
+        _ => throw ArgumentError("Unknown value for FilterType: $value"),
+      };
+}

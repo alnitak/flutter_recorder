@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_recorder/src/audio_data_container.dart';
+import 'package:flutter_recorder/src/bindings/flutter_recorder_bindings_generated.dart';
 import 'package:flutter_recorder/src/enums.dart';
 import 'package:flutter_recorder/src/exceptions/exceptions.dart';
 import 'package:flutter_recorder/src/flutter_recorder.dart';
@@ -196,4 +197,41 @@ abstract class RecorderImpl {
   /// Get the current volume in dB. Returns -100 if the capture is not inited.
   @mustBeOverridden
   double getVolumeDb();
+
+  // ///////////////////////
+  //   FILTERS
+  // ///////////////////////
+
+  /// Check if a filter is active.
+  /// Return -1 if the filter is not active or its index.
+  @mustBeOverridden
+  int isFilterActive(FilterType filterType);
+
+  /// Add a filter.
+  ///
+  /// Throws [RecorderFilterAlreadyAddedException] if the filter has already
+  /// been added.
+  /// Throws [RecorderFilterNotFoundException] if the filter could not be found.
+  @mustBeOverridden
+  void addFilter(FilterType filterType);
+
+  /// Remove a filter.
+  @mustBeOverridden
+  CaptureErrors removeFilter(FilterType filterType);
+
+  /// Get filter param names.
+  @mustBeOverridden
+  List<String> getFilterParamNames(FilterType filterType);
+
+  /// Set filter param value.
+  @mustBeOverridden
+  void setFilterParamValue(
+    FilterType filterType,
+    int attributeId,
+    double value,
+  );
+
+  /// Get filter param value.
+  @mustBeOverridden
+  double getFilterParamValue(FilterType filterType, int attributeId);
 }

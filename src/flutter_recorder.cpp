@@ -1,10 +1,10 @@
-// TODO(marco): add all miniaudio errors
 #define MINIAUDIO_IMPLEMENTATION
 #include "miniaudio.h"
 
 #include "flutter_recorder.h"
 #include "capture.h"
 #include "analyzer.h"
+#include "filters/filters.h"
 
 #include <memory>
 #include <stdint.h>
@@ -17,6 +17,7 @@
 
 Capture capture;
 std::unique_ptr<Analyzer> analyzerCapture = std::make_unique<Analyzer>(256);
+std::unique_ptr<Filters> mFilters = nullptr;
 
 dartSilenceChangedCallback_t dartSilenceChangedCallback;
 dartSilenceChangedCallback_t nativeSilenceChangedCallback;
@@ -179,6 +180,12 @@ FFI_PLUGIN_EXPORT enum CaptureErrors init(
     unsigned int channels)
 {
     CaptureErrors res = capture.init(deviceID, (PCMFormat)pcmFormat, sampleRate, channels);
+    if (mFilters != nullptr || mFilters.get()->mSamplerate != sampleRate)
+    {
+        mFilters.reset();
+        mFilters = std::make_unique<Filters>(sampleRate);
+    }
+
     return res;
 }
 
@@ -341,4 +348,44 @@ FFI_PLUGIN_EXPORT void getTexture2D(float **samples)
 FFI_PLUGIN_EXPORT float getTextureValue(int row, int column)
 {
     return capturedTexture2D[row][column];
+}
+
+/////////////////////////
+/// FILTERS
+/////////////////////////
+FFI_PLUGIN_EXPORT int isFilterActive(enum FilterType filterType)
+{
+    return mFilters.get()->isFilterActive(filterType);
+}
+
+FFI_PLUGIN_EXPORT enum CaptureErrors addFilter(enum FilterType filterType)
+{
+    return mFilters.get()->addFilter(filterType);
+}
+
+FFI_PLUGIN_EXPORT enum CaptureErrors removeFilter(enum FilterType filterType)
+{
+    return mFilters.get()->removeFilter(filterType);
+}
+
+FFI_PLUGIN_EXPORT void getFilterParamNames(enum FilterType filterType, char **names, int *paramsCount)
+{
+    std::vector<std::string> pNames = mFilters.get()->getFilterParamNames(filterType);
+    *paramsCount = static_cast<int>(pNames.size());
+    *names = (char *)malloc(sizeof(char *) * *paramsCount);
+    for (int i = 0; i < *paramsCount; i++)
+    {
+        names[i] = strdup(pNames[i].c_str());
+        printf("C  i: %d  names[i]: %s  names[i]: %p\n", i, names[i], names[i]);
+    }
+}
+
+FFI_PLUGIN_EXPORT void setFilterParams(enum FilterType filterType, int attributeId, float value)
+{
+    mFilters.get()->setFilterParams(filterType, attributeId, value);
+}
+
+FFI_PLUGIN_EXPORT float getFilterParams(enum FilterType filterType, int attributeId)
+{
+    return mFilters.get()->getFilterParams(filterType, attributeId);
 }

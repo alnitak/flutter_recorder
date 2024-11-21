@@ -110,7 +110,6 @@ private:
 
     /// true when the capture device is initialized.
     bool mInited;
-
 };
 
 #endif // CAPTURE_H

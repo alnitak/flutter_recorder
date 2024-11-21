@@ -215,6 +215,10 @@ interface class Recorder {
   /// Throws [RecorderCaptureNotInitializedException].
   /// Throws [RecorderFailedToInitializeRecordingException].
   void startRecording({String completeFilePath = ''}) {
+    assert(
+        !kIsWeb && completeFilePath.isNotEmpty,
+        'completeFilePath is required '
+        'on all platforms but on the Web.');
     _recoreder.impl.startRecording(completeFilePath);
   }
 

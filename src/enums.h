@@ -5,20 +5,25 @@
 typedef enum CaptureErrors
 {
     /// No error
-    captureNoError,
+    captureNoError = 0,
     /// The capture device has failed to initialize.
-    captureInitFailed,
+    captureInitFailed = 1,
     /// The capture device has not yet been initialized.
-    captureNotInited,
+    captureNotInited = 2,
     /// Failed to start the device.
-    failedToStartDevice,
+    failedToStartDevice = 3,
     /// Failed to initialize wav recording.
-    failedToInitializeRecording,
+    failedToInitializeRecording = 4,
     /// Invalid arguments while initializing wav recording.
-    invalidArgs,
+    invalidArgs = 5,
     /// Failed to write wav file.
-    failedToWriteWav
-
+    failedToWriteWav = 6,
+    /// Filter not found
+    filterNotFound = 7,
+    /// The filter has already been added.
+    filterAlreadyAdded = 8,
+    /// Error getting filter parameter.
+    filterParameterGetError = 9
 } CaptureErrorsInternal_t;
 
 typedef enum PCMFormat
@@ -29,5 +34,11 @@ typedef enum PCMFormat
     pcm_s32,
     pcm_f32
 } PCMFormatInternal_t;
+
+typedef enum FilterType
+{
+    autogain,
+    echoCancellation
+} FilterType_t;
 
 #endif // ENUMS_H
