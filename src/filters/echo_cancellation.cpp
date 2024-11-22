@@ -8,7 +8,7 @@
 
 EchoCancellation::EchoCancellation(unsigned int sampleRate)
     : mWriteIndex(0),
-      mParams{
+      mParams{ // def min max
           {EchoDelayMs, {50.0f, 0.0f, 1000.0f}}, // Delay in ms (default, min, max)
           {EchoAttenuation, {0.7f, 0.0f, 1.0f}}  // Attenuation (default, min, max)
       },

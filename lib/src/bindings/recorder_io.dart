@@ -12,6 +12,7 @@ import 'package:flutter_recorder/src/bindings/flutter_recorder_bindings_generate
 import 'package:flutter_recorder/src/bindings/recorder.dart';
 import 'package:flutter_recorder/src/enums.dart';
 import 'package:flutter_recorder/src/exceptions/exceptions.dart';
+import 'package:flutter_recorder/src/filters/filters.dart';
 import 'package:flutter_recorder/src/flutter_recorder.dart';
 import 'package:meta/meta.dart';
 

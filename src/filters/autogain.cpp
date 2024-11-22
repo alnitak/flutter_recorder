@@ -7,7 +7,7 @@
 
 AutoGain::AutoGain(unsigned int sampleRate)
     : mSampleRate(sampleRate), mCurrentGain(1.0f), mSmoothedRMS(0.0f),
-      mParams{
+      mParams{ // def min max
           {TargetRMS,       {0.1f,   0.01f,   0.5f}},
           {AttackTime,      {0.02f,  0.001f,  0.02f}},
           {ReleaseTime,     {0.2f,   0.01f,   0.2f}},

@@ -9,6 +9,7 @@
 import 'dart:ffi' as ffi;
 
 import 'package:flutter_recorder/src/enums.dart';
+import 'package:flutter_recorder/src/filters/filters.dart';
 
 /// Bindings for `src/flutter_recorder.h`.
 ///
@@ -511,17 +512,3 @@ typedef dartStreamDataCallback_tFunction = ffi.Void Function(
     ffi.Pointer<ffi.UnsignedChar> data, ffi.Int dataLength);
 typedef DartdartStreamDataCallback_tFunction = void Function(
     ffi.Pointer<ffi.UnsignedChar> data, int dataLength);
-
-enum FilterType {
-  autogain(0),
-  echoCancellation(1);
-
-  final int value;
-  const FilterType(this.value);
-
-  static FilterType fromValue(int value) => switch (value) {
-        0 => autogain,
-        1 => echoCancellation,
-        _ => throw ArgumentError("Unknown value for FilterType: $value"),
-      };
-}
