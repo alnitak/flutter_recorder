@@ -100,8 +100,18 @@ void Filters::setFilterParams(FilterType filterType, int attributeId, float valu
 float Filters::getFilterParams(FilterType filterType, int attributeId)
 {
     int index = isFilterActive(filterType);
-    if (index < 0)
-        return 9999.0f;
+    // If not active return its default value
+    if (index < 0) {
+        switch (filterType)
+        {
+        case autogain:
+            return AutoGain(0).getParamDef(attributeId);
+        case echoCancellation:
+            return EchoCancellation(0).getParamDef(attributeId);
+        default:
+            return 9999.f;
+        }
+    }
 
     float ret = filters[index].get()->filter.get()->getParamValue(attributeId);
 

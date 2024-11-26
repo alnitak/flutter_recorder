@@ -5,9 +5,9 @@ enum EchoCancellationEnum {
   echoDelayMs,
   echoAttenuation;
 
-  final List<double> _mins = const [0, 0, 0, 0, 0];
-  final List<double> _maxs = const [1, 1, 1, 1, 1];
-  final List<double> _defs = const [1, 0, 0.5, 0.5, 1];
+  final List<double> _defs = const [50, 0.7];
+  final List<double> _mins = const [0, 0];
+  final List<double> _maxs = const [1000, 1];
 
   double get min => _mins[index];
   double get max => _maxs[index];
@@ -21,7 +21,7 @@ enum EchoCancellationEnum {
 }
 
 abstract class _EchoCancellationInternal extends FilterBase {
-  const _EchoCancellationInternal() : super(FilterType.autogain);
+  const _EchoCancellationInternal() : super(FilterType.echoCancellation);
 
   EchoCancellationEnum get queryEchoDelayMs => EchoCancellationEnum.echoDelayMs;
   EchoCancellationEnum get queryEchoAttenuation =>

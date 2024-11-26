@@ -37,7 +37,7 @@ final class Filters {
   AutoGain get autoGainFilter => const AutoGain();
 
   /// The `Echo Cancellation` filter.
-  EchoCancellation get echoFilter => const EchoCancellation();
+  EchoCancellation get echoCancellationFilter => const EchoCancellation();
 }
 
 /// Common class for single and global filters.

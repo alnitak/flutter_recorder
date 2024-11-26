@@ -280,6 +280,13 @@ class _MyAppState extends State<MyApp> {
                           ),
                         ],
                       ),
+
+                      OutlinedButton(
+                        onPressed: () {
+                          _recorder.filters.autoGainFilter.activate();
+                        },
+                        child: const Text('autogain'),
+                      ),
                       // Threshold dB slider
                       Row(
                         mainAxisSize: MainAxisSize.max,

@@ -13,6 +13,9 @@ dependencies:
   flutter_recorder:
     path: ../
 
+  flutter_soloud:
+    path: ../../flutter_soloud
+
   cupertino_icons: ^1.0.8
   open_filex: ^4.5.0
   path_provider: ^2.1.5

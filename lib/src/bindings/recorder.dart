@@ -4,7 +4,6 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_recorder/src/audio_data_container.dart';
-import 'package:flutter_recorder/src/bindings/flutter_recorder_bindings_generated.dart';
 import 'package:flutter_recorder/src/enums.dart';
 import 'package:flutter_recorder/src/exceptions/exceptions.dart';
 import 'package:flutter_recorder/src/filters/filters.dart';

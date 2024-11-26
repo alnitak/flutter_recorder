@@ -17,7 +17,7 @@
 
 Capture capture;
 std::unique_ptr<Analyzer> analyzerCapture = std::make_unique<Analyzer>(256);
-std::unique_ptr<Filters> mFilters = nullptr;
+std::unique_ptr<Filters> mFilters = std::make_unique<Filters>(0);
 
 dartSilenceChangedCallback_t dartSilenceChangedCallback;
 dartSilenceChangedCallback_t nativeSilenceChangedCallback;
@@ -179,12 +179,12 @@ FFI_PLUGIN_EXPORT enum CaptureErrors init(
     unsigned int sampleRate,
     unsigned int channels)
 {
-    CaptureErrors res = capture.init(deviceID, (PCMFormat)pcmFormat, sampleRate, channels);
-    if (mFilters != nullptr || mFilters.get()->mSamplerate != sampleRate)
+    if (!mFilters || mFilters.get()->mSamplerate != sampleRate)
     {
         mFilters.reset();
         mFilters = std::make_unique<Filters>(sampleRate);
     }
+    CaptureErrors res = capture.init(mFilters.get(), deviceID, (PCMFormat)pcmFormat, sampleRate, channels);
 
     return res;
 }

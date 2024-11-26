@@ -6,21 +6,23 @@
 #include <algorithm>
 
 AutoGain::AutoGain(unsigned int sampleRate)
-    : mSampleRate(sampleRate), mCurrentGain(1.0f), mSmoothedRMS(0.0f),
+    : mSampleRate(sampleRate), mCurrentGain(1.0f),
       mParams{ // def min max
-          {TargetRMS,       {0.1f,   0.01f,   0.5f}},
-          {AttackTime,      {0.02f,  0.001f,  0.02f}},
-          {ReleaseTime,     {0.2f,   0.01f,   0.2f}},
-          {GainSmoothing,   {0.001f, 0.001f,  0.01f}},
+          {TargetRMS,       {0.1f,   0.01f,   1.f}},
+          {AttackTime,      {0.1f,   0.01f,  0.5f}},
+          {ReleaseTime,     {0.2f,   0.01f,   0.5f}},
+          {GainSmoothing,   {0.05f,  0.001f,  1.f}},
           {MaxGain,         {6.0f,   1.0f,    6.0f}},
-          {MinGain,         {0.2f,   0.1f,    0.2f}}
+          {MinGain,         {0.2f,   0.1f,    1.f}}
       }
 {
+    mValues.resize(ParamCount);
     // Initialize values with defaults
     for (const auto &[param, range] : mParams)
     {
         mValues[param] = range.defaultVal;
     }
+    mSmoothedRMS = mValues[TargetRMS]; // Initialize with Target RMS
 }
 
 // Override parameter management methods
@@ -97,12 +99,28 @@ void AutoGain::process(void *pInput, ma_uint32 frameCount, unsigned int channels
 
     // Calculate the target gain based on smoothed RMS
     float targetGain = getParamValue(TargetRMS) / (mSmoothedRMS + 1e-6f);
+    targetGain = std::min(targetGain, getParamValue(MaxGain));
     targetGain = std::clamp(targetGain, getParamValue(MinGain), getParamValue(MaxGain));
+    // if (mSmoothedRMS < 0.01f) {
+    //     targetGain = getParamValue(MaxGain);  // Boost gain to reach MinRMS.
+    // } else if (mSmoothedRMS > .1f) {
+    //     targetGain = getParamValue(MinGain);  // Lower gain to stay below MaxRMS.
+    // } else {
+    //     targetGain = getParamValue(TargetRMS) / mSmoothedRMS;
+    // }
 
     // Smoothly adjust gain
     float smoothing = targetGain > mCurrentGain ? getParamValue(AttackTime) : getParamValue(ReleaseTime);
     mCurrentGain += (targetGain - mCurrentGain) * (1.0f - std::exp(-smoothing * getParamValue(GainSmoothing)));
+    mCurrentGain += (targetGain - mCurrentGain) * getParamValue(GainSmoothing);
+    // float delta = targetGain - mCurrentGain;
+    // if (std::abs(delta) > 0.001f) { // Adjust threshold as needed
+    //     mCurrentGain += delta * getParamValue(GainSmoothing);
+    // }
 
+    printf("currentRMS: %f smoothedRMS: %f targetGain: %f currentGain: %f\n",
+       currentRMS, mSmoothedRMS, targetGain, mCurrentGain);
+    
     // Apply the gain to the input buffer
     applyGain((void *)pInput, frameCount, channels, format);
 }
@@ -163,7 +181,7 @@ float AutoGain::calculateRMS(const void *pInput, ma_uint32 frameCount, unsigned 
 // Exponential smoothing factor for RMS calculation
 float AutoGain::rmsSmoothingFactor() const
 {
-    float windowSizeSeconds = 0.1f; // Adjust smoothing window as needed
+    float windowSizeSeconds = 0.5f; // Adjust smoothing window as needed
     return 1.0f - std::exp(-1.0f / (windowSizeSeconds * mSampleRate));
 }
 

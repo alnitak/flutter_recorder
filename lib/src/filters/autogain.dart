@@ -9,9 +9,9 @@ enum AutoGainEnum {
   maxGain,
   minGain;
 
-  final List<double> _mins = const [0, 0, 0, 0, 0];
-  final List<double> _maxs = const [1, 1, 1, 1, 1];
-  final List<double> _defs = const [1, 0, 0.5, 0.5, 1];
+  final List<double> _defs = const [0.1, 0.1, 0.2, 0.05, 6, 0.2];
+  final List<double> _mins = const [0.01, 0.01, 0.01, 0.001, 1, 0.1];
+  final List<double> _maxs = const [1, 0.5, 0.5, 1, 6, 1];
 
   double get min => _mins[index];
   double get max => _maxs[index];
@@ -32,8 +32,8 @@ abstract class _AutoGainInternal extends FilterBase {
   const _AutoGainInternal() : super(FilterType.autogain);
 
   AutoGainEnum get queryTargetRms => AutoGainEnum.targetRms;
-  AutoGainEnum get queryAttack => AutoGainEnum.attackTime;
-  AutoGainEnum get queryRelease => AutoGainEnum.releaseTime;
+  AutoGainEnum get queryAttackTime => AutoGainEnum.attackTime;
+  AutoGainEnum get queryReleaseTime => AutoGainEnum.releaseTime;
   AutoGainEnum get queryGainSmoothing => AutoGainEnum.gainSmoothing;
   AutoGainEnum get queryMaxGain => AutoGainEnum.maxGain;
   AutoGainEnum get queryMinGain => AutoGainEnum.minGain;

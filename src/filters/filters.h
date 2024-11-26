@@ -48,7 +48,7 @@ public:
     float getFilterParams(FilterType filterType, int attributeId);
     
     unsigned int mSamplerate;
-private:
+
     std::vector<std::unique_ptr<FilterObject>> filters;
 };
 
