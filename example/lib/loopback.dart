@@ -6,7 +6,8 @@ import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 /// Loopback example which uses `flutter_soloud` to play audio back to the
-/// device from the microphone data stream.
+/// device from the microphone data stream. Please try it with headset to
+/// prevent audio feedback.
 ///
 /// If you want to try other formats than `f32le`, you must comment out
 /// the `Bars()` widget.
