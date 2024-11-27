@@ -6,3 +6,4 @@
 #include "../../src/capture.cpp"
 #include "../../src/fft/soloud_fft.cpp"
 #include "../../src/filters/autogain.cpp"
+#include "../../src/filters/echo_cancellation.cpp"

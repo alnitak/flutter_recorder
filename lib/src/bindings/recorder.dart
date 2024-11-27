@@ -182,19 +182,28 @@ abstract class RecorderImpl {
   void setFftSmoothing(double smooth);
 
   /// Return a 256 float array containing FFT data in the range [-1.0, 1.0]
-  /// not clamped.@mustBeOverridden
+  /// not clamped.
+  /// 
+  /// **NOTE**: use this only with format [PCMFormat.f32le].
+  @mustBeOverridden
   Float32List getFft();
 
   /// Return a 256 float array containing wave data in the range [-1.0, 1.0].
+  /// 
+  /// **NOTE**: use this only with format [PCMFormat.f32le].
   @mustBeOverridden
   Float32List getWave();
 
   /// Get the audio data representing an array of 256 floats FFT data and
   /// 256 float of wave data.
+  /// 
+  /// **NOTE**: use this only with format [PCMFormat.f32le].
   @mustBeOverridden
   Float32List getTexture2D();
 
   /// Get the current volume in dB. Returns -100 if the capture is not inited.
+  /// 
+  /// **NOTE**: use this only with format [PCMFormat.f32le].
   @mustBeOverridden
   double getVolumeDb();
 
