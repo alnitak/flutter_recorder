@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:flutter_recorder/src/audio_data_container.dart';
 import 'package:flutter_recorder/src/enums.dart';
 import 'package:flutter_recorder/src/exceptions/exceptions.dart';
+import 'package:flutter_recorder/src/filters/filters.dart';
 import 'package:flutter_recorder/src/flutter_recorder.dart';
 import 'package:meta/meta.dart';
 
@@ -181,19 +182,68 @@ abstract class RecorderImpl {
   void setFftSmoothing(double smooth);
 
   /// Return a 256 float array containing FFT data in the range [-1.0, 1.0]
-  /// not clamped.@mustBeOverridden
+  /// not clamped.
+  /// 
+  /// **NOTE**: use this only with format [PCMFormat.f32le].
+  @mustBeOverridden
   Float32List getFft();
 
   /// Return a 256 float array containing wave data in the range [-1.0, 1.0].
+  /// 
+  /// **NOTE**: use this only with format [PCMFormat.f32le].
   @mustBeOverridden
   Float32List getWave();
 
   /// Get the audio data representing an array of 256 floats FFT data and
   /// 256 float of wave data.
+  /// 
+  /// **NOTE**: use this only with format [PCMFormat.f32le].
   @mustBeOverridden
   Float32List getTexture2D();
 
   /// Get the current volume in dB. Returns -100 if the capture is not inited.
+  /// 
+  /// **NOTE**: use this only with format [PCMFormat.f32le].
   @mustBeOverridden
   double getVolumeDb();
+
+  // ///////////////////////
+  //   FILTERS
+  // ///////////////////////
+
+  /// Check if a filter is active.
+  /// Return -1 if the filter is not active or its index.
+  @mustBeOverridden
+  int isFilterActive(FilterType filterType);
+
+  /// Add a filter.
+  ///
+  /// Throws [RecorderFilterAlreadyAddedException] if the filter has already
+  /// been added.
+  /// Throws [RecorderFilterNotFoundException] if the filter could not be found.
+  @mustBeOverridden
+  void addFilter(FilterType filterType);
+
+  /// Remove a filter.
+  ///
+  /// Throws [RecorderFilterNotFoundException] if trying to a non active
+  /// filter.
+  @mustBeOverridden
+  CaptureErrors removeFilter(FilterType filterType);
+
+  /// Get filter param names.
+  @mustBeOverridden
+  List<String> getFilterParamNames(FilterType filterType);
+
+  /// Set filter param value.
+  @mustBeOverridden
+  void setFilterParamValue(
+    FilterType filterType,
+    int attributeId,
+    double value,
+  );
+
+  /// Get filter param value.
+  @mustBeOverridden
+  double getFilterParamValue(FilterType filterType, int attributeId);
 }

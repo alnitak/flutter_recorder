@@ -1,13 +1,12 @@
 // ignore_for_file: omit_local_variable_types
 // ignore_for_file: avoid_positional_boolean_parameters
 
-import 'dart:typed_data';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter_recorder/src/audio_data_container.dart';
 import 'package:flutter_recorder/src/bindings/recorder.dart';
 import 'package:flutter_recorder/src/enums.dart';
 import 'package:flutter_recorder/src/exceptions/exceptions.dart';
+import 'package:flutter_recorder/src/filters/filters.dart';
 
 /// Callback when silence state is changed.
 typedef SilenceCallback = void Function(bool isSilent, double decibel);
@@ -62,6 +61,8 @@ interface class Recorder {
   /// }
   /// ```
   static final Recorder instance = Recorder._();
+
+  final filters = const Filters();
 
   final _recoreder = RecorderController();
 
@@ -215,6 +216,10 @@ interface class Recorder {
   /// Throws [RecorderCaptureNotInitializedException].
   /// Throws [RecorderFailedToInitializeRecordingException].
   void startRecording({String completeFilePath = ''}) {
+    assert(
+        !kIsWeb && completeFilePath.isNotEmpty,
+        'completeFilePath is required '
+        'on all platforms but on the Web.');
     _recoreder.impl.startRecording(completeFilePath);
   }
 
@@ -244,25 +249,79 @@ interface class Recorder {
 
   /// Return a 256 float array containing FFT data in the range [-1.0, 1.0]
   /// not clamped.
+  /// 
+  /// **NOTE**: use this only with format [PCMFormat.f32le].
   Float32List getFft() {
     return _recoreder.impl.getFft();
   }
 
   /// Return a 256 float array containing wave data in the range [-1.0, 1.0]
   /// not clamped.
+  /// 
+  /// **NOTE**: use this only with format [PCMFormat.f32le].
   Float32List getWave() {
     return _recoreder.impl.getWave();
   }
 
   /// Get the audio data representing an array of 256 floats FFT data and
   /// 256 float of wave data.
+  /// 
+  /// **NOTE**: use this only with format [PCMFormat.f32le].
   Float32List getTexture2D() {
     return _recoreder.impl.getTexture2D();
   }
 
   /// Get the current volume in dB. Returns -100 if the capture is not inited.
   /// 0 is the max volume the capture device can handle.
+  /// 
+  /// **NOTE**: use this only with format [PCMFormat.f32le].
   double getVolumeDb() {
     return _recoreder.impl.getVolumeDb();
+  }
+
+  // ///////////////////////
+  //   FILTERS
+  // ///////////////////////
+
+  /// Check if a filter is active.
+  /// Return -1 if the filter is not active or its index.
+  int isFilterActive(FilterType filterType) {
+    return _recoreder.impl.isFilterActive(filterType);
+  }
+
+  /// Add a filter.
+  ///
+  /// Throws [RecorderFilterAlreadyAddedException] if the filter has already
+  /// been added.
+  /// Throws [RecorderFilterNotFoundException] if the filter could not be found.
+  void addFilter(FilterType filterType) {
+    _recoreder.impl.addFilter(filterType);
+  }
+
+  /// Remove a filter.
+  ///
+  /// Throws [RecorderFilterNotFoundException] if trying to a non active
+  /// filter.
+  CaptureErrors removeFilter(FilterType filterType) {
+    return _recoreder.impl.removeFilter(filterType);
+  }
+
+  /// Get filter param names.
+  List<String> getFilterParamNames(FilterType filterType) {
+    return _recoreder.impl.getFilterParamNames(filterType);
+  }
+
+  /// Set filter param value.
+  void setFilterParamValue(
+    FilterType filterType,
+    int attributeId,
+    double value,
+  ) {
+    _recoreder.impl.setFilterParamValue(filterType, attributeId, value);
+  }
+
+  /// Get filter param value.
+  double getFilterParamValue(FilterType filterType, int attributeId) {
+    return _recoreder.impl.getFilterParamValue(filterType, attributeId);
   }
 }

@@ -22,8 +22,8 @@ A low-level audio recorder plugin that uses miniaudio as the backend and support
 
 [A web example compiled in WASM.](https://marcobavagnoli.com/flutter_recorder/)
 
-## 🚀 Setup Permissions
-After setting up permission for you Android, MacOS or iOS, in your app, you will need to ask for permission to use the microphonem maybe using [permission_handler](https://pub.dev/packages/permission_handler) plugin.
+## 🚀 Setup
+After setting up permission for you Android, MacOS or iOS, in your app, you will need to ask for permission to use the microphone maybe using [permission_handler](https://pub.dev/packages/permission_handler) plugin.
 https://pub.dev/packages/permission_handler
 
 #### Android
@@ -44,6 +44,10 @@ Add this in `web/index.html` under the `<head>` tag.
 ```
 <script src="assets/packages/flutter_recorder/web/libflutter_recorder_plugin.js" defer></script>
 ```
+
+#### Linux
+- [`GStreamer`](https://gstreamer.freedesktop.org/documentation/installing/index.html?gi-language=c) is installed by default on most distributions, but if not, please [install it](https://gstreamer.freedesktop.org/documentation/installing/on-linux.html?gi-language=c) through your distribution's package manager.
+- Installing Flutter using `snap` could cause compilation problems with native plugins. The only solution is to uninstall it with `sudo snap remove flutter` and install it the [official way](https://flutter-ko.dev/get-started/install/linux).
 
 ## 🛠️ Usage Example
 ```dart

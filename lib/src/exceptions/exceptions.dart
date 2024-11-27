@@ -64,10 +64,16 @@ abstract class RecorderCppException extends RecorderException {
         return const RecorderFailedToInitializeRecordingException();
       case CaptureErrors.failedToStartDevice:
         throw const RecorderFailedToStartDeviceException();
-      case CaptureErrors.failedToWriteWav:
-        return const RecorderFailedToWriteWavException();
       case CaptureErrors.invalidArgs:
         return const RecorderInvalidArgumentsException();
+      case CaptureErrors.failedToWriteWav:
+        return const RecorderFailedToWriteWavException();
+      case CaptureErrors.filterNotFound:
+        return const RecorderFilterNotFoundException();
+      case CaptureErrors.filterAlreadyAdded:
+        return const RecorderFilterAlreadyAddedException();
+      case CaptureErrors.filterParameterGetError:
+        return const RecorderFilterParameterGetException();
     }
   }
 }

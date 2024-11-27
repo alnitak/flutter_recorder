@@ -46,6 +46,16 @@ class RecorderFailedToStartDeviceException extends RecorderCppException {
       '(on the C++ side).';
 }
 
+/// An exception that is thrown when passing invalid arguments.
+class RecorderInvalidArgumentsException extends RecorderCppException {
+  /// Creates a new [RecorderInvalidArgumentsException].
+  const RecorderInvalidArgumentsException([super.message]);
+
+  @override
+  String get description => 'Some invalid arguments were passed in '
+      '(on the C++ side).';
+}
+
 /// An exception that is thrown when the wav file could not be written.
 class RecorderFailedToWriteWavException extends RecorderCppException {
   /// Creates a new [RecorderFailedToWriteWavException].
@@ -56,12 +66,33 @@ class RecorderFailedToWriteWavException extends RecorderCppException {
       '(on the C++ side).';
 }
 
-/// An exception that is thrown when passing invalid arguments.
-class RecorderInvalidArgumentsException extends RecorderCppException {
-  /// Creates a new [RecorderInvalidArgumentsException].
-  const RecorderInvalidArgumentsException([super.message]);
+/// An exception that is thrown when the filter could not be found.
+class RecorderFilterNotFoundException extends RecorderCppException {
+  /// Creates a new [RecorderFilterNotFoundException].
+  const RecorderFilterNotFoundException([super.message]);
 
   @override
-  String get description => 'Some invalid arguments were passed in '
+  String get description => 'The filter could not be found '
       '(on the C++ side).';
+}
+
+/// An exception that is thrown when the filter has already been added.
+class RecorderFilterAlreadyAddedException extends RecorderCppException {
+  /// Creates a new [RecorderFilterAlreadyAddedException].
+  const RecorderFilterAlreadyAddedException([super.message]);
+
+  @override
+  String get description => 'The filter has already been added '
+      '(on the C++ side).';
+}
+
+/// An exception that is thrown when an error occurred while getting a
+/// filter parameter.
+class RecorderFilterParameterGetException extends RecorderCppException {
+  /// Creates a new [RecorderFilterParameterGetException].
+  const RecorderFilterParameterGetException([super.message]);
+
+  @override
+  String get description => 'An error occurred while getting a filter '
+      'parameter (on the C++ side).';
 }
