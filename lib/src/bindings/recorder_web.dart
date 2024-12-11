@@ -9,6 +9,7 @@ import 'package:flutter_recorder/src/bindings/js_extension.dart';
 import 'package:flutter_recorder/src/bindings/recorder.dart';
 import 'package:flutter_recorder/src/enums.dart';
 import 'package:flutter_recorder/src/exceptions/exceptions.dart';
+import 'package:flutter_recorder/src/filters/filters.dart';
 import 'package:flutter_recorder/src/flutter_recorder.dart';
 import 'package:flutter_recorder/src/worker/worker.dart';
 import 'package:meta/meta.dart';
@@ -281,5 +282,64 @@ class RecorderWeb extends RecorderImpl {
     final volumeDb = wasmGetF32Value(volumeDbPtr, 'float');
     wasmFree(volumeDbPtr);
     return volumeDb;
+  }
+
+  @override
+  int isFilterActive(FilterType filterType) {
+    return wasmIsFilterActive(filterType.value);
+  }
+
+  @override
+  void addFilter(FilterType filterType) {
+    final error = wasmAddFilter(filterType.value);
+    if (CaptureErrors.fromValue(error) != CaptureErrors.captureNoError) {
+      throw RecorderCppException.fromRecorderError(
+        CaptureErrors.fromValue(error),
+      );
+    }
+  }
+
+  @override
+  CaptureErrors removeFilter(FilterType filterType) {
+    final error = wasmRemoveFilter(filterType.value);
+    if (CaptureErrors.fromValue(error) != CaptureErrors.captureNoError) {
+      throw RecorderCppException.fromRecorderError(
+        CaptureErrors.fromValue(error),
+      );
+    }
+    return CaptureErrors.fromValue(error);
+  }
+
+  @override
+  List<String> getFilterParamNames(FilterType filterType) {
+    final namesPtr = wasmMalloc(4);
+    final paramsCountPtr = wasmMalloc(4);
+    wasmGetFilterParamNames(filterType.value, namesPtr, paramsCountPtr);
+    final namesPtr2 = wasmGetI32Value(namesPtr, '*');
+    final paramsCount = wasmGetI32Value(paramsCountPtr, '*');
+    final names = <String>[];
+    for (var i = 0; i < paramsCount; i++) {
+      final namePtr = wasmGetI32Value(namesPtr2 + i * 4, '*');
+      final name = wasmUtf8ToString(namePtr);
+      names.add(name);
+    }
+    wasmFree(namesPtr);
+    wasmFree(paramsCountPtr);
+    return names;
+  }
+
+  @override
+  void setFilterParamValue(
+    FilterType filterType,
+    int attributeId,
+    double value,
+  ) {
+    wasmSetFilterParamValue(filterType.value, attributeId, value);
+  }
+
+  @override
+  double getFilterParamValue(FilterType filterType, int attributeId) {
+    final value = wasmGetFilterParamValue(filterType.value, attributeId);
+    return value;
   }
 }

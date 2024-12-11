@@ -16,6 +16,9 @@ em++ \
 ../../src/capture.cpp \
 ../../src/analyzer.cpp \
 ../../src/fft/soloud_fft.cpp \
+../../src/filters/filters.cpp \
+../../src/filters/autogain.cpp \
+../../src/filters/echo_cancellation.cpp \
 -O3 \
 -msimd128 -msse3 \
 -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap']" \

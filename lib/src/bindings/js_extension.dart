@@ -135,3 +135,29 @@ external void wasmGetTexture2D(int samplesPtr);
 
 @JS('Module._getVolumeDb')
 external void wasmGetVolumeDb(int volumeDbPtr);
+
+@JS('Module._isFilterActive')
+external int wasmIsFilterActive(int filterTypeId);
+
+@JS('Module._addFilter')
+external int wasmAddFilter(int filterTypeId);
+
+@JS('Module._removeFilter')
+external int wasmRemoveFilter(int filterTypeId);
+
+@JS('Module._getFilterParamNames')
+external int wasmGetFilterParamNames(
+  int filterTypeId,
+  int namesPtr,
+  int paramsCountPtr,
+);
+
+@JS('Module._setFilterParamValue')
+external void wasmSetFilterParamValue(
+  int filterTypeId,
+  int attributeId,
+  double value,
+);
+
+@JS('Module._getFilterParamValue')
+external double wasmGetFilterParamValue(int filterTypeId, int attributeId);
