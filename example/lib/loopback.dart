@@ -119,7 +119,6 @@ class _LoopBackState extends State<LoopBack> {
 
   Future<void> init() async {
     /// Initialize the player and the recorder.
-      soloud.deinit();
     await soloud.init(channels: Channels.mono, sampleRate: sampleRate);
     // soloud.filters.echoFilter.activate();
     // soloud.filters.echoFilter.delay.value = 0.1;
@@ -210,7 +209,7 @@ class _LoopBackState extends State<LoopBack> {
 
         // if (echoCancellation) EchoCancellationSliders(),
 
-        // const Bars(),
+        const Bars(),
       ],
     );
   }
