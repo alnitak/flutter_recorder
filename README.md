@@ -141,3 +141,6 @@ Recorder.instance.startStreamingData();
 /// Stop streaming:
 Recorder.instance.stopStreamingData();
 ```
+> [!CAUTION]
+> Audio data must be processed as it is received. To optimize performance, the same memory is used to store data for all incoming streams, meaning the data will be overwritten. Therefore, you must copy the data if you need to populate a buffer while it arrives.
+> For example, when using **RxDart.bufferTime**, it will fill a **List** of `AudioDataContainer` objects, but when you attempt to read them, you will find that all the items contain the same data.
