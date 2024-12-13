@@ -77,7 +77,7 @@ final class Filters {
   ///   - Adjust to: Avoid muting low signals unless silence is acceptable.
   ///
   /// #### Recommended Settings for Common Scenarios
-  /// 
+  ///
   /// **Speech in a Noisy Environment**
   ///   - targetRMS = 0.1f
   ///   - attackTime = 0.02f
@@ -85,7 +85,7 @@ final class Filters {
   ///   - gainSmoothing = 0.01f
   ///   - maxGain = 6.0f
   ///   - minGain = 0.2f
-  /// 
+  ///
   /// **Music Playback**
   ///   - targetRMS = 0.2f
   ///   - attackTime = 0.01f
@@ -93,7 +93,7 @@ final class Filters {
   ///   - gainSmoothing = 0.05f
   ///   - maxGain = 4.0f
   ///   - minGain = 0.1f
-  /// 
+  ///
   /// **Podcast Recording**
   ///   - targetRMS = 0.15f
   ///   - attackTime = 0.02f

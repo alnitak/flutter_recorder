@@ -112,7 +112,7 @@ class _MyAppState extends State<MyApp> {
                   child: const Text('listCaptureDevices'),
                 ),
                 OutlinedButton(
-                  onPressed: () async{
+                  onPressed: () async {
                     try {
                       await recorder.init(
                         format: format,
