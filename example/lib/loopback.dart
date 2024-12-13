@@ -117,6 +117,7 @@ class _LoopBackState extends State<LoopBack> {
 
   Future<void> init() async {
     /// Initialize the player and the recorder.
+    await disposeAudioSource();
     await soloud.init(channels: Channels.mono, sampleRate: sampleRate);
     // soloud.filters.echoFilter.activate();
     // soloud.filters.echoFilter.delay.value = 0.1;
@@ -131,15 +132,16 @@ class _LoopBackState extends State<LoopBack> {
       ..start()
       ..startStreamingData();
 
-    setState(() {});
+    if (context.mounted) {
+      setState(() {});
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    const gap = SizedBox(width: 8, height: 8);
-
     return Column(
       mainAxisSize: MainAxisSize.min,
+      spacing: 10,
       children: [
         // Start / Stop
         Row(
@@ -151,7 +153,6 @@ class _LoopBackState extends State<LoopBack> {
               },
               child: const Text('Init loopback'),
             ),
-            gap,
             OutlinedButton(
               onPressed: () {
                 soloud.deinit();
@@ -164,10 +165,10 @@ class _LoopBackState extends State<LoopBack> {
             ),
           ],
         ),
-        gap,
 
         Row(
           mainAxisSize: MainAxisSize.min,
+          spacing: 10,
           children: [
             Text('Auto gain'),
             Checkbox(
@@ -183,8 +184,6 @@ class _LoopBackState extends State<LoopBack> {
                 });
               },
             ),
-            // gap,
-            // gap,
             // Text('Echo Cancellation'),
             // Checkbox(
             //   value: echoCancellation,
@@ -201,7 +200,6 @@ class _LoopBackState extends State<LoopBack> {
             // ),
           ],
         ),
-        gap,
 
         if (autoGain) AutoGainSliders(),
 

@@ -99,17 +99,14 @@ interface class Recorder {
 
   final _recoreder = RecorderController();
 
+  /// Whether the device is initialized.
+  bool _isInitialized = false;
+
   /// Whether the device is started.
   bool _isStarted = false;
 
   /// Currently used recorder configuration.
   PCMFormat _recorderFormat = PCMFormat.s16le;
-
-  /// Currently used recorder configuration.
-  int _recorderSampleRate = 22050;
-
-  /// Currently used recorder configuration.
-  RecorderChannels _recorderChannels = RecorderChannels.mono;
 
   /// Listening to silence state changes.
   Stream<SilenceState> get silenceChangedEvents =>
@@ -202,6 +199,15 @@ interface class Recorder {
     RecorderChannels channels = RecorderChannels.mono,
   }) async {
     await _recoreder.impl.setDartEventCallbacks();
+    if (_isInitialized) {
+      _log.warning('init() called when the native device is already '
+          'initialized. This is expected after a hot restart but not '
+          "otherwise. If you see this in production logs, there's probably "
+          'a bug in your code. You may have neglected to deinit() Recorder '
+          'during the current lifetime of the app.');
+      deinit();
+    }
+    
     _recoreder.impl.init(
       deviceID: deviceID,
       format: format,
@@ -209,19 +215,21 @@ interface class Recorder {
       channels: channels,
     );
     _recorderFormat = format;
-    _recorderSampleRate = sampleRate;
-    _recorderChannels = channels;
+    _isInitialized = true;
   }
 
   /// Dispose capture device.
   void deinit() {
+    _isInitialized = false;
     _isStarted = false;
     _recoreder.impl.deinit();
   }
 
   /// Whether the device is initialized.
   bool isDeviceInitialized() {
-    return _recoreder.impl.isDeviceInitialized();
+    // ignore: join_return_with_assignment
+    _isInitialized = _recoreder.impl.isDeviceInitialized();
+    return _isInitialized;
   }
 
   /// Whether the device is started.
