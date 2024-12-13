@@ -44,6 +44,10 @@ Add this in `web/index.html` under the `<head>` tag.
 ```
 <script src="assets/packages/flutter_recorder/web/libflutter_recorder_plugin.js" defer></script>
 ```
+The plugin is **WASM** compatible and your app can be compiled and run locally with something like:
+```
+flutter run -d chrome --web-renderer canvaskit --web-browser-flag '--disable-web-security' -t lib/main.dart --release
+```
 
 #### Linux
 - [`GStreamer`](https://gstreamer.freedesktop.org/documentation/installing/index.html?gi-language=c) is installed by default on most distributions, but if not, please [install it](https://gstreamer.freedesktop.org/documentation/installing/on-linux.html?gi-language=c) through your distribution's package manager.
