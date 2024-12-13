@@ -7,6 +7,7 @@ import 'package:flutter_recorder/src/bindings/recorder.dart';
 import 'package:flutter_recorder/src/enums.dart';
 import 'package:flutter_recorder/src/exceptions/exceptions.dart';
 import 'package:flutter_recorder/src/filters/filters.dart';
+import 'package:logging/logging.dart';
 
 /// Callback when silence state is changed.
 typedef SilenceCallback = void Function(bool isSilent, double decibel);
@@ -19,6 +20,8 @@ interface class Recorder {
   /// The private constructor of [Recorder]. This prevents developers from
   /// instantiating new instances.
   Recorder._();
+
+  static final Logger _log = Logger('flutter_recorder.Recorder');
 
   /// The singleton instance of [Recorder]. Only one Recorder instance
   /// can exist in C++ land, so – for consistency and to avoid confusion
@@ -62,9 +65,51 @@ interface class Recorder {
   /// ```
   static final Recorder instance = Recorder._();
 
+  /// This can be used to access all the available filter functionalities.
+  ///
+  /// ```dart
+  /// final recorder = await Recorder.instance.init();
+  /// ...
+  /// /// activate the filter.
+  ///recorder.filters.autoGainFilter.activate();
+  ///
+  /// /// Later on, deactivate it.
+  /// recorder.filters.autoGainFilter.deactivate();
+  /// ```
+  ///
+  /// It's possible to get and set filter parameters:
+  /// ```dart
+  /// /// Set
+  /// recorder.filters.autoGainFilter.targetRms.value = 0.6;
+  /// /// Get
+  /// final targetRmsValue = recorder.filters.autoGainFilter.targetRms.value;
+  /// ```
+  ///
+  /// It's possible to query filter parameters:
+  /// ```dart
+  /// final targetRms = recorder.filters.autoGainFilter.queryTargetRms;
+  /// ```
+  ///
+  /// Now with `targetRms` you have access to:
+  /// - `toString()` gives the "human readable" parameter name.
+  /// - `min` which represent the minimum accepted value.
+  /// - `max` which represent the maximum accepted value.
+  /// - `def` which represent the default value.
   final filters = const Filters();
 
   final _recoreder = RecorderController();
+
+  /// Whether the device is started.
+  bool _isStarted = false;
+
+  /// Currently used recorder configuration.
+  PCMFormat _recorderFormat = PCMFormat.s16le;
+
+  /// Currently used recorder configuration.
+  int _recorderSampleRate = 22050;
+
+  /// Currently used recorder configuration.
+  RecorderChannels _recorderChannels = RecorderChannels.mono;
 
   /// Listening to silence state changes.
   Stream<SilenceState> get silenceChangedEvents =>
@@ -150,23 +195,27 @@ interface class Recorder {
   ///
   /// Thows [RecorderInitializeFailedException] if something goes wrong, ie. no
   /// device found with [deviceID] id.
-  void init({
+  Future<void> init({
     int deviceID = -1,
     PCMFormat format = PCMFormat.s16le,
     int sampleRate = 22050,
     RecorderChannels channels = RecorderChannels.mono,
-  }) {
+  }) async {
+    await _recoreder.impl.setDartEventCallbacks();
     _recoreder.impl.init(
       deviceID: deviceID,
       format: format,
       sampleRate: sampleRate,
       channels: channels,
     );
-    _recoreder.impl.setDartEventCallbacks();
+    _recorderFormat = format;
+    _recorderSampleRate = sampleRate;
+    _recorderChannels = channels;
   }
 
   /// Dispose capture device.
   void deinit() {
+    _isStarted = false;
     _recoreder.impl.deinit();
   }
 
@@ -177,7 +226,9 @@ interface class Recorder {
 
   /// Whether the device is started.
   bool isDeviceStarted() {
-    return _recoreder.impl.isDeviceStarted();
+    // ignore: join_return_with_assignment
+    _isStarted = _recoreder.impl.isDeviceStarted();
+    return _isStarted;
   }
 
   /// Start the device.
@@ -189,10 +240,12 @@ interface class Recorder {
   /// Throws [RecorderFailedToStartDeviceException].
   void start() {
     _recoreder.impl.start();
+    _isStarted = true;
   }
 
   /// Stop the device.
   void stop() {
+    _isStarted = false;
     _recoreder.impl.stop();
   }
 
@@ -249,33 +302,73 @@ interface class Recorder {
 
   /// Return a 256 float array containing FFT data in the range [-1.0, 1.0]
   /// not clamped.
-  /// 
+  ///
   /// **NOTE**: use this only with format [PCMFormat.f32le].
   Float32List getFft() {
+    if (!_isStarted) {
+      _log.warning(() => 'Recorder is not started.');
+      return Float32List(256);
+    }
+    if (_recorderFormat != PCMFormat.f32le) {
+      _log.warning(
+        () => 'getFft: FFT data can be get only with f32le format.',
+      );
+      return Float32List(256);
+    }
     return _recoreder.impl.getFft();
   }
 
   /// Return a 256 float array containing wave data in the range [-1.0, 1.0]
   /// not clamped.
-  /// 
+  ///
   /// **NOTE**: use this only with format [PCMFormat.f32le].
   Float32List getWave() {
+    if (!_isStarted) {
+      _log.warning(() => 'Recorder is not started.');
+      return Float32List(256);
+    }
+    if (_recorderFormat != PCMFormat.f32le) {
+      _log.warning(
+        () => 'getWave: wave data can be get only with f32le format.',
+      );
+      return Float32List(256);
+    }
     return _recoreder.impl.getWave();
   }
 
   /// Get the audio data representing an array of 256 floats FFT data and
   /// 256 float of wave data.
-  /// 
+  ///
   /// **NOTE**: use this only with format [PCMFormat.f32le].
   Float32List getTexture2D() {
+    if (!_isStarted) {
+      _log.warning(() => 'Recorder is not started.');
+      return Float32List(256);
+    }
+    if (_recorderFormat != PCMFormat.f32le) {
+      _log.warning(
+        () => 'getTexture2D: texture can be get only with f32le format.',
+      );
+      return Float32List(256);
+    }
     return _recoreder.impl.getTexture2D();
   }
 
   /// Get the current volume in dB. Returns -100 if the capture is not inited.
   /// 0 is the max volume the capture device can handle.
-  /// 
+  ///
   /// **NOTE**: use this only with format [PCMFormat.f32le].
   double getVolumeDb() {
+    if (!_isStarted) {
+      _log.warning(() => 'Recorder is not started.');
+      return -100;
+    }
+    if (_recorderFormat != PCMFormat.f32le) {
+      _log.warning(
+        () => 'getVolumeDb: volume can be get only with f32le format.',
+      );
+      return -100;
+    }
     return _recoreder.impl.getVolumeDb();
   }
 

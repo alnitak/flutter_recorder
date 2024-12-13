@@ -1,37 +1,63 @@
 // ignore_for_file: public_member_api_docs, avoid_positional_boolean_parameters
 
+import 'dart:async';
 import 'dart:js_interop';
+import 'dart:js_util';
+import 'package:flutter/foundation.dart';
 import 'package:web/web.dart' as web;
+
+@JS('RecorderModule')
+external JSObject getRecorderModule();
+
+@JS('RecorderModule')
+external JSObject recorderModuleConstructor(); // Represents the IIFE
+
+@JS('self.RecorderModule') // Attach RecorderModule to the global scope
+external set globalRecorderModule(JSObject module);
+
+Future<JSObject> initializeRecorderModule() async {
+  try {
+    // Convert JavaScript Promise to Dart Future
+    final promise = recorderModuleConstructor();
+    final module = await promiseToFuture<JSObject>(promise);
+    globalRecorderModule = module; // Make it globally accessible
+    debugPrint('RecorderModule initialized and set globally.');
+    return module; // Return the initialized module
+  } catch (e) {
+    debugPrint('Failed to initialize RecorderModule: $e');
+    rethrow;
+  }
+}
 
 // //////////////////////////
 // common
 // //////////////////////////
-@JS('Module._malloc')
+@JS('RecorderModule._malloc')
 external int wasmMalloc(int bytesCount);
 
-@JS('Module._free')
+@JS('RecorderModule._free')
 external void wasmFree(int ptrAddress);
 
-@JS('Module.getValue')
+@JS('RecorderModule.getValue')
 external int wasmGetI32Value(int ptrAddress, String type);
 
-@JS('Module.getValue')
+@JS('RecorderModule.getValue')
 external double wasmGetF32Value(int ptrAddress, String type);
 
-@JS('Module.UTF8ToString')
+@JS('RecorderModule.UTF8ToString')
 external String wasmUtf8ToString(int ptrAddress);
 
-@JS('Module.setValue')
+@JS('RecorderModule.setValue')
 external void wasmSetValue(int ptrAddress, int value, String type);
 
-@JS('Module.cwrap')
+@JS('RecorderModule.cwrap')
 external JSFunction wasmCwrap(
   JSString fName,
   JSString returnType,
   JSArray<JSString> argTypes,
 );
 
-@JS('Module.ccall')
+@JS('RecorderModule.ccall')
 external JSFunction wasmCccall(
   JSString fName,
   JSString returnType,
@@ -39,37 +65,37 @@ external JSFunction wasmCccall(
   JSArray<JSAny> args,
 );
 
-@JS('Module._createWorkerInWasm')
+@JS('RecorderModule._createWorkerInWasm')
 external void wasmCreateWorkerInWasm();
 
-@JS('Module._setDartEventCallback')
+@JS('RecorderModule._setDartEventCallback')
 external void wasmSetDartEventCallback(int callbackPtr, int callbackPtr2);
 
-@JS('Module._sendToWorker')
+@JS('RecorderModule._sendToWorker')
 external void wasmSendToWorker(int message, int value);
 
-@JS('Module.wasmWorker')
+@JS('RecorderModule.wasmWorker')
 external web.Worker wasmWorker;
 
 // //////////////////////////
 // bindings
 // //////////////////////////
 
-@JS('Module._setSilenceDetection')
+@JS('RecorderModule._setSilenceDetection')
 external void wasmSetSilenceDetection(bool enable);
 
-@JS('Module._setSilenceThresholdDb')
+@JS('RecorderModule._setSilenceThresholdDb')
 external void wasmSetSilenceThresholdDb(double silenceThresholdDb);
 
-@JS('Module._setSilenceDuration')
+@JS('RecorderModule._setSilenceDuration')
 external void wasmSetSilenceDuration(double silenceDuration);
 
-@JS('Module._setSecondsOfAudioToWriteBefore')
+@JS('RecorderModule._setSecondsOfAudioToWriteBefore')
 external void wasmSetSecondsOfAudioToWriteBefore(
   double secondsOfAudioToWriteBefore,
 );
 
-@JS('Module._listCaptureDevices')
+@JS('RecorderModule._listCaptureDevices')
 external void wasmListCaptureDevices(
   int namesPtr,
   int deviceIdPtr,
@@ -77,7 +103,7 @@ external void wasmListCaptureDevices(
   int nDevicePtr,
 );
 
-@JS('Module._freeListCaptureDevices')
+@JS('RecorderModule._freeListCaptureDevices')
 external void wasmFreeListCaptureDevices(
   int namesPtr,
   int deviceIdPtr,
@@ -85,79 +111,79 @@ external void wasmFreeListCaptureDevices(
   int nDevicePtr,
 );
 
-@JS('Module._init')
+@JS('RecorderModule._init')
 external int wasmInit(int deviceID, int format, int sampleRate, int channels);
 
-@JS('Module._deinit')
+@JS('RecorderModule._deinit')
 external void wasmDeinit();
 
-@JS('Module._isInited')
+@JS('RecorderModule._isInited')
 external int wasmIsDeviceInitialized();
 
-@JS('Module._isDeviceStarted')
+@JS('RecorderModule._isDeviceStarted')
 external int wasmIsDeviceStarted();
 
-@JS('Module._start')
+@JS('RecorderModule._start')
 external int wasmStart();
 
-@JS('Module._stop')
+@JS('RecorderModule._stop')
 external void wasmStop();
 
-@JS('Module._startStreamingData')
+@JS('RecorderModule._startStreamingData')
 external void wasmStartStreamingData();
 
-@JS('Module._stopStreamingData')
+@JS('RecorderModule._stopStreamingData')
 external void wasmStopStreamingData();
 
-@JS('Module._startRecording')
+@JS('RecorderModule._startRecording')
 external int wasmStartRecording(int pathPtr);
 
-@JS('Module._setPauseRecording')
+@JS('RecorderModule._setPauseRecording')
 external void wasmSetPauseRecording(bool pause);
 
-@JS('Module._stopRecording')
+@JS('RecorderModule._stopRecording')
 external void wasmStopRecording();
 
-@JS('Module._setFftSmoothing')
+@JS('RecorderModule._setFftSmoothing')
 external void wasmSetFftSmoothing(double smooth);
 
-@JS('Module._getFft')
+@JS('RecorderModule._getFft')
 external void wasmGetFft(int samplesPtr);
 
-@JS('Module._getWave')
+@JS('RecorderModule._getWave')
 external void wasmGetWave(int samplesPtr);
 
-@JS('Module._getTexture')
+@JS('RecorderModule._getTexture')
 external void wasmGetTexture(int samplesPtr);
 
-@JS('Module._getTexture2D')
+@JS('RecorderModule._getTexture2D')
 external void wasmGetTexture2D(int samplesPtr);
 
-@JS('Module._getVolumeDb')
+@JS('RecorderModule._getVolumeDb')
 external void wasmGetVolumeDb(int volumeDbPtr);
 
-@JS('Module._isFilterActive')
+@JS('RecorderModule._isFilterActive')
 external int wasmIsFilterActive(int filterTypeId);
 
-@JS('Module._addFilter')
+@JS('RecorderModule._addFilter')
 external int wasmAddFilter(int filterTypeId);
 
-@JS('Module._removeFilter')
+@JS('RecorderModule._removeFilter')
 external int wasmRemoveFilter(int filterTypeId);
 
-@JS('Module._getFilterParamNames')
+@JS('RecorderModule._getFilterParamNames')
 external int wasmGetFilterParamNames(
   int filterTypeId,
   int namesPtr,
   int paramsCountPtr,
 );
 
-@JS('Module._setFilterParamValue')
+@JS('RecorderModule._setFilterParams')
 external void wasmSetFilterParamValue(
   int filterTypeId,
   int attributeId,
   double value,
 );
 
-@JS('Module._getFilterParamValue')
+@JS('RecorderModule._getFilterParams')
 external double wasmGetFilterParamValue(int filterTypeId, int attributeId);

@@ -34,7 +34,8 @@ class RecorderWeb extends RecorderImpl {
   /// Create the worker in the WASM Module and listen for events coming
   /// from `web/worker.dart.js`
   @override
-  void setDartEventCallbacks() {
+  Future<void> setDartEventCallbacks() async{
+    await initializeRecorderModule();
     // This calls the native WASM `createWorkerInWasm()` in `bindings.cpp`.
     // The latter creates a web Worker using `EM_ASM` inlining JS code to
     // create the worker in the WASM `Module`.
@@ -42,7 +43,7 @@ class RecorderWeb extends RecorderImpl {
 
     wasmSetDartEventCallback(0, 0);
 
-    // Here the `Module.wasmModule` binded to a local [WorkerController]
+    // Here the `RecorderModule.wasmModule` binded to a local [WorkerController]
     // is used in the main isolate to listen for events coming from native.
     // From native the events can be sent from the main thread and even from
     // other threads like the audio thread.

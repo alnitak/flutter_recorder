@@ -28,16 +28,16 @@ dartStreamDataCallback_t nativeStreamDataCallback;
 /// WEB WORKER
 
 #ifdef __EMSCRIPTEN__
-/// Create the web worker and store a global "Module.workerUri" in JS.
+/// Create the web worker and store a global "RecorderModule.workerUri" in JS.
 FFI_PLUGIN_EXPORT void createWorkerInWasm()
 {
     EM_ASM({
-        if (!Module.wasmWorker)
+        if (!RecorderModule.wasmWorker)
         {
             // Create a new Worker from the URI
             var workerUri = "assets/packages/flutter_recorder/web/worker.dart.js";
-            Module.wasmWorker = new Worker(workerUri);
-            console.log("EM_ASM creating web worker! " + workerUri + "  " + Module.wasmWorker);
+            RecorderModule.wasmWorker = new Worker(workerUri);
+            console.log("EM_ASM creating web worker! " + workerUri + "  " + RecorderModule.wasmWorker);
         }
         else
         {
@@ -50,10 +50,10 @@ FFI_PLUGIN_EXPORT void createWorkerInWasm()
 FFI_PLUGIN_EXPORT void sendSilenceEventToWorker(const char *message, bool isSilent, float energyDb)
 {
     EM_ASM({
-            if (Module.wasmWorker)
+            if (RecorderModule.wasmWorker)
             {
                 // Send the message
-                Module.wasmWorker.postMessage({
+                RecorderModule.wasmWorker.postMessage({
                     message : UTF8ToString($0),
                     isSilent : $1,
                     energyDb : $2,
@@ -69,12 +69,12 @@ FFI_PLUGIN_EXPORT void sendSilenceEventToWorker(const char *message, bool isSile
 FFI_PLUGIN_EXPORT void sendStreamToWorker(const char *message, unsigned char *audioData, int audioDataLength)
 {
     EM_ASM({
-            if (Module.wasmWorker)
+            if (RecorderModule.wasmWorker)
             {
                 // Convert audioData to Uint8Array for JavaScript compatibility
-                const audioDataArray = new Uint8Array(Module.HEAPU8.subarray($1, $1 + $2));
+                const audioDataArray = new Uint8Array(RecorderModule.HEAPU8.subarray($1, $1 + $2));
                 // Send the message and data
-                Module.wasmWorker.postMessage({
+                RecorderModule.wasmWorker.postMessage({
                     message : UTF8ToString($0),
                     data : audioDataArray,
                 });
@@ -288,17 +288,26 @@ FFI_PLUGIN_EXPORT void stopRecording()
 
 FFI_PLUGIN_EXPORT void getVolumeDb(float *volumeDb)
 {
+    if (!capture.isInited())
+    {
+        *volumeDb = 0;
+        return;
+    }
     *volumeDb = capture.getVolumeDb();
 }
 
 FFI_PLUGIN_EXPORT void setFftSmoothing(float smooth)
 {
+    if (!capture.isInited())
+        return;
     analyzerCapture.get()->setSmoothing(smooth);
 }
 
 /// Return a 256 float array containing FFT data.
 FFI_PLUGIN_EXPORT void getFft(float **fft)
 {
+    if (!capture.isInited())
+        return;
     float *wave = capture.getWave();
     *fft = analyzerCapture.get()->calcFFT(wave);
 }
@@ -306,11 +315,15 @@ FFI_PLUGIN_EXPORT void getFft(float **fft)
 /// Return a 256 float array containing wave data.
 FFI_PLUGIN_EXPORT void getWave(float **wave)
 {
+    if (!capture.isInited())
+        return;
     *wave = capture.getWave();
 }
 
 FFI_PLUGIN_EXPORT void getTexture(float *samples)
 {
+    if (!capture.isInited())
+        return;
     if (analyzerCapture.get() == nullptr || !capture.isInited())
     {
         memset(samples, 0, sizeof(float) * 512);
@@ -332,6 +345,8 @@ FFI_PLUGIN_EXPORT void getTexture(float *samples)
 float capturedTexture2D[256][512];
 FFI_PLUGIN_EXPORT void getTexture2D(float **samples)
 {
+    if (!capture.isInited())
+        return;
     if (analyzerCapture.get() == nullptr || !capture.isInited())
     {
         *samples = *capturedTexture2D;
@@ -347,6 +362,8 @@ FFI_PLUGIN_EXPORT void getTexture2D(float **samples)
 
 FFI_PLUGIN_EXPORT float getTextureValue(int row, int column)
 {
+    if (!capture.isInited())
+        return .0f;
     return capturedTexture2D[row][column];
 }
 

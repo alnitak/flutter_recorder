@@ -44,7 +44,7 @@ abstract class RecorderImpl {
 
   /// Set Dart functions to call when an event occurs.
   @mustBeOverridden
-  void setDartEventCallbacks();
+  FutureOr<void> setDartEventCallbacks();
 
   /// Enable or disable silence detection.
   ///

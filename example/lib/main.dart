@@ -1,10 +1,11 @@
 import 'dart:io';
+import 'dart:developer' as dev;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-
 import 'package:flutter_recorder/flutter_recorder.dart';
 import 'package:flutter_recorder_example/ui/bars.dart';
+import 'package:logging/logging.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -14,6 +15,23 @@ import 'package:permission_handler/permission_handler.dart';
 /// The silence detection and the visualizer works when using [PCMFormat.f32].
 /// Writing audio stream to file is not implemented on Web.
 void main() async {
+  // The `flutter_soloud` package logs everything
+  // (from severe warnings to fine debug messages)
+  // using the standard `package:logging`.
+  // You can listen to the logs as shown below.
+  Logger.root.level = kDebugMode ? Level.FINE : Level.INFO;
+  Logger.root.onRecord.listen((record) {
+    dev.log(
+      record.message,
+      time: record.time,
+      level: record.level.value,
+      name: record.loggerName,
+      zone: record.zone,
+      error: record.error,
+      stackTrace: record.stackTrace,
+    );
+  });
+
   runApp(
     MaterialApp(
       home: Scaffold(
@@ -38,7 +56,7 @@ class _MyAppState extends State<MyApp> {
   final format = PCMFormat.f32le;
   final sampleRate = 22050;
   final channels = RecorderChannels.mono;
-  final _recorder = Recorder.instance;
+  final recorder = Recorder.instance;
   String? filePath;
   var thresholdDb = -20.0;
   var silenceDuration = 2.0;
@@ -59,7 +77,7 @@ class _MyAppState extends State<MyApp> {
     }
 
     /// Listen to audio data stream. The data is received in Uint8List.
-    _recorder.uint8ListStream.listen((data) {
+    recorder.uint8ListStream.listen((data) {
       /// Write the PCM data to file. It can then be imported with the correct
       /// parameters with for example Audacity.
       /// Not testing on Web platform.
@@ -94,9 +112,9 @@ class _MyAppState extends State<MyApp> {
                   child: const Text('listCaptureDevices'),
                 ),
                 OutlinedButton(
-                  onPressed: () {
+                  onPressed: () async{
                     try {
-                      _recorder.init(
+                      await recorder.init(
                         format: format,
                         sampleRate: sampleRate,
                         channels: channels,
@@ -110,7 +128,7 @@ class _MyAppState extends State<MyApp> {
                 OutlinedButton(
                   onPressed: () {
                     try {
-                      _recorder.start();
+                      recorder.start();
                     } on Exception catch (e) {
                       debugPrint('-------------- start() error: $e\n');
                     }
@@ -119,7 +137,7 @@ class _MyAppState extends State<MyApp> {
                 ),
                 OutlinedButton(
                   onPressed: () {
-                    _recorder.deinit();
+                    recorder.deinit();
                   },
                   child: const Text('deinit'),
                 ),
@@ -141,9 +159,9 @@ class _MyAppState extends State<MyApp> {
                       if (!kIsWeb) {
                         final downloadsDir = await getDownloadsDirectory();
                         filePath = '${downloadsDir!.path}/flutter_recorder.wav';
-                        _recorder.startRecording(completeFilePath: filePath!);
+                        recorder.startRecording(completeFilePath: filePath!);
                       } else {
-                        _recorder.startRecording();
+                        recorder.startRecording();
                       }
                     } on Exception catch (e) {
                       debugPrint('-------------- startRecording() $e\n');
@@ -153,19 +171,19 @@ class _MyAppState extends State<MyApp> {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    _recorder.setPauseRecording(pause: true);
+                    recorder.setPauseRecording(pause: true);
                   },
                   child: const Text('Pause recording'),
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    _recorder.setPauseRecording(pause: false);
+                    recorder.setPauseRecording(pause: false);
                   },
                   child: const Text('UN-Pause recording'),
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    _recorder.stopRecording();
+                    recorder.stopRecording();
                     if (!kIsWeb) {
                       debugPrint('Audio recorded to "$filePath"');
                       showFileRecordedDialog(filePath!);
@@ -185,7 +203,7 @@ class _MyAppState extends State<MyApp> {
                 CircularProgressIndicator(),
                 OutlinedButton(
                   onPressed: () async {
-                    _recorder.startStreamingData();
+                    recorder.startStreamingData();
 
                     if (!kIsWeb) {
                       savingDir = await getDownloadsDirectory();
@@ -211,7 +229,7 @@ class _MyAppState extends State<MyApp> {
                 ),
                 OutlinedButton(
                   onPressed: () {
-                    _recorder.stopStreamingData();
+                    recorder.stopStreamingData();
                   },
                   child: const Text('stop stream'),
                 ),
@@ -227,7 +245,7 @@ class _MyAppState extends State<MyApp> {
                   Column(
                     children: [
                       StreamBuilder(
-                        stream: _recorder.silenceChangedEvents,
+                        stream: recorder.silenceChangedEvents,
                         builder: (context, snapshot) {
                           return ColoredBox(
                             color: snapshot.hasData && snapshot.data!.isSilent
@@ -238,7 +256,7 @@ class _MyAppState extends State<MyApp> {
                               height: 50,
                               child: Center(
                                 child: Text(
-                                    _recorder.getVolumeDb().toStringAsFixed(1)),
+                                    recorder.getVolumeDb().toStringAsFixed(1)),
                               ),
                             ),
                           );
@@ -251,7 +269,7 @@ class _MyAppState extends State<MyApp> {
                         children: [
                           OutlinedButton(
                             onPressed: () {
-                              _recorder.setSilenceDetection(
+                              recorder.setSilenceDetection(
                                 enable: true,
                                 onSilenceChanged: (isSilent, decibel) {
                                   /// Here you can check if silence is changed.
@@ -260,9 +278,9 @@ class _MyAppState extends State<MyApp> {
                                   // debugPrint('SILENCE CHANGED: $isSilent, $decibel');
                                 },
                               );
-                              _recorder.setSilenceThresholdDb(-27);
-                              _recorder.setSilenceDuration(0.5);
-                              _recorder.setSecondsOfAudioToWriteBefore(0.0);
+                              recorder.setSilenceThresholdDb(-27);
+                              recorder.setSilenceDuration(0.5);
+                              recorder.setSecondsOfAudioToWriteBefore(0.0);
                               setState(() {
                                 thresholdDb = -27;
                                 silenceDuration = 0.5;
@@ -274,7 +292,7 @@ class _MyAppState extends State<MyApp> {
                           ),
                           OutlinedButton(
                             onPressed: () {
-                              _recorder.setSilenceDetection(enable: false);
+                              recorder.setSilenceDetection(enable: false);
                             },
                             child: const Text('setSilenceDetection OFF'),
                           ),
@@ -283,7 +301,7 @@ class _MyAppState extends State<MyApp> {
 
                       OutlinedButton(
                         onPressed: () {
-                          _recorder.filters.autoGainFilter.activate();
+                          recorder.filters.autoGainFilter.activate();
                         },
                         child: const Text('autogain'),
                       ),
@@ -300,7 +318,7 @@ class _MyAppState extends State<MyApp> {
                               max: 0,
                               label: thresholdDb.toStringAsFixed(1),
                               onChanged: (value) {
-                                _recorder.setSilenceThresholdDb(value);
+                                recorder.setSilenceThresholdDb(value);
                                 setState(() {
                                   thresholdDb = value;
                                 });
@@ -323,7 +341,7 @@ class _MyAppState extends State<MyApp> {
                               max: 10,
                               label: silenceDuration.toStringAsFixed(1),
                               onChanged: (value) {
-                                _recorder.setSilenceDuration(value);
+                                recorder.setSilenceDuration(value);
                                 setState(() {
                                   silenceDuration = value;
                                 });
@@ -346,7 +364,7 @@ class _MyAppState extends State<MyApp> {
                               max: 5,
                               label: silenceDuration.toStringAsFixed(1),
                               onChanged: (value) {
-                                _recorder.setSecondsOfAudioToWriteBefore(value);
+                                recorder.setSecondsOfAudioToWriteBefore(value);
                                 setState(() {
                                   secondsOfAudioToWriteBefore = value;
                                 });
@@ -397,7 +415,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> showDeviceListDialog() async {
-    final devices = _recorder.listCaptureDevices();
+    final devices = recorder.listCaptureDevices();
     String devicesString = devices.asMap().entries.map((entry) {
       return '${entry.value.id} ${entry.value.isDefault ? 'DEFAULT' : ''} - '
           ' ${entry.value.name}';

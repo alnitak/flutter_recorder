@@ -74,7 +74,7 @@ class RecorderFfi extends RecorderImpl {
   ffi.NativeCallable<dartStreamDataCallback_tFunction>?
       nativeStreamDataCallable;
   @override
-  void setDartEventCallbacks() {
+  Future<void> setDartEventCallbacks() async {
     // Create a NativeCallable for the Dart functions
     final nativeSilenceChangedCallable =
         ffi.NativeCallable<dartSilenceChangedCallback_tFunction>.listener(

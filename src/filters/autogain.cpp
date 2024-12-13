@@ -118,8 +118,8 @@ void AutoGain::process(void *pInput, ma_uint32 frameCount, unsigned int channels
     //     mCurrentGain += delta * getParamValue(GainSmoothing);
     // }
 
-    printf("currentRMS: %f smoothedRMS: %f targetGain: %f currentGain: %f\n",
-       currentRMS, mSmoothedRMS, targetGain, mCurrentGain);
+    // printf("currentRMS: %f smoothedRMS: %f targetGain: %f currentGain: %f\n",
+    //    currentRMS, mSmoothedRMS, targetGain, mCurrentGain);
     
     // Apply the gain to the input buffer
     applyGain((void *)pInput, frameCount, channels, format);
@@ -192,59 +192,63 @@ void AutoGain::applyGain(void *pInput, ma_uint32 frameCount, unsigned int channe
 
     switch (format)
     {
-    case ma_format_u8:
-        for (ma_uint32 i = 0; i < sampleCount; ++i)
-        {
-            float sample = (static_cast<uint8_t *>(pInput)[i] - 128) / 128.0f * mCurrentGain;
-            sample = std::clamp(sample, -1.0f, 1.0f);
-            static_cast<uint8_t *>(pInput)[i] = static_cast<uint8_t>((sample * 128.0f) + 128);
-        }
-        break;
-    case ma_format_s16:
-        for (ma_uint32 i = 0; i < sampleCount; ++i)
-        {
-            float sample = static_cast<int16_t *>(pInput)[i] / 32768.0f * mCurrentGain;
-            sample = std::clamp(sample, -1.0f, 1.0f);
-            static_cast<int16_t *>(pInput)[i] = static_cast<int16_t>(sample * 32768.0f);
-        }
-        break;
-    case ma_format_s24:
-        for (ma_uint32 i = 0; i < sampleCount; ++i)
-        {
-            // Read the 24-bit signed sample (3 bytes per sample)
-            uint8_t *samplePtr = static_cast<uint8_t *>(pInput) + i * 3;
-            int32_t sample = (samplePtr[0] << 8) | (samplePtr[1] << 16) | (samplePtr[2] << 24); // Reassemble to 32-bit signed
-            sample >>= 8;                                                                       // Shift to make it a signed 24-bit value
+        case ma_format_u8:
+            for (ma_uint32 i = 0; i < sampleCount; ++i)
+            {
+                float sample = (static_cast<uint8_t *>(pInput)[i] - 128) / 128.0f * mCurrentGain;
+                sample = std::clamp(sample, -1.0f, 1.0f);
+                static_cast<uint8_t *>(pInput)[i] = static_cast<uint8_t>((sample * 128.0f) + 128);
+            }
+            break;
+        case ma_format_s16:
+            for (ma_uint32 i = 0; i < sampleCount; ++i)
+            {
+                float sample = static_cast<int16_t *>(pInput)[i] / 32768.0f * mCurrentGain;
+                sample = std::clamp(sample, -1.0f, 1.0f);
+                static_cast<int16_t *>(pInput)[i] = static_cast<int16_t>(sample * 32768.0f);
+            }
+            break;
+        case ma_format_s24:
+            for (ma_uint32 i = 0; i < sampleCount; ++i)
+            {
+                // Read the 24-bit signed sample (3 bytes per sample)
+                uint8_t *samplePtr = static_cast<uint8_t *>(pInput) + i * 3;
+                int32_t sample = (samplePtr[0] << 8) | (samplePtr[1] << 16) | (samplePtr[2] << 24); // Reassemble to 32-bit signed
+                sample >>= 8;                                                                       // Shift to make it a signed 24-bit value
 
-            // Scale and apply gain
-            float normalizedSample = sample / 8388608.0f; // Scale to -1.0 to +1.0 range
-            normalizedSample *= mCurrentGain;
-            normalizedSample = std::clamp(normalizedSample, -1.0f, 1.0f);
+                // Scale and apply gain
+                float normalizedSample = sample / 8388608.0f; // Scale to -1.0 to +1.0 range
+                normalizedSample *= mCurrentGain;
+                normalizedSample = std::clamp(normalizedSample, -1.0f, 1.0f);
 
-            // Convert back to signed 24-bit
-            int32_t processedSample = static_cast<int32_t>(normalizedSample * 8388608.0f);
-            processedSample = std::clamp(processedSample, -8388608, 8388607);
+                // Convert back to signed 24-bit
+                int32_t processedSample = static_cast<int32_t>(normalizedSample * 8388608.0f);
+                processedSample = std::clamp(processedSample, -8388608, 8388607);
 
-            // Write back the processed sample into 3 bytes
-            samplePtr[0] = (processedSample & 0xFF0000) >> 16;
-            samplePtr[1] = (processedSample & 0x00FF00) >> 8;
-            samplePtr[2] = (processedSample & 0x0000FF);
-        }
-        break;
-    case ma_format_s32:
-        for (ma_uint32 i = 0; i < sampleCount; ++i)
-        {
-            float sample = static_cast<int32_t *>(pInput)[i] / 2147483648.0f * mCurrentGain;
-            sample = std::clamp(sample, -1.0f, 1.0f);
-            static_cast<int32_t *>(pInput)[i] = static_cast<int32_t>(sample * 2147483648.0f);
-        }
-        break;
-    case ma_format_f32:
-        for (ma_uint32 i = 0; i < sampleCount; ++i)
-        {
-            static_cast<float *>(pInput)[i] *= mCurrentGain;
-        }
-        break;
+                // Write back the processed sample into 3 bytes
+                samplePtr[0] = (processedSample & 0xFF0000) >> 16;
+                samplePtr[1] = (processedSample & 0x00FF00) >> 8;
+                samplePtr[2] = (processedSample & 0x0000FF);
+            }
+            break;
+        case ma_format_s32:
+            for (ma_uint32 i = 0; i < sampleCount; ++i)
+            {
+                float sample = static_cast<int32_t *>(pInput)[i] / 2147483648.0f * mCurrentGain;
+                sample = std::clamp(sample, -1.0f, 1.0f);
+                static_cast<int32_t *>(pInput)[i] = static_cast<int32_t>(sample * 2147483648.0f);
+            }
+            break;
+        case ma_format_f32:
+            for (ma_uint32 i = 0; i < sampleCount; ++i)
+            {
+                static_cast<float *>(pInput)[i] *= mCurrentGain;
+            }
+            break;
+        case ma_format_unknown:
+            break;
+        case ma_format_count:
+            break;
     }
 }
 

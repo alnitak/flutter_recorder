@@ -12,8 +12,6 @@ import 'package:permission_handler/permission_handler.dart';
 /// If you want to try other formats than `f32le`, you must comment out
 /// the `Bars()` widget.
 ///
-/// No web support yet.
-///
 /// The `Echo Cancellation` code is not yet ready and don't know if it will be!
 void main() async {
   runApp(
@@ -124,12 +122,12 @@ class _LoopBackState extends State<LoopBack> {
     // soloud.filters.echoFilter.delay.value = 0.1;
     // soloud.filters.echoFilter.decay.value = 0.2;
 
+    await recorder.init(
+      format: recorderFormat,
+      sampleRate: sampleRate,
+      channels: recorderChannels,
+    );
     recorder
-      ..init(
-        format: recorderFormat,
-        sampleRate: sampleRate,
-        channels: recorderChannels,
-      )
       ..start()
       ..startStreamingData();
 
