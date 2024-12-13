@@ -115,7 +115,7 @@ interface class Recorder {
   /// Listen to audio data.
   ///
   /// The streaming must be enabled calling [startStreamingData].
-  /// 
+  ///
   /// **NOTE**: Audio data must be processed as it is received. To optimize
   /// performance, the same memory is used to store data for all incoming
   /// streams, meaning the data will be overwritten. Therefore, you must copy
@@ -235,6 +235,9 @@ interface class Recorder {
 
   /// Whether the device is initialized.
   bool isDeviceInitialized() {
+    if (!_isInitialized) {
+      return false;
+    }
     // ignore: join_return_with_assignment
     _isInitialized = _recoreder.impl.isDeviceInitialized();
     return _isInitialized;
@@ -242,6 +245,9 @@ interface class Recorder {
 
   /// Whether the device is started.
   bool isDeviceStarted() {
+    if (!_isInitialized) {
+      return false;
+    }
     // ignore: join_return_with_assignment
     _isStarted = _recoreder.impl.isDeviceStarted();
     return _isStarted;
@@ -255,23 +261,27 @@ interface class Recorder {
   /// Throws [RecorderCaptureNotInitializedException].
   /// Throws [RecorderFailedToStartDeviceException].
   void start() {
+    if (!_isInitialized) return;
     _recoreder.impl.start();
     _isStarted = true;
   }
 
   /// Stop the device.
   void stop() {
+    if (!_isInitialized) return;
     _isStarted = false;
     _recoreder.impl.stop();
   }
 
   /// Start streaming data.
   void startStreamingData() {
+    if (!_isInitialized) return;
     _recoreder.impl.startStreamingData();
   }
 
   /// Stop streaming data.
   void stopStreamingData() {
+    if (!_isInitialized) return;
     _recoreder.impl.stopStreamingData();
   }
 
@@ -289,16 +299,21 @@ interface class Recorder {
         !kIsWeb && completeFilePath.isNotEmpty,
         'completeFilePath is required '
         'on all platforms but on the Web.');
+    if (!_isInitialized) {
+      throw const RecorderCaptureNotInitializedException();
+    }
     _recoreder.impl.startRecording(completeFilePath);
   }
 
   /// Pause recording.
   void setPauseRecording({required bool pause}) {
+    if (!_isInitialized) return;
     _recoreder.impl.setPauseRecording(pause: pause);
   }
 
   /// Stop recording.
   void stopRecording() {
+    if (!_isInitialized) return;
     _recoreder.impl.stopRecording();
   }
 
@@ -321,6 +336,10 @@ interface class Recorder {
   ///
   /// **NOTE**: use this only with format [PCMFormat.f32le].
   Float32List getFft() {
+    if (!_isInitialized) {
+      _log.warning(() => 'Recorder is not initialized.');
+      return Float32List(256);
+    }
     if (!_isStarted) {
       _log.warning(() => 'Recorder is not started.');
       return Float32List(256);
@@ -339,6 +358,10 @@ interface class Recorder {
   ///
   /// **NOTE**: use this only with format [PCMFormat.f32le].
   Float32List getWave() {
+    if (!_isInitialized) {
+      _log.warning(() => 'Recorder is not initialized.');
+      return Float32List(256);
+    }
     if (!_isStarted) {
       _log.warning(() => 'Recorder is not started.');
       return Float32List(256);
@@ -357,6 +380,10 @@ interface class Recorder {
   ///
   /// **NOTE**: use this only with format [PCMFormat.f32le].
   Float32List getTexture2D() {
+    if (!_isInitialized) {
+      _log.warning(() => 'Recorder is not initialized.');
+      return Float32List(256);
+    }
     if (!_isStarted) {
       _log.warning(() => 'Recorder is not started.');
       return Float32List(256);
@@ -375,6 +402,10 @@ interface class Recorder {
   ///
   /// **NOTE**: use this only with format [PCMFormat.f32le].
   double getVolumeDb() {
+    if (!_isInitialized) {
+      _log.warning(() => 'Recorder is not initialized.');
+      return -100;
+    }
     if (!_isStarted) {
       _log.warning(() => 'Recorder is not started.');
       return -100;
