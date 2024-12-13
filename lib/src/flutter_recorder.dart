@@ -114,7 +114,15 @@ interface class Recorder {
 
   /// Listen to audio data.
   ///
-  /// The streaming must be enable calling [startStreamingData].
+  /// The streaming must be enabled calling [startStreamingData].
+  /// 
+  /// *NOTE*: the audio data must be managed as the data is received. Since the
+  /// memory used to store data is the same for all the received streams to
+  /// have better performances, the data will be overwritten. Hence, you
+  /// must copy the data if you want fill a buffer. This happens
+  /// for example when using "RxDart.bufferTime" which will fill a "List" of
+  /// [AudioDataContainer] but when you will try to read them, you will notice
+  /// that all the items have the same data.
   Stream<AudioDataContainer> get uint8ListStream =>
       _recoreder.impl.uint8ListStream;
 
@@ -207,7 +215,7 @@ interface class Recorder {
           'during the current lifetime of the app.');
       deinit();
     }
-    
+
     _recoreder.impl.init(
       deviceID: deviceID,
       format: format,
