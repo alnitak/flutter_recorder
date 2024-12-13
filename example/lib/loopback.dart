@@ -1,9 +1,13 @@
+import 'dart:developer' as dev;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_recorder/flutter_recorder.dart';
 import 'package:flutter_recorder_example/ui/bars.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
+import 'package:logging/logging.dart';
 import 'package:permission_handler/permission_handler.dart';
+
 
 /// Loopback example which uses `flutter_soloud` to play audio back to the
 /// device from the microphone data stream. Please try it with headset to
@@ -14,6 +18,23 @@ import 'package:permission_handler/permission_handler.dart';
 ///
 /// The `Echo Cancellation` code is not yet ready and don't know if it will be!
 void main() async {
+  // The `flutter_recorder` package logs everything
+  // (from severe warnings to fine debug messages)
+  // using the standard `package:logging`.
+  // You can listen to the logs as shown below.
+  Logger.root.level = kDebugMode ? Level.FINE : Level.INFO;
+  Logger.root.onRecord.listen((record) {
+    dev.log(
+      record.message,
+      time: record.time,
+      level: record.level.value,
+      name: record.loggerName,
+      zone: record.zone,
+      error: record.error,
+      stackTrace: record.stackTrace,
+    );
+  });
+
   runApp(
     MaterialApp(
       home: Scaffold(

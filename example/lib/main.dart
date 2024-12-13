@@ -15,7 +15,7 @@ import 'package:permission_handler/permission_handler.dart';
 /// The silence detection and the visualizer works when using [PCMFormat.f32].
 /// Writing audio stream to file is not implemented on Web.
 void main() async {
-  // The `flutter_soloud` package logs everything
+  // The `flutter_recorder` package logs everything
   // (from severe warnings to fine debug messages)
   // using the standard `package:logging`.
   // You can listen to the logs as shown below.
