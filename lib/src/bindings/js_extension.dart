@@ -6,29 +6,6 @@ import 'dart:js_util';
 import 'package:flutter/foundation.dart';
 import 'package:web/web.dart' as web;
 
-@JS('RecorderModule')
-external JSObject getRecorderModule();
-
-@JS('RecorderModule')
-external JSObject recorderModuleConstructor(); // Represents the IIFE
-
-@JS('self.RecorderModule') // Attach RecorderModule to the global scope
-external set globalRecorderModule(JSObject module);
-
-Future<JSObject> initializeRecorderModule() async {
-  try {
-    // Convert JavaScript Promise to Dart Future
-    final promise = recorderModuleConstructor();
-    final module = await promiseToFuture<JSObject>(promise);
-    globalRecorderModule = module; // Make it globally accessible
-    debugPrint('RecorderModule initialized and set globally.');
-    return module; // Return the initialized module
-  } catch (e) {
-    debugPrint('Failed to initialize RecorderModule: $e');
-    rethrow;
-  }
-}
-
 // //////////////////////////
 // common
 // //////////////////////////

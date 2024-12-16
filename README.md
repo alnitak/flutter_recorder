@@ -43,6 +43,7 @@ Add the permission in `Runner/Info.plist`.
 Add this in `web/index.html` under the `<head>` tag.
 ```
 <script src="assets/packages/flutter_recorder/web/libflutter_recorder_plugin.js" defer></script>
+<script src="assets/packages/flutter_recorder/web/init_recorder_module.dart.js" defer></script>
 ```
 The plugin is **WASM** compatible and your app can be compiled and run locally with something like:
 ```

@@ -85,11 +85,6 @@ class _LoopBackState extends State<LoopBack> {
       });
     }
 
-
-
-                final b = recorder.isFilterActive(RecorderFilterType.autogain);
-                print('Is Filter Active: $b');
-
     /// Listen for microphne data.
     recorder.uint8ListStream.listen((chunks) {
       if (audioSource != null) {
@@ -174,13 +169,6 @@ class _LoopBackState extends State<LoopBack> {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            OutlinedButton(
-              onPressed: () {
-                final b = recorder.isFilterActive(RecorderFilterType.autogain);
-                print('Is Filter Active: $b');
-              },
-              child: const Text('Is Filter Active'),
-            ),
             OutlinedButton(
               onPressed: () {
                 init();

@@ -65,5 +65,6 @@ flutter:
     # https://github.com/flutter/flutter/issues/8230 to be addressed.
     # to make a conditional build.
     - web/worker.dart.js
+    - web/init_recorder_module.dart.js
     - web/libflutter_recorder_plugin.js
     - web/libflutter_recorder_plugin.wasm

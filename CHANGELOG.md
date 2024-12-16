@@ -3,6 +3,7 @@
 - breaking change: 
   - the `init` method is now async
   - `FilterType` renamed to `RecorderFilterType`
+  - an [additional script](https://github.com/alnitak/flutter_recorder#web) must be added for the web platform
 
 ## 0.9.2
 - fix: the stop was instead einit the device
