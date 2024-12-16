@@ -29,7 +29,7 @@ enum AutoGainEnum {
 }
 
 abstract class _AutoGainInternal extends FilterBase {
-  const _AutoGainInternal() : super(FilterType.autogain);
+  const _AutoGainInternal() : super(RecorderFilterType.autogain);
 
   AutoGainEnum get queryTargetRms => AutoGainEnum.targetRms;
   AutoGainEnum get queryAttackTime => AutoGainEnum.attackTime;

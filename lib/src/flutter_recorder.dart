@@ -337,7 +337,7 @@ interface class Recorder {
   /// **NOTE**: use this only with format [PCMFormat.f32le].
   Float32List getFft() {
     if (!_isInitialized) {
-      _log.warning(() => 'Recorder is not initialized.');
+      _log.warning(() => 'getFft: Recorder is not initialized.');
       return Float32List(256);
     }
     if (!_isStarted) {
@@ -359,7 +359,7 @@ interface class Recorder {
   /// **NOTE**: use this only with format [PCMFormat.f32le].
   Float32List getWave() {
     if (!_isInitialized) {
-      _log.warning(() => 'Recorder is not initialized.');
+      _log.warning(() => 'getWave: recorder is not initialized.');
       return Float32List(256);
     }
     if (!_isStarted) {
@@ -381,7 +381,7 @@ interface class Recorder {
   /// **NOTE**: use this only with format [PCMFormat.f32le].
   Float32List getTexture2D() {
     if (!_isInitialized) {
-      _log.warning(() => 'Recorder is not initialized.');
+      _log.warning(() => 'getTexture2D: recorder is not initialized.');
       return Float32List(256);
     }
     if (!_isStarted) {
@@ -403,7 +403,7 @@ interface class Recorder {
   /// **NOTE**: use this only with format [PCMFormat.f32le].
   double getVolumeDb() {
     if (!_isInitialized) {
-      _log.warning(() => 'Recorder is not initialized.');
+      _log.warning(() => 'getVolumeDb: recorder is not initialized.');
       return -100;
     }
     if (!_isStarted) {
@@ -425,7 +425,7 @@ interface class Recorder {
 
   /// Check if a filter is active.
   /// Return -1 if the filter is not active or its index.
-  int isFilterActive(FilterType filterType) {
+  int isFilterActive(RecorderFilterType filterType) {
     return _recoreder.impl.isFilterActive(filterType);
   }
 
@@ -434,7 +434,7 @@ interface class Recorder {
   /// Throws [RecorderFilterAlreadyAddedException] if the filter has already
   /// been added.
   /// Throws [RecorderFilterNotFoundException] if the filter could not be found.
-  void addFilter(FilterType filterType) {
+  void addFilter(RecorderFilterType filterType) {
     _recoreder.impl.addFilter(filterType);
   }
 
@@ -442,18 +442,18 @@ interface class Recorder {
   ///
   /// Throws [RecorderFilterNotFoundException] if trying to a non active
   /// filter.
-  CaptureErrors removeFilter(FilterType filterType) {
+  CaptureErrors removeFilter(RecorderFilterType filterType) {
     return _recoreder.impl.removeFilter(filterType);
   }
 
   /// Get filter param names.
-  List<String> getFilterParamNames(FilterType filterType) {
+  List<String> getFilterParamNames(RecorderFilterType filterType) {
     return _recoreder.impl.getFilterParamNames(filterType);
   }
 
   /// Set filter param value.
   void setFilterParamValue(
-    FilterType filterType,
+    RecorderFilterType filterType,
     int attributeId,
     double value,
   ) {
@@ -461,7 +461,7 @@ interface class Recorder {
   }
 
   /// Get filter param value.
-  double getFilterParamValue(FilterType filterType, int attributeId) {
+  double getFilterParamValue(RecorderFilterType filterType, int attributeId) {
     return _recoreder.impl.getFilterParamValue(filterType, attributeId);
   }
 }

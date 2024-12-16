@@ -8,11 +8,11 @@ import 'package:meta/meta.dart';
 abstract class FilterBase {
   /// The base class common to all filters. It can be used to [activate],
   /// [deactivate] or query its status and its index in the filter list.
-  const FilterBase(FilterType ft) : filterType = ft;
+  const FilterBase(RecorderFilterType ft) : filterType = ft;
 
   /// The type of this filter. It can be used to get the number of its
   /// parameters or the name of the filter.
-  final FilterType filterType;
+  final RecorderFilterType filterType;
 
   /// Activate this filter.
   void activate() => filterType.activate();
@@ -117,7 +117,7 @@ class FilterParam {
     this._max,
   );
 
-  final FilterType _type;
+  final RecorderFilterType _type;
   final int _attributeId;
   final double _min;
   final double _max;
@@ -142,7 +142,7 @@ class FilterParam {
 }
 
 /// The different types of audio filters.
-enum FilterType {
+enum RecorderFilterType {
   /// Auto gain filter.
   autogain(0),
 
@@ -153,10 +153,10 @@ enum FilterType {
   final int value;
 
   // ignore: sort_constructors_first
-  const FilterType(this.value);
+  const RecorderFilterType(this.value);
 
   /// Get the filter type from its value.
-  static FilterType fromValue(int value) => switch (value) {
+  static RecorderFilterType fromValue(int value) => switch (value) {
         0 => autogain,
         1 => echoCancellation,
         _ => throw ArgumentError('Unknown value for FilterType: $value'),
@@ -164,14 +164,14 @@ enum FilterType {
 
   @override
   String toString() => switch (this) {
-        FilterType.autogain => 'Auto Gain',
-        FilterType.echoCancellation => 'Echo Cancellation',
+        RecorderFilterType.autogain => 'Auto Gain',
+        RecorderFilterType.echoCancellation => 'Echo Cancellation',
       };
 
   /// The number of parameter this filter owns.
   int get numParameters => switch (this) {
-        FilterType.autogain => 6,
-        FilterType.echoCancellation => 2,
+        RecorderFilterType.autogain => 6,
+        RecorderFilterType.echoCancellation => 2,
       };
 
   /// Activate this filter.

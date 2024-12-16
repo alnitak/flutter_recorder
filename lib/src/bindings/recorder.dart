@@ -214,7 +214,7 @@ abstract class RecorderImpl {
   /// Check if a filter is active.
   /// Return -1 if the filter is not active or its index.
   @mustBeOverridden
-  int isFilterActive(FilterType filterType);
+  int isFilterActive(RecorderFilterType filterType);
 
   /// Add a filter.
   ///
@@ -222,28 +222,28 @@ abstract class RecorderImpl {
   /// been added.
   /// Throws [RecorderFilterNotFoundException] if the filter could not be found.
   @mustBeOverridden
-  void addFilter(FilterType filterType);
+  void addFilter(RecorderFilterType filterType);
 
   /// Remove a filter.
   ///
   /// Throws [RecorderFilterNotFoundException] if trying to a non active
   /// filter.
   @mustBeOverridden
-  CaptureErrors removeFilter(FilterType filterType);
+  CaptureErrors removeFilter(RecorderFilterType filterType);
 
   /// Get filter param names.
   @mustBeOverridden
-  List<String> getFilterParamNames(FilterType filterType);
+  List<String> getFilterParamNames(RecorderFilterType filterType);
 
   /// Set filter param value.
   @mustBeOverridden
   void setFilterParamValue(
-    FilterType filterType,
+    RecorderFilterType filterType,
     int attributeId,
     double value,
   );
 
   /// Get filter param value.
   @mustBeOverridden
-  double getFilterParamValue(FilterType filterType, int attributeId);
+  double getFilterParamValue(RecorderFilterType filterType, int attributeId);
 }

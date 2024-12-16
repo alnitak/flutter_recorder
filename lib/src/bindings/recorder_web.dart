@@ -36,6 +36,7 @@ class RecorderWeb extends RecorderImpl {
   @override
   Future<void> setDartEventCallbacks() async {
     await initializeRecorderModule();
+    
     // This calls the native WASM `createWorkerInWasm()` in `bindings.cpp`.
     // The latter creates a web Worker using `EM_ASM` inlining JS code to
     // create the worker in the WASM `Module`.
@@ -286,12 +287,12 @@ class RecorderWeb extends RecorderImpl {
   }
 
   @override
-  int isFilterActive(FilterType filterType) {
+  int isFilterActive(RecorderFilterType filterType) {
     return wasmIsFilterActive(filterType.value);
   }
 
   @override
-  void addFilter(FilterType filterType) {
+  void addFilter(RecorderFilterType filterType) {
     final error = wasmAddFilter(filterType.value);
     if (CaptureErrors.fromValue(error) != CaptureErrors.captureNoError) {
       throw RecorderCppException.fromRecorderError(
@@ -301,7 +302,7 @@ class RecorderWeb extends RecorderImpl {
   }
 
   @override
-  CaptureErrors removeFilter(FilterType filterType) {
+  CaptureErrors removeFilter(RecorderFilterType filterType) {
     final error = wasmRemoveFilter(filterType.value);
     if (CaptureErrors.fromValue(error) != CaptureErrors.captureNoError) {
       throw RecorderCppException.fromRecorderError(
@@ -312,7 +313,7 @@ class RecorderWeb extends RecorderImpl {
   }
 
   @override
-  List<String> getFilterParamNames(FilterType filterType) {
+  List<String> getFilterParamNames(RecorderFilterType filterType) {
     final namesPtr = wasmMalloc(4);
     final paramsCountPtr = wasmMalloc(4);
     wasmGetFilterParamNames(filterType.value, namesPtr, paramsCountPtr);
@@ -331,7 +332,7 @@ class RecorderWeb extends RecorderImpl {
 
   @override
   void setFilterParamValue(
-    FilterType filterType,
+    RecorderFilterType filterType,
     int attributeId,
     double value,
   ) {
@@ -339,7 +340,7 @@ class RecorderWeb extends RecorderImpl {
   }
 
   @override
-  double getFilterParamValue(FilterType filterType, int attributeId) {
+  double getFilterParamValue(RecorderFilterType filterType, int attributeId) {
     final value = wasmGetFilterParamValue(filterType.value, attributeId);
     return value;
   }

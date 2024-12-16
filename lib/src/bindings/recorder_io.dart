@@ -314,12 +314,12 @@ class RecorderFfi extends RecorderImpl {
   }
 
   @override
-  int isFilterActive(FilterType filterType) {
+  int isFilterActive(RecorderFilterType filterType) {
     return _bindings.isFilterActive(filterType);
   }
 
   @override
-  void addFilter(FilterType filterType) {
+  void addFilter(RecorderFilterType filterType) {
     final error = _bindings.addFilter(filterType);
     if (error != CaptureErrors.captureNoError) {
       throw RecorderCppException.fromRecorderError(error);
@@ -327,7 +327,7 @@ class RecorderFfi extends RecorderImpl {
   }
 
   @override
-  CaptureErrors removeFilter(FilterType filterType) {
+  CaptureErrors removeFilter(RecorderFilterType filterType) {
     final error = _bindings.removeFilter(filterType);
     if (error != CaptureErrors.captureNoError) {
       throw RecorderCppException.fromRecorderError(error);
@@ -336,7 +336,7 @@ class RecorderFfi extends RecorderImpl {
   }
 
   @override
-  List<String> getFilterParamNames(FilterType filterType) {
+  List<String> getFilterParamNames(RecorderFilterType filterType) {
     final ffi.Pointer<ffi.Pointer<ffi.Char>> names =
         calloc(ffi.sizeOf<ffi.Pointer<ffi.Pointer<ffi.Char>>>() * 30);
     final ffi.Pointer<ffi.Int> paramsCount = calloc(ffi.sizeOf<ffi.Int>());
@@ -356,7 +356,7 @@ class RecorderFfi extends RecorderImpl {
 
   @override
   void setFilterParamValue(
-    FilterType filterType,
+    RecorderFilterType filterType,
     int attributeId,
     double value,
   ) {
@@ -364,7 +364,7 @@ class RecorderFfi extends RecorderImpl {
   }
 
   @override
-  double getFilterParamValue(FilterType filterType, int attributeId) {
+  double getFilterParamValue(RecorderFilterType filterType, int attributeId) {
     return _bindings.getFilterParams(filterType, attributeId);
   }
 }

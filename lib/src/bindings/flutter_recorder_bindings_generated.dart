@@ -405,7 +405,7 @@ class FlutterRecorderBindings {
   /// FILTERS
   /// //////////////////////
   int isFilterActive(
-    FilterType filterType,
+    RecorderFilterType filterType,
   ) {
     return _isFilterActive(
       filterType.value,
@@ -419,7 +419,7 @@ class FlutterRecorderBindings {
       _isFilterActivePtr.asFunction<int Function(int)>();
 
   CaptureErrors addFilter(
-    FilterType filterType,
+    RecorderFilterType filterType,
   ) {
     return CaptureErrors.fromValue(_addFilter(
       filterType.value,
@@ -432,7 +432,7 @@ class FlutterRecorderBindings {
   late final _addFilter = _addFilterPtr.asFunction<int Function(int)>();
 
   CaptureErrors removeFilter(
-    FilterType filterType,
+    RecorderFilterType filterType,
   ) {
     return CaptureErrors.fromValue(_removeFilter(
       filterType.value,
@@ -445,7 +445,7 @@ class FlutterRecorderBindings {
   late final _removeFilter = _removeFilterPtr.asFunction<int Function(int)>();
 
   void getFilterParamNames(
-    FilterType filterType,
+    RecorderFilterType filterType,
     ffi.Pointer<ffi.Pointer<ffi.Char>> names,
     ffi.Pointer<ffi.Int> paramsCount,
   ) {
@@ -465,7 +465,7 @@ class FlutterRecorderBindings {
           int, ffi.Pointer<ffi.Pointer<ffi.Char>>, ffi.Pointer<ffi.Int>)>();
 
   void setFilterParams(
-    FilterType filterType,
+    RecorderFilterType filterType,
     int attributeId,
     double value,
   ) {
@@ -484,7 +484,7 @@ class FlutterRecorderBindings {
       _setFilterParamsPtr.asFunction<void Function(int, int, double)>();
 
   double getFilterParams(
-    FilterType filterType,
+    RecorderFilterType filterType,
     int attributeId,
   ) {
     return _getFilterParams(

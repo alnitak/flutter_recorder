@@ -2,6 +2,7 @@
 - added `autoGain` filter
 - breaking change: 
   - the `init` method is now async
+  - `FilterType` renamed to `RecorderFilterType`
 
 ## 0.9.2
 - fix: the stop was instead einit the device
