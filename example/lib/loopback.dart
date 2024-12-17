@@ -8,7 +8,6 @@ import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:logging/logging.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-
 /// Loopback example which uses `flutter_soloud` to play audio back to the
 /// device from the microphone data stream. Please try it with headset to
 /// prevent audio feedback.
@@ -171,6 +170,18 @@ class _LoopBackState extends State<LoopBack> {
           children: [
             OutlinedButton(
               onPressed: () {
+                recorder.start();
+              },
+              child: const Text('Start'),
+            ),
+            OutlinedButton(
+              onPressed: () {
+                recorder.stop();
+              },
+              child: const Text('Stop'),
+            ),
+            OutlinedButton(
+              onPressed: () {
                 init();
               },
               child: const Text('Init loopback'),
@@ -227,7 +238,7 @@ class _LoopBackState extends State<LoopBack> {
 
         // if (echoCancellation) EchoCancellationSliders(),
 
-        // const Bars(),
+        const Bars(),
       ],
     );
   }

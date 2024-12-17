@@ -207,6 +207,12 @@ interface class Recorder {
     RecorderChannels channels = RecorderChannels.mono,
   }) async {
     await _recoreder.impl.setDartEventCallbacks();
+
+    // Sets the [_isInitialized].
+    // Usefult when the consumer use the hot restart and that flag
+    // has been reset.
+    isDeviceInitialized();
+
     if (_isInitialized) {
       _log.warning('init() called when the native device is already '
           'initialized. This is expected after a hot restart but not '
@@ -229,15 +235,12 @@ interface class Recorder {
   /// Dispose capture device.
   void deinit() {
     _isInitialized = false;
-    _isStarted = false;
+    stop();
     _recoreder.impl.deinit();
   }
 
   /// Whether the device is initialized.
   bool isDeviceInitialized() {
-    if (!_isInitialized) {
-      return false;
-    }
     // ignore: join_return_with_assignment
     _isInitialized = _recoreder.impl.isDeviceInitialized();
     return _isInitialized;
@@ -245,9 +248,6 @@ interface class Recorder {
 
   /// Whether the device is started.
   bool isDeviceStarted() {
-    if (!_isInitialized) {
-      return false;
-    }
     // ignore: join_return_with_assignment
     _isStarted = _recoreder.impl.isDeviceStarted();
     return _isStarted;
@@ -258,30 +258,44 @@ interface class Recorder {
   /// WEB NOTE: it's preferable to call this method after the user accepted
   /// the recording permission.
   ///
-  /// Throws [RecorderCaptureNotInitializedException].
+  /// Throws [RecorderNotInitializedException].
   /// Throws [RecorderFailedToStartDeviceException].
   void start() {
-    if (!_isInitialized) return;
+    if (!_isInitialized) {
+      _log.warning(() => 'start(): recorder is not initialized.');
+      throw const RecorderNotInitializedException();
+    }
     _recoreder.impl.start();
     _isStarted = true;
   }
 
   /// Stop the device.
   void stop() {
-    if (!_isInitialized) return;
+    if (!_isInitialized) {
+      _log.warning(() => 'stop(): recorder is not initialized.');
+      return;
+    }
     _isStarted = false;
     _recoreder.impl.stop();
   }
 
   /// Start streaming data.
+  ///
+  /// Throws [RecorderNotInitializedException].
   void startStreamingData() {
-    if (!_isInitialized) return;
+    if (!_isInitialized) {
+      _log.warning(() => 'startStreamingData(): recorder is not initialized.');
+      throw const RecorderNotInitializedException();
+    }
     _recoreder.impl.startStreamingData();
   }
 
   /// Stop streaming data.
   void stopStreamingData() {
-    if (!_isInitialized) return;
+    if (!_isInitialized) {
+      _log.warning(() => 'stopStreamingData(): recorder is not initialized.');
+      return;
+    }
     _recoreder.impl.stopStreamingData();
   }
 
@@ -292,7 +306,8 @@ interface class Recorder {
   /// NOTE: when running on the  Web, [completeFilePath] is ignored and
   /// just stopping the recording the browser will ask to save the file.
   ///
-  /// Throws [RecorderCaptureNotInitializedException].
+  /// Throws [RecorderNotInitializedException].
+  /// Throws [RecorderCaptureNotStartededException].
   /// Throws [RecorderFailedToInitializeRecordingException].
   void startRecording({String completeFilePath = ''}) {
     assert(
@@ -300,20 +315,25 @@ interface class Recorder {
         'completeFilePath is required '
         'on all platforms but on the Web.');
     if (!_isInitialized) {
-      throw const RecorderCaptureNotInitializedException();
+      _log.warning(() => 'startRecording(): recorder is not initialized.');
+      throw const RecorderNotInitializedException();
+    }
+    if (!_isStarted) {
+      _log.warning(() => 'startRecording(): recorder is not started.');
+      throw const RecorderCaptureNotStartededException();
     }
     _recoreder.impl.startRecording(completeFilePath);
   }
 
   /// Pause recording.
   void setPauseRecording({required bool pause}) {
-    if (!_isInitialized) return;
+    if (!_isStarted) return;
     _recoreder.impl.setPauseRecording(pause: pause);
   }
 
   /// Stop recording.
   void stopRecording() {
-    if (!_isInitialized) return;
+    if (!_isStarted) return;
     _recoreder.impl.stopRecording();
   }
 
@@ -337,16 +357,16 @@ interface class Recorder {
   /// **NOTE**: use this only with format [PCMFormat.f32le].
   Float32List getFft() {
     if (!_isInitialized) {
-      _log.warning(() => 'getFft: Recorder is not initialized.');
+      _log.warning(() => 'getFft: recorder is not initialized.');
       return Float32List(256);
     }
     if (!_isStarted) {
-      _log.warning(() => 'Recorder is not started.');
+      _log.warning(() => 'getFft: recorder is not started.');
       return Float32List(256);
     }
     if (_recorderFormat != PCMFormat.f32le) {
       _log.warning(
-        () => 'getFft: FFT data can be get only with f32le format.',
+        () => 'getFft: FFT data can be get only using f32le format.',
       );
       return Float32List(256);
     }
@@ -363,12 +383,12 @@ interface class Recorder {
       return Float32List(256);
     }
     if (!_isStarted) {
-      _log.warning(() => 'Recorder is not started.');
+      _log.warning(() => 'getWave: recorder is not started.');
       return Float32List(256);
     }
     if (_recorderFormat != PCMFormat.f32le) {
       _log.warning(
-        () => 'getWave: wave data can be get only with f32le format.',
+        () => 'getWave: wave data can be get only using f32le format.',
       );
       return Float32List(256);
     }
@@ -385,12 +405,12 @@ interface class Recorder {
       return Float32List(256);
     }
     if (!_isStarted) {
-      _log.warning(() => 'Recorder is not started.');
+      _log.warning(() => 'getTexture2D: recorder is not started.');
       return Float32List(256);
     }
     if (_recorderFormat != PCMFormat.f32le) {
       _log.warning(
-        () => 'getTexture2D: texture can be get only with f32le format.',
+        () => 'getTexture2D: texture can be get only using f32le format.',
       );
       return Float32List(256);
     }
@@ -407,12 +427,12 @@ interface class Recorder {
       return -100;
     }
     if (!_isStarted) {
-      _log.warning(() => 'Recorder is not started.');
+      _log.warning(() => 'getVolumeDb: recorder is not started.');
       return -100;
     }
     if (_recorderFormat != PCMFormat.f32le) {
       _log.warning(
-        () => 'getVolumeDb: volume can be get only with f32le format.',
+        () => 'getVolumeDb: volume can be get only using f32le format.',
       );
       return -100;
     }

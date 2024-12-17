@@ -136,7 +136,7 @@ abstract class RecorderImpl {
 
   /// Start the device.
   ///
-  /// Throws [RecorderCaptureNotInitializedException].
+  /// Throws [RecorderNotInitializedException].
   /// Throws [RecorderFailedToStartDeviceException].
   @mustBeOverridden
   void start();
@@ -155,7 +155,7 @@ abstract class RecorderImpl {
 
   /// Start recording.
   ///
-  /// Throws [RecorderCaptureNotInitializedException].
+  /// Throws [RecorderNotInitializedException].
   /// Throws [RecorderFailedToInitializeRecordingException].
   @mustBeOverridden
   void startRecording(String path);

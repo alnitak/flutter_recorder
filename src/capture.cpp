@@ -292,8 +292,6 @@ CaptureErrors Capture::init(
     unsigned int sampleRate,
     unsigned int channels)
 {
-    if (mInited)
-        return captureInitFailed;
     deviceConfig = ma_device_config_init(ma_device_type_capture);
     deviceConfig.periodSizeInFrames = BUFFER_SIZE;
     if (deviceID != -1)

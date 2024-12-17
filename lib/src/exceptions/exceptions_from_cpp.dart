@@ -16,12 +16,23 @@ class RecorderInitializeFailedException extends RecorderCppException {
 
 /// An exception that is thrown when calling some methods while the recorder is
 /// not initialized.
-class RecorderCaptureNotInitializedException extends RecorderCppException {
-  /// Creates a new [RecorderCaptureNotInitializedException].
-  const RecorderCaptureNotInitializedException([super.message]);
+class RecorderNotInitializedException extends RecorderCppException {
+  /// Creates a new [RecorderNotInitializedException].
+  const RecorderNotInitializedException([super.message]);
 
   @override
   String get description => 'The recorder has not been initialized yet '
+      '(on the C++ side).';
+}
+
+/// An exception that is thrown when calling some methods while the recorder is
+/// not started.
+class RecorderCaptureNotStartededException extends RecorderCppException {
+  /// Creates a new [RecorderCaptureNotStartededException].
+  const RecorderCaptureNotStartededException([super.message]);
+
+  @override
+  String get description => 'The recorder has not been started yet '
       '(on the C++ side).';
 }
 

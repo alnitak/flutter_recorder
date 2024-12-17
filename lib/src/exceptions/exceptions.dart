@@ -59,7 +59,7 @@ abstract class RecorderCppException extends RecorderException {
       case CaptureErrors.captureInitFailed:
         return const RecorderInitializeFailedException();
       case CaptureErrors.captureNotInited:
-        return const RecorderCaptureNotInitializedException();
+        return const RecorderNotInitializedException();
       case CaptureErrors.failedToInitializeRecording:
         return const RecorderFailedToInitializeRecordingException();
       case CaptureErrors.failedToStartDevice:

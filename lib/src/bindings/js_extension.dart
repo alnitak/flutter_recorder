@@ -1,9 +1,6 @@
 // ignore_for_file: public_member_api_docs, avoid_positional_boolean_parameters
 
-import 'dart:async';
 import 'dart:js_interop';
-import 'dart:js_util';
-import 'package:flutter/foundation.dart';
 import 'package:web/web.dart' as web;
 
 // //////////////////////////
