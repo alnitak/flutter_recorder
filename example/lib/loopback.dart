@@ -170,18 +170,6 @@ class _LoopBackState extends State<LoopBack> {
           children: [
             OutlinedButton(
               onPressed: () {
-                recorder.start();
-              },
-              child: const Text('Start'),
-            ),
-            OutlinedButton(
-              onPressed: () {
-                recorder.stop();
-              },
-              child: const Text('Stop'),
-            ),
-            OutlinedButton(
-              onPressed: () {
                 init();
               },
               child: const Text('Init loopback'),
