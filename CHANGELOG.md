@@ -1,9 +1,16 @@
+## 0.9.3
+- added `autoGain` filter
+- breaking change: 
+  - the `init` method is now async
+  - `FilterType` renamed to `RecorderFilterType`
+  - an [additional script](https://github.com/alnitak/flutter_recorder#web) must be added for the web platform
+
 ## 0.9.2
-* fix: the stop was instead einit the device
-* fix: removed dialog when stopping stream in the example
+- fix: the stop was instead einit the device
+- fix: removed dialog when stopping stream in the example
 
 ## 0.9.1
-* breaking change: 
+- breaking change: 
   - renamed `startListen` to `start`
   - renamed `stopListen` to `stop`
   - renamed `isDeviceStartedListen` to `isDeviceStarted`

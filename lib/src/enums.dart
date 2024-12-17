@@ -37,7 +37,16 @@ enum CaptureErrors {
   invalidArgs(5),
 
   /// Failed to write wav file.
-  failedToWriteWav(6);
+  failedToWriteWav(6),
+
+  /// Filter not found
+  filterNotFound(7),
+
+  /// The filter has already been added.
+  filterAlreadyAdded(8),
+
+  /// Error getting filter parameter.
+  filterParameterGetError(9);
 
   /// Internal value
   final int value;
@@ -53,6 +62,9 @@ enum CaptureErrors {
         4 => failedToInitializeRecording,
         5 => invalidArgs,
         6 => failedToWriteWav,
+        7 => filterNotFound,
+        8 => filterAlreadyAdded,
+        9 => filterParameterGetError,
         _ => throw ArgumentError('Unknown value for CaptureErrors: $value'),
       };
 }

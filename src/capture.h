@@ -8,6 +8,7 @@
 
 #include <vector>
 #include <string>
+#include "filters/filters.h"
 
 struct CaptureDevice
 {
@@ -29,12 +30,14 @@ public:
     /// @brief initialize the capture with a [deviceID]. A list of devices
     ///     can be acquired with [listCaptureDevices].
     ///     If [deviceID] is -1, the default will be used
+    /// @param filters the filters
     /// @param deviceID the device ID chosen to be initialized
     /// @param pcmFormat the PCM format
     /// @param sampleRate the sample rate
     /// @param channels the number of channels
     /// @return `captureNoError` if no error or else `captureInitFailed`
     CaptureErrors init(
+        Filters *filters,
         int deviceID,
         PCMFormat pcmFormat,
         unsigned int sampleRate,
@@ -99,6 +102,7 @@ public:
     /// the number of bytes per sample
     int bytesPerSample;
 
+    Filters *mFilters;
 private:
     ma_context context;
     ma_device_info *pPlaybackInfos;
@@ -108,9 +112,9 @@ private:
     ma_result result;
     ma_device device;
 
+
     /// true when the capture device is initialized.
     bool mInited;
-
 };
 
 #endif // CAPTURE_H

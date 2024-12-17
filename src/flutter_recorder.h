@@ -79,6 +79,16 @@ extern "C"
 
     FFI_PLUGIN_EXPORT void setFftSmoothing(float smooth);
 
+    /////////////////////////
+    /// FILTERS
+    /////////////////////////
+    FFI_PLUGIN_EXPORT int isFilterActive(enum FilterType filterType);
+    FFI_PLUGIN_EXPORT enum CaptureErrors addFilter(enum FilterType filterType);
+    FFI_PLUGIN_EXPORT enum CaptureErrors removeFilter(enum FilterType filterType);
+    FFI_PLUGIN_EXPORT void getFilterParamNames(enum FilterType filterType, char **names, int *paramsCount);
+    FFI_PLUGIN_EXPORT void setFilterParams(enum FilterType filterType, int attributeId, float value);
+    FFI_PLUGIN_EXPORT float getFilterParams(enum FilterType filterType, int attributeId);
+
 #ifdef __cplusplus
 }
 #endif
