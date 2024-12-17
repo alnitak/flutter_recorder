@@ -21,7 +21,8 @@ enum EchoCancellationEnum {
 }
 
 abstract class _EchoCancellationInternal extends FilterBase {
-  const _EchoCancellationInternal() : super(RecorderFilterType.echoCancellation);
+  const _EchoCancellationInternal()
+      : super(RecorderFilterType.echoCancellation);
 
   EchoCancellationEnum get queryEchoDelayMs => EchoCancellationEnum.echoDelayMs;
   EchoCancellationEnum get queryEchoAttenuation =>
