@@ -3,7 +3,7 @@ description: >-
   A low-level audio recorder plugin which uses miniaudio as
   backend. Detect silence and save to WAV audio file. Audio
   wave, FFT and volume level can be get in real-time.
-version: 0.9.2
+version: 0.9.3
 issue_tracker: https://github.com/alnitak/flutter_recorder/issues
 homepage: https://github.com/alnitak/flutter_recorder
 maintainer: Marco Bavagnoli (@lildeimos)
