@@ -4,6 +4,8 @@
 cmake_minimum_required(VERSION 3.10)
 
 project(flutter_recorder_library VERSION 0.0.1 LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/fft)
@@ -13,6 +15,9 @@ add_library(flutter_recorder SHARED
   "analyzer.cpp"
   "capture.cpp"
   "fft/soloud_fft.cpp"
+  "filters/filters.cpp"
+  "filters/autogain.cpp"
+  "filters/echo_cancellation.cpp"
 )
 
 set_target_properties(flutter_recorder PROPERTIES

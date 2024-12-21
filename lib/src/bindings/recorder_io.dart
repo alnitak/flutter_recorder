@@ -12,6 +12,7 @@ import 'package:flutter_recorder/src/bindings/flutter_recorder_bindings_generate
 import 'package:flutter_recorder/src/bindings/recorder.dart';
 import 'package:flutter_recorder/src/enums.dart';
 import 'package:flutter_recorder/src/exceptions/exceptions.dart';
+import 'package:flutter_recorder/src/filters/filters.dart';
 import 'package:flutter_recorder/src/flutter_recorder.dart';
 import 'package:meta/meta.dart';
 
@@ -70,8 +71,10 @@ class RecorderFfi extends RecorderImpl {
     );
   }
 
+  ffi.NativeCallable<dartStreamDataCallback_tFunction>?
+      nativeStreamDataCallable;
   @override
-  void setDartEventCallbacks() {
+  Future<void> setDartEventCallbacks() async {
     // Create a NativeCallable for the Dart functions
     final nativeSilenceChangedCallable =
         ffi.NativeCallable<dartSilenceChangedCallback_tFunction>.listener(
@@ -308,5 +311,60 @@ class RecorderFfi extends RecorderImpl {
     final v = volume.value;
     calloc.free(volume);
     return v;
+  }
+
+  @override
+  int isFilterActive(RecorderFilterType filterType) {
+    return _bindings.isFilterActive(filterType);
+  }
+
+  @override
+  void addFilter(RecorderFilterType filterType) {
+    final error = _bindings.addFilter(filterType);
+    if (error != CaptureErrors.captureNoError) {
+      throw RecorderCppException.fromRecorderError(error);
+    }
+  }
+
+  @override
+  CaptureErrors removeFilter(RecorderFilterType filterType) {
+    final error = _bindings.removeFilter(filterType);
+    if (error != CaptureErrors.captureNoError) {
+      throw RecorderCppException.fromRecorderError(error);
+    }
+    return error;
+  }
+
+  @override
+  List<String> getFilterParamNames(RecorderFilterType filterType) {
+    final ffi.Pointer<ffi.Pointer<ffi.Char>> names =
+        calloc(ffi.sizeOf<ffi.Pointer<ffi.Pointer<ffi.Char>>>() * 30);
+    final ffi.Pointer<ffi.Int> paramsCount = calloc(ffi.sizeOf<ffi.Int>());
+    _bindings.getFilterParamNames(filterType, names, paramsCount);
+    final List<String> ret = [];
+    for (var i = 0; i < paramsCount.value; i++) {
+      final s1 = (names + i).value;
+      final s = s1.cast<Utf8>().toDartString();
+      ret.add(s);
+      _bindings.nativeFree(s1.cast<ffi.Void>());
+    }
+    calloc
+      ..free(names)
+      ..free(paramsCount);
+    return ret;
+  }
+
+  @override
+  void setFilterParamValue(
+    RecorderFilterType filterType,
+    int attributeId,
+    double value,
+  ) {
+    _bindings.setFilterParams(filterType, attributeId, value);
+  }
+
+  @override
+  double getFilterParamValue(RecorderFilterType filterType, int attributeId) {
+    return _bindings.getFilterParams(filterType, attributeId);
   }
 }

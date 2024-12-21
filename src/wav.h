@@ -79,7 +79,7 @@ namespace WriteAudio
             // ma_format_s32     = 4
             // ma_format_f32     = 5
             
-            // Store parameters to the WASM Module.
+            // Store parameters to the WASM RecorderModule.
             EM_ASM({
                 let format;
                 switch ($2) {
@@ -103,11 +103,11 @@ namespace WriteAudio
                         break;
                 }
                 console.log("EM_ASM init wav! " + $0 + "  " + $1 + "  " + format);
-                Module.dataChunks = [];
-                Module.fileName = "output.wav";
-                Module.numChannels = $0;
-                Module.sampleRate = $1; 
-                Module.format = format; }, deviceConfig.capture.channels, deviceConfig.sampleRate, deviceConfig.capture.format);
+                RecorderModule.dataChunks = [];
+                RecorderModule.fileName = "output.wav";
+                RecorderModule.numChannels = $0;
+                RecorderModule.sampleRate = $1; 
+                RecorderModule.format = format; }, deviceConfig.capture.channels, deviceConfig.sampleRate, deviceConfig.capture.format);
 
             isRecording = true;
             return captureNoError;
@@ -123,30 +123,30 @@ namespace WriteAudio
                 }
         
                 let buffer;
-                switch (Module.format) {
+                switch (RecorderModule.format) {
                     case 'u8':
-                        buffer = HEAPU8.subarray($0, $0 + $1 * Module.numChannels);
+                        buffer = HEAPU8.subarray($0, $0 + $1 * RecorderModule.numChannels);
                         break;
                     case 's16':
-                        buffer = HEAP16.subarray($0 / 2, ($0 / 2) + $1 * Module.numChannels);
+                        buffer = HEAP16.subarray($0 / 2, ($0 / 2) + $1 * RecorderModule.numChannels);
                         break;
                     case 's24':
-                        buffer = HEAPU8.subarray($0, $0 + $1 * Module.numChannels * 3);
+                        buffer = HEAPU8.subarray($0, $0 + $1 * RecorderModule.numChannels * 3);
                         break;
                     case 's32':
-                        buffer = HEAP32.subarray($0 / 4, ($0 / 4) + $1 * Module.numChannels);
+                        buffer = HEAP32.subarray($0 / 4, ($0 / 4) + $1 * RecorderModule.numChannels);
                         break;
                     case 'f32':
                     default:
-                        buffer = HEAPF32.subarray($0 / 4, ($0 / 4) + $1 * Module.numChannels);
+                        buffer = HEAPF32.subarray($0 / 4, ($0 / 4) + $1 * RecorderModule.numChannels);
                 }
         
-                if (!Module.dataChunks) {
-                    Module.dataChunks = [];
+                if (!RecorderModule.dataChunks) {
+                    RecorderModule.dataChunks = [];
                 }
         
                 // Add new audio data to the buffer.
-                Module.dataChunks.push(...buffer); 
+                RecorderModule.dataChunks.push(...buffer); 
             }, bufferPointer, numFrames);
         }
 
@@ -157,33 +157,33 @@ namespace WriteAudio
                 EM_ASM({
                     function encodeWAV()
                     {
-                        const numChannels = Module.numChannels;
-                        const sampleRate = Module.sampleRate;
+                        const numChannels = RecorderModule.numChannels;
+                        const sampleRate = RecorderModule.sampleRate;
                         let bitsPerSample;
                         let audioData;
                         let formatCode = 1;  // Default to PCM
 
-                        switch (Module.format) {
+                        switch (RecorderModule.format) {
                             case 'u8':
                                 bitsPerSample = 8;
-                                audioData = new Uint8Array(Module.dataChunks);
+                                audioData = new Uint8Array(RecorderModule.dataChunks);
                                 break;
                             case 's16':
                                 bitsPerSample = 16;
-                                audioData = new Int16Array(Module.dataChunks);
+                                audioData = new Int16Array(RecorderModule.dataChunks);
                                 break;
                             case 's24':
                                 bitsPerSample = 24;
-                                audioData = new Uint8Array(Module.dataChunks);
+                                audioData = new Uint8Array(RecorderModule.dataChunks);
                                 break;
                             case 's32':
                                 bitsPerSample = 32;
-                                audioData = new Int32Array(Module.dataChunks);
+                                audioData = new Int32Array(RecorderModule.dataChunks);
                                 break;
                             case 'f32':
                                 bitsPerSample = 32;
                                 formatCode = 3;  // Floating-point PCM format
-                                audioData = new Float32Array(Module.dataChunks);
+                                audioData = new Float32Array(RecorderModule.dataChunks);
                                 break;
                             default:
                                 throw new Error("Formato non supportato");
@@ -193,7 +193,7 @@ namespace WriteAudio
                         const byteRate = sampleRate * blockAlign;
                         let dataSize = audioData.length * (bitsPerSample / 8);
                         const totalFileSize = 44 + dataSize;
-                        if (Module.format == 's24') {
+                        if (RecorderModule.format == 's24') {
                             // If we are using s24 `audioData` is a Uint8Array which reflects the `dataSize`.
                             dataSize = audioData.length;
                         }
@@ -232,7 +232,7 @@ namespace WriteAudio
                                 // view.setUint8(44 + i * 3 + 2, audioData[i * 3 + 2]);
                                 view.setUint8(44 + i, audioData[i]);
                             } else if (bitsPerSample === 32) {
-                                if (Module.format === 'f32') {
+                                if (RecorderModule.format === 'f32') {
                                     view.setFloat32(44 + i * 4, audioData[i], true);
                                 } else {
                                     view.setInt32(44 + i * 4, audioData[i], true);
@@ -249,7 +249,7 @@ namespace WriteAudio
                         if (window.showSaveFilePicker) {
                             try {
                                 const handle = await window.showSaveFilePicker({
-                                    suggestedName : Module.fileName || 'output.wav',
+                                    suggestedName : RecorderModule.fileName || 'output.wav',
                                     types : [ { description : 'Audio WAV file', accept : {'audio/wav' : ['.wav']} } ],
                                 });
                                 const writable = await handle.createWritable();
@@ -262,7 +262,7 @@ namespace WriteAudio
                             const blob = new Blob([wavFile], { type: 'audio/wav' });
                             const link = document.createElement('a');
                             link.href = URL.createObjectURL(blob);
-                            link.download = Module.fileName || 'output.wav';
+                            link.download = RecorderModule.fileName || 'output.wav';
                             link.click();
                             URL.revokeObjectURL(link.href);
                         }

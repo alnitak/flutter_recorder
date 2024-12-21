@@ -19,11 +19,13 @@ A low-level audio recorder plugin that uses miniaudio as the backend and support
 - 📊 **Customizable Silence Threshold**: Define what’s considered “silence” for your recordings.
 - ⏱️ **Adjustable Pause Timing**: Set how long silence lasts before pausing, and how soon to resume recording.
 - 🔊 **Real-time Audio Metrics**: Access volume, audio wave, and FFT data in real-time.
+- 🎚️ **Auto Gain**: Experimental Auto Gain filter.
+- 🌐 **Cross Platform**: Supports all platforms with WASM support for the web.
 
 [A web example compiled in WASM.](https://marcobavagnoli.com/flutter_recorder/)
 
-## 🚀 Setup Permissions
-After setting up permission for you Android, MacOS or iOS, in your app, you will need to ask for permission to use the microphonem maybe using [permission_handler](https://pub.dev/packages/permission_handler) plugin.
+## 🚀 Setup
+After setting up permission for you Android, MacOS or iOS, in your app, you will need to ask for permission to use the microphone maybe using [permission_handler](https://pub.dev/packages/permission_handler) plugin.
 https://pub.dev/packages/permission_handler
 
 #### Android
@@ -43,7 +45,16 @@ Add the permission in `Runner/Info.plist`.
 Add this in `web/index.html` under the `<head>` tag.
 ```
 <script src="assets/packages/flutter_recorder/web/libflutter_recorder_plugin.js" defer></script>
+<script src="assets/packages/flutter_recorder/web/init_recorder_module.dart.js" defer></script>
 ```
+The plugin is **WASM** compatible and your app can be compiled and run locally with something like:
+```
+flutter run -d chrome --web-renderer canvaskit --web-browser-flag '--disable-web-security' -t lib/main.dart --release
+```
+
+#### Linux
+- [`GStreamer`](https://gstreamer.freedesktop.org/documentation/installing/index.html?gi-language=c) is installed by default on most distributions, but if not, please [install it](https://gstreamer.freedesktop.org/documentation/installing/on-linux.html?gi-language=c) through your distribution's package manager.
+- Installing Flutter using `snap` could cause compilation problems with native plugins. The only solution is to uninstall it with `sudo snap remove flutter` and install it the [official way](https://flutter-ko.dev/get-started/install/linux).
 
 ## 🛠️ Usage Example
 ```dart
@@ -137,3 +148,27 @@ Recorder.instance.startStreamingData();
 /// Stop streaming:
 Recorder.instance.stopStreamingData();
 ```
+> [!CAUTION]
+> Audio data must be processed as it is received. To optimize performance, the same memory is used to store data for all incoming streams, meaning the data will be overwritten. Therefore, you must copy the data if you need to populate a buffer while it arrives.
+> For example, when using **RxDart.bufferTime**, it will fill a **List** of `AudioDataContainer` objects, but when you attempt to read them, you will find that all the items contain the same data.
+
+### 🎚️ Auto Gain Filter
+
+> [!WARNING]
+> This is an experimental feature, may change in the future.
+
+```
+final Recorder recorder = Recorder.instance;
+// Please look at the [Recorder.instance.autoGainFilter] doc to have a parameters overview.
+final AutoGain autoGain = recorder.filters.autoGainFilter;
+
+// You can now query or set parameters:
+// For example with [autoGain.queryTargetRms] you can query the "human" name, `min`, `max` and `def` values.
+
+// Set a new parameter value:
+autoGain.targetRms.value = newValue;
+
+// Get a new parameter value:
+final value = autoGain.targetRms.value;
+```
+Available parameters: `targetRMS`, `attackTime`, `releaseTime`, `gainSmoothing`, `maxGain`, `minGain`.

@@ -13,12 +13,14 @@
 #define CLOCK_REALTIME 0
 // struct timespec { long long tv_sec; long tv_nsec; };    //header part
 // Windows is not POSIX compliant. Implement this.
-int clock_gettime(int, struct timespec *spec)      //C-file part
-{  __int64 wintime; GetSystemTimeAsFileTime((FILETIME*)&wintime);
-   wintime      -=116444736000000000i64;  //1jan1601 to 1jan1970
-   spec->tv_sec  =wintime / 10000000i64;           //seconds
-   spec->tv_nsec =wintime % 10000000i64 *100;      //nano-seconds
-   return 0;
+int clock_gettime(int, struct timespec *spec) // C-file part
+{
+    __int64 wintime;
+    GetSystemTimeAsFileTime((FILETIME *)&wintime);
+    wintime -= 116444736000000000i64;            // 1jan1601 to 1jan1970
+    spec->tv_sec = wintime / 10000000i64;        // seconds
+    spec->tv_nsec = wintime % 10000000i64 * 100; // nano-seconds
+    return 0;
 }
 #endif
 
@@ -48,7 +50,7 @@ double getElapsed(struct timespec since)
 #define BUFFER_SIZE 1024      // Buffer length
 #define MOVING_AVERAGE_SIZE 4 // Moving average window size
 float capturedBuffer[BUFFER_SIZE];
-std::atomic<bool> is_silent{true};    // Initial state
+std::atomic<bool> is_silent{true};     // Initial state
 bool delayed_silence_started = false;  // Whether the silence is delayed
 std::atomic<float> energy_db{-100.0f}; // Current energy
 
@@ -164,10 +166,23 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
 {
     // Process the captured audio data as needed.
     float *captured = (float *)(pInput); // Assuming float format
+    Capture *userData = (Capture *)pDevice->pUserData;
+
+    // Apply filters
+    if (userData->mFilters->filters.size() > 0)
+    {
+        for (auto &filter : userData->mFilters->filters)
+        {
+            filter->filter->process(
+                captured,
+                frameCount,
+                userData->deviceConfig.capture.channels,
+                userData->deviceConfig.capture.format);
+        }
+    }
+
     // Do something with the captured audio data...
     memcpy(capturedBuffer, captured, sizeof(float) * BUFFER_SIZE);
-
-    Capture *userData = (Capture *)pDevice->pUserData;
 
     if (userData->deviceConfig.capture.format == ma_format_f32)
         calculateEnergy(captured, frameCount);
@@ -178,9 +193,8 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
         if (nativeStreamDataCallback != nullptr)
         {
             nativeStreamDataCallback(
-                (unsigned char*)captured,
-                frameCount * userData->bytesPerSample * userData->deviceConfig.capture.channels
-            );
+                (unsigned char *)captured,
+                frameCount * userData->bytesPerSample * userData->deviceConfig.capture.channels);
         }
     }
 
@@ -190,7 +204,8 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
         detectSilence(userData);
 
         // Copy current buffer to circularBuffer
-        if (delayed_silence_started && userData->isRecording && userData->secondsOfAudioToWriteBefore > 0) {
+        if (delayed_silence_started && userData->isRecording && userData->secondsOfAudioToWriteBefore > 0)
+        {
             std::vector<float> values(captured, captured + frameCount);
             circularBuffer.get()->push(values);
         }
@@ -223,7 +238,7 @@ Capture::Capture() : isDetectingSilence(false),
                      mInited(false)
 {
     memset(waveData, 0, sizeof(float) * 256);
-};
+}
 
 Capture::~Capture()
 {
@@ -271,13 +286,12 @@ std::vector<CaptureDevice> Capture::listCaptureDevices()
 }
 
 CaptureErrors Capture::init(
+    Filters *filters,
     int deviceID,
     PCMFormat pcmFormat,
     unsigned int sampleRate,
     unsigned int channels)
 {
-    if (mInited)
-        return captureInitFailed;
     deviceConfig = ma_device_config_init(ma_device_type_capture);
     deviceConfig.periodSizeInFrames = BUFFER_SIZE;
     if (deviceID != -1)
@@ -326,6 +340,7 @@ CaptureErrors Capture::init(
         return captureInitFailed;
     }
     mInited = true;
+    mFilters = filters;
     return captureNoError;
 }
 

@@ -5,3 +5,6 @@
 #include "../../src/analyzer.cpp"
 #include "../../src/capture.cpp"
 #include "../../src/fft/soloud_fft.cpp"
+#include "../../src/filters/filters.cpp"
+#include "../../src/filters/autogain.cpp"
+#include "../../src/filters/echo_cancellation.cpp"
