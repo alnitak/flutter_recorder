@@ -84,13 +84,15 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.9.2"
+    version: "0.9.3"
   flutter_soloud:
     dependency: "direct main"
     description:
-      path: "../../flutter_soloud"
-      relative: true
-    source: path
+      path: "."
+      ref: main
+      resolved-ref: "5303435ce7ce5a3fdba6b564e62a81c953bd9e49"
+      url: "https://github.com/alnitak/flutter_soloud.git"
+    source: git
     version: "2.1.8"
   flutter_test:
     dependency: "direct dev"

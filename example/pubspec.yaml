@@ -14,10 +14,10 @@ dependencies:
     path: ../
 
   flutter_soloud:
-    path: ../../flutter_soloud # for development
-    # git:
-    #   url: https://github.com/alnitak/flutter_soloud.git
-    #   ref: main
+    # path: ../../flutter_soloud # for development
+    git:
+      url: https://github.com/alnitak/flutter_soloud.git
+      ref: main
 
   cupertino_icons: ^1.0.8
   logging: ^1.3.0
