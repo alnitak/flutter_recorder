@@ -6,8 +6,6 @@ A low-level audio recorder plugin that uses miniaudio as the backend and support
 |:-:|:-:|:-:|:-:|:-:|:-:|
 |💙|💙|💙|💙|💙|💙|
 
-**Note:** not yet available on pub.dev
-
 ## 🌟 Key Features:
 - 🖥️ **Cross-platform**: Supports Linux, Windows, Android, MacOS, iOS, and web.
 - ⚡ **High performance**: Built using the fast and efficient miniaudio C library with FFI.
