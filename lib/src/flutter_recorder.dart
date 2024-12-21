@@ -8,6 +8,7 @@ import 'package:flutter_recorder/src/enums.dart';
 import 'package:flutter_recorder/src/exceptions/exceptions.dart';
 import 'package:flutter_recorder/src/filters/filters.dart';
 import 'package:logging/logging.dart';
+import 'package:meta/meta.dart';
 
 /// Callback when silence state is changed.
 typedef SilenceCallback = void Function(bool isSilent, double decibel);
@@ -95,6 +96,7 @@ interface class Recorder {
   /// - `min` which represent the minimum accepted value.
   /// - `max` which represent the maximum accepted value.
   /// - `def` which represent the default value.
+  @experimental
   final filters = const Filters();
 
   final _recoreder = RecorderController();

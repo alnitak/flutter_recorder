@@ -29,27 +29,28 @@ abstract class FilterBase {
 }
 
 /// Filters instance used in [Recorder.filters].
+@experimental
 final class Filters {
   /// The class to get access to all the filters available globally.
   const Filters();
 
   /// The `Auto Gain` filter.
   ///
-  /// 1. **Target RMS Level (g_targetRMS)**
+  /// 1. **Target RMS Level (targetRMS)**
   ///   - Purpose: Sets the desired loudness level.
   ///   - Typical Value:
   ///   - For speech: 0.05 to 0.2 (RMS values in the -1.0 to +1.0 range).
   ///   - For music: 0.1 to 0.3.
   ///   - Adjust to: Match the desired loudness without introducing excessive
   /// distortion or artifacts.
-  /// 2. **Attack Time (g_attackTime)**
+  /// 2. **Attack Time (attackTime)**
   ///   - Purpose: Determines how quickly the gain increases when the signal
   /// level is below the target.
   ///   - Typical Value: 0.005 to 0.05 seconds.
   ///   - Faster attack (e.g., 0.005) ensures quick response to sudden volume
   /// drops, but may sound unnatural.
   ///   - Slower attack (e.g., 0.02-0.05) smoothens gain changes.
-  /// 3. **Release Time (g_releaseTime)**
+  /// 3. **Release Time (releaseTime)**
   ///   - Purpose: Determines how quickly the gain decreases when the signal
   /// level is above the target.
   ///   - Typical Value: 0.05 to 0.5 seconds.
@@ -57,7 +58,7 @@ final class Filters {
   /// risks unnatural pumping effects.
   ///   - Long release (e.g., 0.2-0.5) creates smoother transitions for
   /// dynamic content like music.
-  /// 4. **Gain Smoothing (g_gainSmoothing)**
+  /// 4. **Gain Smoothing (gainSmoothing)**
   ///   - Purpose: Controls how quickly the gain changes overall, acting as
   /// a dampening factor.
   ///   - Typical Value: 0.01 to 0.1.
@@ -65,13 +66,13 @@ final class Filters {
   /// artifacts but possibly underreacting to fast changes.
   ///   - Higher values (e.g., 0.05-0.1) provide faster responsiveness but
   /// may sound less smooth.
-  /// 5. **Maximum Gain (g_maxGain)**
+  /// 5. **Maximum Gain (maxGain)**
   ///   - Purpose: Caps the maximum amplification to avoid over-amplification
   /// or distortion.
   ///   - Typical Value: 4.0 to 10.0.
   ///   - Adjust to: Match the dynamic range of the input; keep lower for
   /// highly dynamic signals to prevent clipping.
-  /// 6. **Minimum Gain (g_minGain)**
+  /// 6. **Minimum Gain (minGain)**
   ///   - Purpose: Prevents excessive attenuation of the signal.
   ///   - Typical Value: 0.1 to 0.5.
   ///   - Adjust to: Avoid muting low signals unless silence is acceptable.
