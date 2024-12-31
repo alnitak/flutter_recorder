@@ -148,8 +148,11 @@ class RecorderFfi extends RecorderImpl {
 
     final ndev = nDevices.value;
     for (var i = 0; i < ndev; i++) {
+      var s = 'no name';
       final s1 = (deviceNames + i).value;
-      final s = s1.cast<Utf8>().toDartString();
+      if (s1 != ffi.nullptr) {
+        s = s1.cast<Utf8>().toDartString();
+      }
       final id1 = (deviceIds + i).value;
       final id = id1.value;
       final n1 = (deviceIsDefault + i).value;

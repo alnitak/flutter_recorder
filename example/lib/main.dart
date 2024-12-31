@@ -420,7 +420,7 @@ class _MyAppState extends State<MyApp> {
       barrierDismissible: true,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Recording saved!'),
+          title: const Text('Available input devices'),
           content: Text(devicesString),
           actions: <Widget>[
             const Text(''),
