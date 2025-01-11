@@ -39,6 +39,14 @@ Add the permission in `Runner/Info.plist`.
 <string>Some message to describe why you need this permission</string>
 ```
 
+on **MacOS** :
+
+In capabilities, activate "Audio input" in debug and release schemes or add in `macos/Runner/*.entitlements` files:
+```
+<key>com.apple.security.device.audio-input</key>
+<true/>
+```
+
 #### Web
 Add this in `web/index.html` under the `<head>` tag.
 ```
