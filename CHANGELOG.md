@@ -1,3 +1,8 @@
+## 0.9.4
+- fixed mic permission iOS example
+- fixed `listCaptureDevices` when there are not input devices
+- update doc
+
 ## 0.9.3
 - added `autoGain` filter
 - breaking changes: 
