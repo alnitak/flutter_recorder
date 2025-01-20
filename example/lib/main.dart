@@ -76,7 +76,7 @@ class _MyAppState extends State<MyApp> {
       });
     }
 
-    /// Listen to audio data stream. The data is received in Uint8List.
+    /// Listen to audio data stream. The data is received as Uint8List.
     recorder.uint8ListStream.listen((data) {
       /// Write the PCM data to file. It can then be imported with the correct
       /// parameters with for example Audacity.
@@ -219,7 +219,9 @@ class _MyAppState extends State<MyApp> {
                           '${savingDir?.path}/fr_${sampleRate}_${format.name}_'
                           '${channels.count}.pcm');
                       try {
-                        file?.deleteSync();
+                        if (file?.existsSync() ?? false) {
+                          file?.deleteSync();
+                        }
                       } catch (e) {
                         debugPrint('Error deleting file: $e');
                       }
