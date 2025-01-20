@@ -313,9 +313,14 @@ interface class Recorder {
   /// Throws [RecorderFailedToInitializeRecordingException].
   void startRecording({String completeFilePath = ''}) {
     assert(
-        !kIsWeb && completeFilePath.isNotEmpty,
-        'completeFilePath is required '
-        'on all platforms but on the Web.');
+      () {
+        if (!kIsWeb && completeFilePath.isEmpty) {
+          return false;
+        }
+        return true;
+      }.call(),
+      'completeFilePath is required on all platforms but on the Web.',
+    );
     if (!_isInitialized) {
       _log.warning(() => 'startRecording(): recorder is not initialized.');
       throw const RecorderNotInitializedException();
