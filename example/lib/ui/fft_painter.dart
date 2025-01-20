@@ -8,6 +8,8 @@ class FftPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (!Recorder.instance.isDeviceStarted()) return;
+    
     final fftData = Recorder.instance.getFft();
     final barWidth = size.width / 256;
 

@@ -34,7 +34,7 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
   }
 
   void _tick(Duration elapsed) {
-    if (context.mounted) {
+    if (context.mounted && Recorder.instance.isDeviceStarted()) {
       setState(() {
         /// 100 = scale to minimum decibel
         db = Recorder.instance.getVolumeDb();
@@ -45,6 +45,7 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    
     return Padding(
       padding: const EdgeInsets.all(6),
       child: Row(
