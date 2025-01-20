@@ -47,7 +47,7 @@ static void my_application_activate(GApplication* application) {
     gtk_window_set_title(window, "flutter_recorder_example");
   }
 
-  gtk_window_set_default_size(window, 650, 900);
+  gtk_window_set_default_size(window, 1280, 720);
   gtk_widget_show(GTK_WIDGET(window));
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
@@ -117,6 +117,12 @@ static void my_application_class_init(MyApplicationClass* klass) {
 static void my_application_init(MyApplication* self) {}
 
 MyApplication* my_application_new() {
+  // Set the program name to the application ID, which helps various systems
+  // like GTK and desktop environments map this running application to its
+  // corresponding .desktop file. This ensures better integration by allowing
+  // the application to be recognized beyond its binary name.
+  g_set_prgname(APPLICATION_ID);
+
   return MY_APPLICATION(g_object_new(my_application_get_type(),
                                      "application-id", APPLICATION_ID,
                                      "flags", G_APPLICATION_NON_UNIQUE,

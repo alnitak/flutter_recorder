@@ -1,3 +1,6 @@
+## 0.9.5
+- fix `startRecording` empty path on the web
+
 ## 0.9.4
 - fixed mic permission iOS example
 - fixed `listCaptureDevices` when there are not input devices
