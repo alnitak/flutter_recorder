@@ -8,7 +8,7 @@
             "name": "example debug",
             "request": "launch",
             "type": "dart",
-            "program": "lib/test.dart",
+            "program": "lib/loopback.dart",
             "cwd": "${workspaceFolder}/example"
         },
         {

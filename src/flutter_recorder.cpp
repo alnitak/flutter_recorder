@@ -334,12 +334,6 @@ FFI_PLUGIN_EXPORT void getTexture(float *samples)
 
     memcpy(samples, fft, sizeof(float) * 256);
     memcpy(samples + 256, wave, sizeof(float) * 256);
-    // for (int i=0; i<56; i++)
-    //     printf("%f ", fft[i]);
-    // printf("\n");
-    // for (int i=0; i<56; i++)
-    //     printf("%f ", wave[i]);
-    // printf("\n\n");
 }
 
 float capturedTexture2D[256][512];

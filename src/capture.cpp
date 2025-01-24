@@ -47,9 +47,9 @@ double getElapsed(struct timespec since)
 }
 
 // 1024 means 1/(44100*2)*1024 = 0.0116 ms
-#define BUFFER_SIZE 1024      // Buffer length
-#define STREAM_BUFFER_SIZE BUFFER_SIZE * 2      // Buffer length
-#define MOVING_AVERAGE_SIZE 4 // Moving average window size
+#define BUFFER_SIZE 1024                   // Buffer length in frames
+#define STREAM_BUFFER_SIZE (BUFFER_SIZE * 4) // Buffer length in frames
+#define MOVING_AVERAGE_SIZE 4              // Moving average window size
 float capturedBuffer[BUFFER_SIZE];
 std::atomic<bool> is_silent{true};     // Initial state
 bool delayed_silence_started = false;  // Whether the silence is delayed
@@ -194,23 +194,28 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
     // Stream the audio data?
     if (userData->isStreamingData && nativeStreamDataCallback != nullptr)
     {
-        const unsigned char* data = (const unsigned char*)captured;
-        int dataSize = frameCount * userData->bytesPerSample * userData->deviceConfig.capture.channels;
-        
+        const unsigned char *data = (const unsigned char *)captured;
+        // Calculate total size in bytes considering frame size
+        int frameSize = userData->bytesPerSample * userData->deviceConfig.capture.channels;
+        int dataSize = frameCount * frameSize;
+
         // Add new data to the stream buffer
         streamBuffer->insert(streamBuffer->end(), data, data + dataSize);
 
+        // Calculate target buffer size in bytes
+        int targetBufferSize = STREAM_BUFFER_SIZE * frameSize;
+
         // If we've reached the target buffer size, send the data
-        if (streamBuffer->size() >= STREAM_BUFFER_SIZE)
+        if (streamBuffer->size() >= targetBufferSize)
         {
             nativeStreamDataCallback(
                 streamBuffer->data(),
-                STREAM_BUFFER_SIZE);
-            
+                targetBufferSize);
+
             // Remove sent data and keep remaining data
-            if (streamBuffer->size() > STREAM_BUFFER_SIZE) {
+            if (streamBuffer->size() > targetBufferSize) {
                 std::vector<unsigned char> remaining(
-                    streamBuffer->begin() + STREAM_BUFFER_SIZE,
+                    streamBuffer->begin() + targetBufferSize,
                     streamBuffer->end()
                 );
                 *streamBuffer = std::move(remaining);
@@ -218,6 +223,9 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
                 streamBuffer->clear();
             }
         }
+        // nativeStreamDataCallback(
+        //     (unsigned char *)captured,
+        //     frameCount * userData->bytesPerSample * userData->deviceConfig.capture.channels);
     }
 
     // Detect silence only when using float32
@@ -415,7 +423,7 @@ void Capture::startStreamingData()
     if (!streamBuffer)
         streamBuffer.reset();
     streamBuffer = std::make_unique<std::vector<unsigned char>>();
-    streamBuffer->reserve(STREAM_BUFFER_SIZE * 2);
+    streamBuffer->reserve(STREAM_BUFFER_SIZE * 6);
     isStreamingData = true;
 }
 
@@ -482,14 +490,12 @@ void Capture::stopRecording()
 
 float *Capture::getWave()
 {
-    // int n = BUFFER_SIZE >> 8;
+    float *src = capturedBuffer;
+    float *dst = waveData;
     for (int i = 0; i < 256; i++)
     {
-        waveData[i] = (capturedBuffer[i * 4] +
-                       capturedBuffer[i * 4 + 1] +
-                       capturedBuffer[i * 4 + 2] +
-                       capturedBuffer[i * 4 + 3]) /
-                      4;
+        *dst++ = (src[0] + src[1] + src[2] + src[3]) / 4;
+        src += 4;
     }
     return waveData;
 }
