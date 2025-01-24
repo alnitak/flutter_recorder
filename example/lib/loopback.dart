@@ -87,6 +87,11 @@ class _LoopBackState extends State<LoopBack> {
     /// Listen for microphne data.
     recorder.uint8ListStream.listen((chunks) {
       if (audioSource != null) {
+        // StringBuffer sb = StringBuffer();
+        // for (var i = 0; i < 10; i++) {
+        //   sb.write(chunks.rawData[i].toRadixString(16).padLeft(2, '0'));
+        // }
+        // print('Received ${chunks.length} chunks  ${sb.toString()}');
         soloud.addAudioDataStream(
           audioSource!,
           chunks.toF32List(from: PCMFormat.f32le).buffer.asUint8List(),

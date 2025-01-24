@@ -48,6 +48,7 @@ double getElapsed(struct timespec since)
 
 // 1024 means 1/(44100*2)*1024 = 0.0116 ms
 #define BUFFER_SIZE 1024      // Buffer length
+#define STREAM_BUFFER_SIZE BUFFER_SIZE * 2      // Buffer length
 #define MOVING_AVERAGE_SIZE 4 // Moving average window size
 float capturedBuffer[BUFFER_SIZE];
 std::atomic<bool> is_silent{true};     // Initial state
@@ -55,7 +56,10 @@ bool delayed_silence_started = false;  // Whether the silence is delayed
 std::atomic<float> energy_db{-100.0f}; // Current energy
 
 /// the buffer used for capturing audio.
-std::unique_ptr<CircularBuffer> circularBuffer;
+std::unique_ptr<CircularBuffer<float>> circularBuffer;
+
+/// the buffer used for streaming.
+std::unique_ptr<std::vector<unsigned char>> streamBuffer;
 
 // Function to convert energy to decibels
 float energy_to_db(float energy)
@@ -188,13 +192,31 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
         calculateEnergy(captured, frameCount);
 
     // Stream the audio data?
-    if (userData->isStreamingData)
+    if (userData->isStreamingData && nativeStreamDataCallback != nullptr)
     {
-        if (nativeStreamDataCallback != nullptr)
+        const unsigned char* data = (const unsigned char*)captured;
+        int dataSize = frameCount * userData->bytesPerSample * userData->deviceConfig.capture.channels;
+        
+        // Add new data to the stream buffer
+        streamBuffer->insert(streamBuffer->end(), data, data + dataSize);
+
+        // If we've reached the target buffer size, send the data
+        if (streamBuffer->size() >= STREAM_BUFFER_SIZE)
         {
             nativeStreamDataCallback(
-                (unsigned char *)captured,
-                frameCount * userData->bytesPerSample * userData->deviceConfig.capture.channels);
+                streamBuffer->data(),
+                STREAM_BUFFER_SIZE);
+            
+            // Remove sent data and keep remaining data
+            if (streamBuffer->size() > STREAM_BUFFER_SIZE) {
+                std::vector<unsigned char> remaining(
+                    streamBuffer->begin() + STREAM_BUFFER_SIZE,
+                    streamBuffer->end()
+                );
+                *streamBuffer = std::move(remaining);
+            } else {
+                streamBuffer->clear();
+            }
         }
     }
 
@@ -348,7 +370,10 @@ void Capture::dispose()
 {
     mInited = false;
     wav.close();
-    circularBuffer.reset();
+    if (!circularBuffer)
+        circularBuffer.reset();
+    if (!streamBuffer)
+        streamBuffer.reset();
     isRecording = false;
 
     ma_device_uninit(&device);
@@ -387,12 +412,18 @@ void Capture::stop()
 
 void Capture::startStreamingData()
 {
+    if (!streamBuffer)
+        streamBuffer.reset();
+    streamBuffer = std::make_unique<std::vector<unsigned char>>();
+    streamBuffer->reserve(STREAM_BUFFER_SIZE * 2);
     isStreamingData = true;
 }
 
 void Capture::stopStreamingData()
 {
     isStreamingData = false;
+    if (!streamBuffer)
+        streamBuffer.reset();
 }
 
 void Capture::setSilenceDetection(bool enable)
@@ -417,7 +448,7 @@ void Capture::setSecondsOfAudioToWriteBefore(float secondsOfAudioToWriteBefore)
     frameCount = (frameCount >> 1) << 1;
     if (!circularBuffer)
         circularBuffer.reset();
-    circularBuffer = std::make_unique<CircularBuffer>(frameCount);
+    circularBuffer = std::make_unique<CircularBuffer<float>>(frameCount);
 }
 
 CaptureErrors Capture::startRecording(const char *path)

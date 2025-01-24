@@ -8,10 +8,11 @@
 #include <algorithm>
 #endif
 
+template<typename T = float>
 class CircularBuffer
 {
 private:
-    std::vector<float> buffer;
+    std::vector<T> buffer;
     unsigned int maxSize;
     unsigned int currentSize;
     unsigned int head;
@@ -26,9 +27,9 @@ public:
 
     int size() { return currentSize; }
 
-    void push(const std::vector<float> &values)
+    void push(const std::vector<T> &values)
     {
-        unsigned int numValues = values.size();
+        unsigned int numValues = (unsigned int)values.size();
 
         // Check if the buffer is full
         if (currentSize + numValues > maxSize)
@@ -53,10 +54,10 @@ public:
         currentSize = std::min(currentSize + numValues, maxSize);
     }
 
-    std::vector<float> pop(unsigned int numValues)
+    std::vector<T> pop(unsigned int numValues)
     {
         numValues = std::min(numValues, currentSize);
-        std::vector<float> poppedValues(numValues);
+        std::vector<T> poppedValues(numValues);
 
         unsigned int numTail = std::min(numValues, maxSize - head);
 

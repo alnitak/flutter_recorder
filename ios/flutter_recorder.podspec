@@ -27,8 +27,8 @@ A new Flutter FFI plugin project.
     'DEFINES_MODULE' => 'YES',
     'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386',
     "CLANG_CXX_LANGUAGE_STANDARD" => "c++17",
-    "OTHER_CFLAGS" => "-msse -msse2 -msse3 -msse4.1",
-    "OTHER_CPLUSPLUSFLAGS" => "-msse -msse2 -msse3 -msse4.1"
+    'OTHER_CFLAGS' => '-msse -msse2 -msse3 -msse4.1 -O3 -ffast-math -flto',
+    'OTHER_CPLUSPLUSFLAGS' => '-msse -msse2 -msse3 -msse4.1 -O3 -ffast-math -flto'
   }
   s.swift_version = '5.0'
   s.ios.framework  = ['AudioToolbox', 'AVFoundation']

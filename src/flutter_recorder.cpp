@@ -98,7 +98,7 @@ void silenceChangedCallback(bool *isSilent, float *energyDb)
         dartSilenceChangedCallback(isSilent, energyDb);
 }
 
-void streamDataCallback(unsigned char *samples, int numSamples)
+void streamDataCallback(const unsigned char *samples, const int numSamples)
 {
 #ifdef __EMSCRIPTEN__
     sendStreamToWorker("streamDataCallback", samples, numSamples);

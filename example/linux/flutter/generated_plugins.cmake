@@ -8,6 +8,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
   flutter_recorder
   flutter_soloud
+  mp_audio_stream
 )
 
 set(PLUGIN_BUNDLED_LIBRARIES)
