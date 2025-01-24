@@ -26,11 +26,11 @@ A new Flutter FFI plugin project.
     'DEFINES_MODULE' => 'YES',
     "CLANG_CXX_LANGUAGE_STANDARD" => "c++17",
     # Enhanced optimization flags
-    'OTHER_CFLAGS' => '-Ofast -march=native -mtune=native -ffast-math -flto -funroll-loops -msse -msse2 -msse3 -msse4.1',
-    'OTHER_CPLUSPLUSFLAGS' => '-Ofast -march=native -mtune=native -ffast-math -flto -funroll-loops -msse -msse2 -msse3 -msse4.1',
+    'OTHER_CFLAGS' => '-Ofast -march=native -mtune=native -ffast-math -flto -funroll-loops -msse -msse2 -msse3 -msse4.1 -pthread',
+    'OTHER_CPLUSPLUSFLAGS' => '-Ofast -march=native -mtune=native -ffast-math -flto -funroll-loops -msse -msse2 -msse3 -msse4.1 -pthread',
     'GCC_OPTIMIZATION_LEVEL' => '3',
-    # Add audio optimization flags
-    'GCC_PREPROCESSOR_DEFINITIONS' => 'MA_NO_RUNTIME_LINKING=1 NDEBUG=1',
+    # Add audio and threading optimization flags
+    'GCC_PREPROCESSOR_DEFINITIONS' => 'MA_NO_RUNTIME_LINKING=1 NDEBUG=1 _REENTRANT=1',
     'HEADER_SEARCH_PATHS' => '$(inherited) $(PODS_TARGET_SRCROOT)/src'
   }
   s.swift_version = '5.0'
