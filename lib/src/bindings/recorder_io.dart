@@ -66,9 +66,16 @@ class RecorderFfi extends RecorderImpl {
     ffi.Pointer<ffi.UnsignedChar> data,
     int dataLength,
   ) {
-    uint8ListController.add(
-      AudioDataContainer(data.cast<ffi.Uint8>().asTypedList(dataLength)),
-    );
+    try {
+      // Create a copy of the data
+      final audioData = data.cast<ffi.Uint8>().asTypedList(dataLength).toList();
+      uint8ListController.add(
+        AudioDataContainer(Uint8List.fromList(audioData)),
+      );
+    } finally {
+      // Free the memory allocated in C++
+      _bindings.nativeFree(data.cast<ffi.Void>());
+    }
   }
 
   ffi.NativeCallable<dartStreamDataCallback_tFunction>?

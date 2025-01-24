@@ -30,7 +30,7 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin
 
 SPEC CHECKSUMS:
-  flutter_recorder: ef3fe0b0349101a66e28f304d40857eaccaf4430
+  flutter_recorder: c93092a2b731a51bf81e2e0bcfc3021870c5a628
   flutter_soloud: ac107e865a1098789906160f086f4c3efca01b22
   FlutterMacOS: 8f6f14fa908a6fb3fba0cd85dbd81ec4b251fb24
   mp_audio_stream: c140c6f5d79ea84f801878e5b89f05ab5f738bde

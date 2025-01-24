@@ -48,7 +48,7 @@ double getElapsed(struct timespec since)
 
 // 1024 means 1/(44100*2)*1024 = 0.0116 ms
 #define BUFFER_SIZE 1024                   // Buffer length in frames
-#define STREAM_BUFFER_SIZE (BUFFER_SIZE * 4) // Buffer length in frames
+#define STREAM_BUFFER_SIZE (BUFFER_SIZE * 2) // Buffer length in frames
 #define MOVING_AVERAGE_SIZE 4              // Moving average window size
 float capturedBuffer[BUFFER_SIZE];
 std::atomic<bool> is_silent{true};     // Initial state
@@ -208,8 +208,13 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
         // If we've reached the target buffer size, send the data
         if (streamBuffer->size() >= targetBufferSize)
         {
+            // Create a copy of the data to send
+            auto *dataCopy = new unsigned char[targetBufferSize];
+            memcpy(dataCopy, streamBuffer->data(), targetBufferSize);
+
+            // Send copy to Dart - it will be responsible for freeing the memory
             nativeStreamDataCallback(
-                streamBuffer->data(),
+                dataCopy,
                 targetBufferSize);
 
             // Remove sent data and keep remaining data
@@ -223,9 +228,6 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
                 streamBuffer->clear();
             }
         }
-        // nativeStreamDataCallback(
-        //     (unsigned char *)captured,
-        //     frameCount * userData->bytesPerSample * userData->deviceConfig.capture.channels);
     }
 
     // Detect silence only when using float32

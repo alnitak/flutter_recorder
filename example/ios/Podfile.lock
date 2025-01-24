@@ -1,0 +1,53 @@
+PODS:
+  - Flutter (1.0.0)
+  - flutter_recorder (0.0.1):
+    - Flutter
+  - flutter_soloud (0.0.1):
+    - Flutter
+  - mp_audio_stream (0.0.3):
+    - Flutter
+  - open_filex (0.0.2):
+    - Flutter
+  - path_provider_foundation (0.0.1):
+    - Flutter
+    - FlutterMacOS
+  - permission_handler_apple (9.3.0):
+    - Flutter
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - flutter_recorder (from `.symlinks/plugins/flutter_recorder/ios`)
+  - flutter_soloud (from `.symlinks/plugins/flutter_soloud/ios`)
+  - mp_audio_stream (from `.symlinks/plugins/mp_audio_stream/ios`)
+  - open_filex (from `.symlinks/plugins/open_filex/ios`)
+  - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
+  - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+  flutter_recorder:
+    :path: ".symlinks/plugins/flutter_recorder/ios"
+  flutter_soloud:
+    :path: ".symlinks/plugins/flutter_soloud/ios"
+  mp_audio_stream:
+    :path: ".symlinks/plugins/mp_audio_stream/ios"
+  open_filex:
+    :path: ".symlinks/plugins/open_filex/ios"
+  path_provider_foundation:
+    :path: ".symlinks/plugins/path_provider_foundation/darwin"
+  permission_handler_apple:
+    :path: ".symlinks/plugins/permission_handler_apple/ios"
+
+SPEC CHECKSUMS:
+  Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
+  flutter_recorder: 0fc535956dc023fbbb5ec1a8870a1382af6448f2
+  flutter_soloud: ceb463dfdba562ed9e3798855eca9a4ecc72d23c
+  mp_audio_stream: 3aeeb992433b114917bffc30accf51ce8114aea2
+  open_filex: 432f3cd11432da3e39f47fcc0df2b1603854eff1
+  path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
+  permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
+
+PODFILE CHECKSUM: a57f30d18f102dd3ce366b1d62a55ecbef2158e5
+
+COCOAPODS: 1.16.2
