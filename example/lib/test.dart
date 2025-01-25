@@ -87,12 +87,6 @@ class _MyAppState extends State<MyApp> {
     }
 
     recorder.uint8ListStream.listen((data) {
-      // StringBuffer sb = StringBuffer();
-      // for (var i = 0; i < 10; i++) {
-      //   sb.write(' ${data.rawData[i].toRadixString(16).padLeft(2, '0')} ');
-      // }
-      // print('Received ${data.length} chunks  ${sb.toString()}');
-
       _audioStream.push(data.toF32List(from: PCMFormat.f32le));
     });
 
@@ -111,7 +105,7 @@ class _MyAppState extends State<MyApp> {
             onPressed: init,
             child: const Text('start'),
           ),
-          // const Bars(),
+          const Bars(),
         ],
       ),
     );
