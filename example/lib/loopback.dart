@@ -58,7 +58,7 @@ class LoopBack extends StatefulWidget {
 
 class _LoopBackState extends State<LoopBack> {
   final audioStreamChannels = Channels.mono;
-  final audioStreamFormat = BufferPcmType.f32le;
+  final audioStreamFormat = BufferType.f32le;
 
   final recorderChannels = RecorderChannels.mono;
   final recorderFormat = PCMFormat.f32le;
@@ -114,7 +114,7 @@ class _LoopBackState extends State<LoopBack> {
 
     audioSource = soloud.setBufferStream(
       channels: audioStreamChannels,
-      pcmFormat: audioStreamFormat,
+      format: audioStreamFormat,
       sampleRate: sampleRate,
       bufferingTimeNeeds: 0.2,
     );

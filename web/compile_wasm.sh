@@ -9,7 +9,7 @@ cd build
 #https://emscripten.org/docs/tools_reference/emcc.html
 #-g3 #keep debug info, including JS whitespace, function names
 
-em++ \
+em++ -O3 \
 -I ../../src/fft \
 -I ../../src \
 ../../src/flutter_recorder.cpp \
@@ -21,11 +21,12 @@ em++ \
 ../../src/filters/echo_cancellation.cpp \
 -s MODULARIZE=1 -s EXPORT_NAME="'RecorderModule'" \
 -msimd128 -msse3 \
--O3 \
 -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap']" \
--s "EXPORTED_FUNCTIONS=['_free', '_malloc']" \
--s EXPORT_ALL=1 -s NO_EXIT_RUNTIME=1 \
+-s "EXPORTED_FUNCTIONS=['_free', '_malloc', '_ma_device__on_notification_unlocked']" \
+-s EXPORT_ALL=1 \
+-s NO_EXIT_RUNTIME=1 \
 -s SAFE_HEAP=1 \
 -s STACK_SIZE=4194304 \
--s ALLOW_MEMORY_GROWTH \
+-s ALLOW_TABLE_GROWTH=1 \
+-s ALLOW_MEMORY_GROWTH=1 \
 -o ../../web/libflutter_recorder_plugin.js

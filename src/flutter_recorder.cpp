@@ -66,7 +66,7 @@ FFI_PLUGIN_EXPORT void sendSilenceEventToWorker(const char *message, bool isSile
 }
 
 /// Post a stream of audio data with the web worker.
-FFI_PLUGIN_EXPORT void sendStreamToWorker(const char *message, unsigned char *audioData, int audioDataLength)
+FFI_PLUGIN_EXPORT void sendStreamToWorker(const char *message, const unsigned char *audioData, int audioDataLength)
 {
     EM_ASM({
             if (RecorderModule.wasmWorker)

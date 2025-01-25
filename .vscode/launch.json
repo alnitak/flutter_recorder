@@ -73,7 +73,7 @@
         {
             "name": "Chrome",
             "type": "chrome",
-            "preLaunchTask": "compile web debug",
+            "preLaunchTask": "compile web release",
             "request": "launch"
         }
     ]
