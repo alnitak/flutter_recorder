@@ -182,14 +182,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.15.0"
-  mp_audio_stream:
-    dependency: "direct main"
-    description:
-      name: mp_audio_stream
-      sha256: "05b0103aa1f97a07442c78ae9d54d054c0e49e39c07d391dbbe5c85eab46de98"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.2.1"
   open_filex:
     dependency: "direct main"
     description:

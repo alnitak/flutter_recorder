@@ -113,6 +113,7 @@ class _LoopBackState extends State<LoopBack> {
     if (audioSource != null) disposeAudioSource();
 
     audioSource = soloud.setBufferStream(
+      maxBufferSize: 50,
       channels: audioStreamChannels,
       format: audioStreamFormat,
       sampleRate: sampleRate,
