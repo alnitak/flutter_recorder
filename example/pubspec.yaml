@@ -13,8 +13,8 @@ dependencies:
   flutter_recorder:
     path: ../
 
-  flutter_soloud:
-    path: ../../flutter_soloud # for development
+  flutter_soloud: ^3.0.0-pre.0
+    # path: ../../flutter_soloud # for development
     # git:
     #   url: https://github.com/alnitak/flutter_soloud.git
     #   ref: main

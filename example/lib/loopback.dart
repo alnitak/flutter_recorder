@@ -113,7 +113,7 @@ class _LoopBackState extends State<LoopBack> {
     if (audioSource != null) disposeAudioSource();
 
     audioSource = soloud.setBufferStream(
-      maxBufferSize: 50,
+      maxBufferSize: 1024 * 1024 * 50,
       channels: audioStreamChannels,
       format: audioStreamFormat,
       sampleRate: sampleRate,
@@ -170,6 +170,7 @@ class _LoopBackState extends State<LoopBack> {
       mainAxisSize: MainAxisSize.min,
       spacing: 10,
       children: [
+        const Text('Please, use headset to prevent audio feedback'),
         // Start / Stop
         Row(
           mainAxisSize: MainAxisSize.min,

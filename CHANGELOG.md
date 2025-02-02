@@ -1,7 +1,5 @@
-## 0.9.6
-- choppy PCM playback on macOS
-
-## 0.9.5
+## 1.0.0
+- fixed choppy PCM playback on macOS #18.
 - fix `startRecording` empty path on the web
 
 ## 0.9.4
