@@ -58,7 +58,7 @@ class LoopBack extends StatefulWidget {
 
 class _LoopBackState extends State<LoopBack> {
   final audioStreamChannels = Channels.mono;
-  final audioStreamFormat = BufferPcmType.f32le;
+  final audioStreamFormat = BufferType.f32le;
 
   final recorderChannels = RecorderChannels.mono;
   final recorderFormat = PCMFormat.f32le;
@@ -87,6 +87,11 @@ class _LoopBackState extends State<LoopBack> {
     /// Listen for microphne data.
     recorder.uint8ListStream.listen((chunks) {
       if (audioSource != null) {
+        // StringBuffer sb = StringBuffer();
+        // for (var i = 0; i < 10; i++) {
+        //   sb.write(chunks.rawData[i].toRadixString(16).padLeft(2, '0'));
+        // }
+        // print('Received ${chunks.length} chunks  ${sb.toString()}');
         soloud.addAudioDataStream(
           audioSource!,
           chunks.toF32List(from: PCMFormat.f32le).buffer.asUint8List(),
@@ -108,8 +113,9 @@ class _LoopBackState extends State<LoopBack> {
     if (audioSource != null) disposeAudioSource();
 
     audioSource = soloud.setBufferStream(
+      maxBufferSize: 1024 * 1024 * 50,
       channels: audioStreamChannels,
-      pcmFormat: audioStreamFormat,
+      format: audioStreamFormat,
       sampleRate: sampleRate,
       bufferingTimeNeeds: 0.2,
     );
@@ -164,6 +170,7 @@ class _LoopBackState extends State<LoopBack> {
       mainAxisSize: MainAxisSize.min,
       spacing: 10,
       children: [
+        const Text('Please, use headset to prevent audio feedback'),
         // Start / Stop
         Row(
           mainAxisSize: MainAxisSize.min,

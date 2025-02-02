@@ -66,7 +66,7 @@ FFI_PLUGIN_EXPORT void sendSilenceEventToWorker(const char *message, bool isSile
 }
 
 /// Post a stream of audio data with the web worker.
-FFI_PLUGIN_EXPORT void sendStreamToWorker(const char *message, unsigned char *audioData, int audioDataLength)
+FFI_PLUGIN_EXPORT void sendStreamToWorker(const char *message, const unsigned char *audioData, int audioDataLength)
 {
     EM_ASM({
             if (RecorderModule.wasmWorker)
@@ -98,7 +98,7 @@ void silenceChangedCallback(bool *isSilent, float *energyDb)
         dartSilenceChangedCallback(isSilent, energyDb);
 }
 
-void streamDataCallback(unsigned char *samples, int numSamples)
+void streamDataCallback(const unsigned char *samples, const int numSamples)
 {
 #ifdef __EMSCRIPTEN__
     sendStreamToWorker("streamDataCallback", samples, numSamples);
@@ -334,12 +334,6 @@ FFI_PLUGIN_EXPORT void getTexture(float *samples)
 
     memcpy(samples, fft, sizeof(float) * 256);
     memcpy(samples + 256, wave, sizeof(float) * 256);
-    // for (int i=0; i<56; i++)
-    //     printf("%f ", fft[i]);
-    // printf("\n");
-    // for (int i=0; i<56; i++)
-    //     printf("%f ", wave[i]);
-    // printf("\n\n");
 }
 
 float capturedTexture2D[256][512];

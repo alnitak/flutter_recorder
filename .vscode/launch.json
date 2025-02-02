@@ -8,7 +8,7 @@
             "name": "example debug",
             "request": "launch",
             "type": "dart",
-            "program": "lib/main.dart",
+            "program": "lib/loopback.dart",
             "cwd": "${workspaceFolder}/example"
         },
         {
@@ -24,7 +24,7 @@
             "request": "launch",
             "type": "dart",
             "flutterMode": "release",
-            "program": "lib/main.dart",
+            "program": "lib/test.dart",
             "cwd": "${workspaceFolder}/example"
         },
         {
@@ -73,7 +73,7 @@
         {
             "name": "Chrome",
             "type": "chrome",
-            "preLaunchTask": "compile web debug",
+            "preLaunchTask": "compile web release",
             "request": "launch"
         }
     ]

@@ -44,7 +44,7 @@
 
 typedef void (*dartSilenceChangedCallback_t)(bool *, float *);
 
-typedef void (*dartStreamDataCallback_t)(unsigned char * data, int dataLength);
+typedef void (*dartStreamDataCallback_t)(const unsigned char * data, const int dataLength);
 
 // To be used by `NativeCallable` since it will be called inside the audio thread,
 // these functions must return void.
@@ -53,8 +53,8 @@ extern void (*dartSilenceChangedCallback)(bool *, float *);
 // Native functions can be called from any thread. It will eventually call `dartSilenceChangedCallback`.
 extern void (*nativeSilenceChangedCallback)(bool *, float *);
 
-extern void (*dartStreamDataCallback)(unsigned char * data, int dataLength);
+extern void (*dartStreamDataCallback)(const unsigned char * data, const int dataLength);
 
-extern void (*nativeStreamDataCallback)(unsigned char * data, int dataLength);
+extern void (*nativeStreamDataCallback)(const unsigned char * data, const int dataLength);
 
 #endif // COMMON_H

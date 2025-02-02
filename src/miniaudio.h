@@ -18670,11 +18670,16 @@ static void ma_device__on_notification_rerouted(ma_device* pDevice)
 #endif
 
 #if defined(MA_EMSCRIPTEN)
-EMSCRIPTEN_KEEPALIVE
-void ma_device__on_notification_unlocked(ma_device* pDevice)
+#ifdef __cplusplus
+extern "C" {
+#endif
+void EMSCRIPTEN_KEEPALIVE ma_device__on_notification_unlocked(ma_device* pDevice)
 {
     ma_device__on_notification(ma_device_notification_init(pDevice, ma_device_notification_type_unlocked));
 }
+#ifdef __cplusplus
+}
+#endif
 #endif
 
 
@@ -40488,7 +40493,7 @@ static ma_result ma_context_init__webaudio(ma_context* pContext, const ma_contex
                         device.state === window.miniaudio.device_state.started) {
 
                         device.webaudio.resume().then(() => {
-                                Module._ma_device__on_notification_unlocked(device.pDevice);
+                                _ma_device__on_notification_unlocked(device.pDevice);
                             },
                             (error) => {console.error("Failed to resume audiocontext", error);
                             });

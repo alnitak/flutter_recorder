@@ -8,7 +8,7 @@ class WavePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (!Recorder.instance.isDeviceStarted()) return;
-    
+
     final waveData = Recorder.instance.getWave();
 
     final barWidth = size.width / 256;
