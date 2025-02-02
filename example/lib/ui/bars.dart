@@ -45,7 +45,6 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    
     return Padding(
       padding: const EdgeInsets.all(6),
       child: Row(
