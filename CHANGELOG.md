@@ -1,3 +1,6 @@
+## 1.0.1
+- detailed exception when passing an invalind file name to `startRecording` #23
+
 ## 1.0.0
 - fixed choppy PCM playback on macOS #18.
 - fix `startRecording` empty path on the web
