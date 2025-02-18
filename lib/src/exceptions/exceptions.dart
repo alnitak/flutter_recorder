@@ -36,9 +36,6 @@ sealed class RecorderException implements Exception {
 
 /// A base class for all flutter_recorder exceptions that are thrown from
 /// the C++ side.
-///
-/// These exceptions correspond to the errors define in the
-/// [CaptureErrors] enum.
 abstract class RecorderCppException extends RecorderException {
   /// Creates a new Recorder exception that is thrown from the C++ side.
   const RecorderCppException([super.message]);
@@ -76,4 +73,13 @@ abstract class RecorderCppException extends RecorderException {
         return const RecorderFilterParameterGetException();
     }
   }
+}
+
+/// An exception that is thrown when passing an invalid file name.
+class RecorderInvalidFileNameException extends RecorderException {
+  /// Creates a new [RecorderInvalidFileNameException].
+  const RecorderInvalidFileNameException([super.message]);
+
+  @override
+  String get description => 'The file name is invalid.';
 }

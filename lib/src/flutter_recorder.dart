@@ -305,12 +305,13 @@ interface class Recorder {
   ///
   /// [completeFilePath] complete file path to save the recording.
   /// This is mandatory on all platforms but on the Web.
-  /// NOTE: when running on the  Web, [completeFilePath] is ignored and
-  /// just stopping the recording the browser will ask to save the file.
+  /// NOTE: when running on the  Web, [completeFilePath] is ignored:
+  /// when stopping the recording the browser will ask to save the file.
   ///
   /// Throws [RecorderNotInitializedException].
   /// Throws [RecorderCaptureNotStartededException].
-  /// Throws [RecorderFailedToInitializeRecordingException].
+  /// Throws [RecorderInvalidFileNameException] if the given file name is
+  /// invalid.
   void startRecording({String completeFilePath = ''}) {
     assert(
       () {

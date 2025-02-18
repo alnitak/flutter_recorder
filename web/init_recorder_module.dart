@@ -1,7 +1,6 @@
 // ignore_for_file: avoid_print
 
 import 'dart:js_interop';
-import 'dart:js_util';
 
 /// Module to initialized the WASM RecorderModule before the app starts.
 /// It must be compiled with
@@ -25,9 +24,12 @@ external set globalRecorderModule(JSObject module);
 Future<JSObject> initializeRecorderModule() async {
   try {
     // Convert JavaScript Promise to Dart Future
-    final promise = recorderModuleConstructor();
-    final module = await promiseToFuture<JSObject>(promise);
-    globalRecorderModule = module; // Make it globally accessible
+    final modulePromise = recorderModuleConstructor() as JSPromise;
+    final module = await JSPromiseToFuture<JSAny?>(modulePromise).toDart;
+    if (module == null) {
+      throw Exception('Module initialization failed: Module is null');
+    }
+    globalRecorderModule = module as JSObject; // Make it globally accessible
     print('RecorderModule initialized and set globally.');
     return module; // Return the initialized module
   } catch (e) {

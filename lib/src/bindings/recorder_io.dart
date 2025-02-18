@@ -3,7 +3,6 @@
 
 import 'dart:ffi' as ffi;
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
@@ -253,6 +252,81 @@ class RecorderFfi extends RecorderImpl {
 
   @override
   void startRecording(String path) {
+    var errorDescription = '';
+    // Check the file name is valid for the different platforms.
+    bool isValidPathName() {
+      // Reserved Windows filenames - these apply to any part of the path
+      const reservedNames = {
+        'CON', 'PRN', 'AUX', 'NUL',
+        'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9',
+        'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'
+        // ignore: require_trailing_commas
+      };
+
+      switch (defaultTargetPlatform) {
+        case TargetPlatform.windows:
+          // Split path into components
+          final pathParts = path.split(RegExp(r'[/\\]'));
+
+          // Check each component
+          for (final part in pathParts) {
+            // Skip empty parts
+            if (part.isEmpty) continue;
+
+            // Check for invalid characters in each part
+            if (part.contains(RegExp('[:*?"<>|]')) ||
+                reservedNames.contains(part.toUpperCase().split('.').first) ||
+                part.endsWith(' ') ||
+                part.endsWith('.')) {
+              errorDescription = 'Invalid path component "$part". Path '
+                  'components must not '
+                  'contain any of these characters: :*?"<>| '
+                  'or be a reserved name, or end with space/period.';
+              return false;
+            }
+          }
+
+          // Check total path length (Windows MAX_PATH is 260)
+          if (path.length > 259) {
+            errorDescription = 'Path is too long. Windows paths must be '
+                'less than 260 characters.';
+            return false;
+          }
+
+        case TargetPlatform.linux:
+        case TargetPlatform.android:
+          // Check for null bytes and control characters
+          if (path.contains(RegExp(r'[\x00-\x1F]'))) {
+            errorDescription = 'Path contains invalid control characters.';
+            return false;
+          }
+
+        case TargetPlatform.macOS:
+        case TargetPlatform.iOS:
+          // Check for invalid characters on macOS/iOS
+          if (path.contains(RegExp('[:<>]'))) {
+            errorDescription = 'Path contains invalid characters. '
+                'The following characters are not allowed: :<>';
+            return false;
+          }
+          // Check for ._ at start (reserved for resource forks)
+          if (path.split('/').any((part) => part.startsWith('._'))) {
+            errorDescription =
+                'File names cannot start with "._" on macOS/iOS.';
+            return false;
+          }
+
+        case TargetPlatform.fuchsia:
+          throw UnimplementedError();
+      }
+
+      return true;
+    }
+
+    if (!isValidPathName()) {
+      throw RecorderInvalidFileNameException(errorDescription);
+    }
+
     final error = _bindings.startRecording(path.toNativeUtf8().cast());
     if (error != CaptureErrors.captureNoError) {
       throw RecorderCppException.fromRecorderError(error);
