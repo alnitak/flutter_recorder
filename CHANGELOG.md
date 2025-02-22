@@ -1,3 +1,6 @@
+## 1.0.2
+- resolved conflicts with flutter_soloud #25
+
 ## 1.0.1
 - detailed exception when passing an invalind file name to `startRecording` #23
 - removed deprecated `dart:js_util`
