@@ -10,13 +10,13 @@
 
 struct FilterObject
 {
-    FilterType type;
+    RecorderFilterType type;
     std::unique_ptr<GenericFilter> filter;
 
-    FilterObject(FilterType t, std::unique_ptr<GenericFilter> f)
+    FilterObject(RecorderFilterType t, std::unique_ptr<GenericFilter> f)
         : type(t), filter(std::move(f)) {}
 
-    bool operator==(FilterType const &i)
+    bool operator==(RecorderFilterType const &i)
     {
         return (i == type);
     }
@@ -33,19 +33,19 @@ public:
     ~Filters();
 
     /// Return -1 if the filter is not active or its index
-    int isFilterActive(FilterType filter);
+    int isFilterActive(RecorderFilterType filter);
     
-    CaptureErrors addFilter(FilterType filterType);
+    CaptureErrors addFilter(RecorderFilterType filterType);
     
-    CaptureErrors removeFilter(FilterType filterType);
+    CaptureErrors removeFilter(RecorderFilterType filterType);
     
-    std::vector<std::string> getFilterParamNames(FilterType filterType);
-    
-    /// If [handle]==0 the operation is done to global filters.
-    void setFilterParams(FilterType filterType, int attributeId, float value);
+    std::vector<std::string> getFilterParamNames(RecorderFilterType filterType);
     
     /// If [handle]==0 the operation is done to global filters.
-    float getFilterParams(FilterType filterType, int attributeId);
+    void setFilterParams(RecorderFilterType filterType, int attributeId, float value);
+    
+    /// If [handle]==0 the operation is done to global filters.
+    float getFilterParams(RecorderFilterType filterType, int attributeId);
     
     unsigned int mSamplerate;
 

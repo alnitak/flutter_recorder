@@ -73,7 +73,7 @@ class RecorderFfi extends RecorderImpl {
       );
     } finally {
       // Free the memory allocated in C++
-      _bindings.nativeFree(data.cast<ffi.Void>());
+      _bindings.flutter_recorder_nativeFree(data.cast<ffi.Void>());
     }
   }
 
@@ -92,7 +92,7 @@ class RecorderFfi extends RecorderImpl {
       _streamDataCallback,
     );
 
-    _bindings.setDartEventCallback(
+    _bindings.flutter_recorder_setDartEventCallback(
       nativeSilenceChangedCallable.nativeFunction,
       nativeStreamDataCallable.nativeFunction,
     );
@@ -103,7 +103,7 @@ class RecorderFfi extends RecorderImpl {
     required bool enable,
     SilenceCallback? onSilenceChanged,
   }) {
-    _bindings.setSilenceDetection(enable);
+    _bindings.flutter_recorder_setSilenceDetection(enable);
 
     if (onSilenceChanged != null) {
       _silenceCallback = onSilenceChanged;
@@ -116,13 +116,13 @@ class RecorderFfi extends RecorderImpl {
   @override
   void setSilenceThresholdDb(double silenceThresholdDb) {
     assert(silenceThresholdDb < 0, 'silenceThresholdDb must be < 0');
-    _bindings.setSilenceThresholdDb(silenceThresholdDb);
+    _bindings.flutter_recorder_setSilenceThresholdDb(silenceThresholdDb);
   }
 
   @override
   void setSilenceDuration(double silenceDuration) {
     assert(silenceDuration >= 0, 'silenceDuration must be >= 0');
-    _bindings.setSilenceDuration(silenceDuration);
+    _bindings.flutter_recorder_setSilenceDuration(silenceDuration);
   }
 
   @override
@@ -131,7 +131,9 @@ class RecorderFfi extends RecorderImpl {
       secondsOfAudioToWriteBefore >= 0,
       'secondsOfAudioToWriteBefore must be >= 0',
     );
-    _bindings.setSecondsOfAudioToWriteBefore(secondsOfAudioToWriteBefore);
+    _bindings.flutter_recorder_setSecondsOfAudioToWriteBefore(
+      secondsOfAudioToWriteBefore,
+    );
   }
 
   @override
@@ -145,7 +147,7 @@ class RecorderFfi extends RecorderImpl {
         calloc(ffi.sizeOf<ffi.Pointer<ffi.Pointer<ffi.Int>>>() * 50);
     final ffi.Pointer<ffi.Int> nDevices = calloc();
 
-    _bindings.listCaptureDevices(
+    _bindings.flutter_recorder_listCaptureDevices(
       deviceNames,
       deviceIds,
       deviceIsDefault,
@@ -172,7 +174,7 @@ class RecorderFfi extends RecorderImpl {
     //   calloc.free(devices.elementAt(i).value.ref.name);
     //   calloc.free(devices.elementAt(i).value);
     // }
-    _bindings.freeListCaptureDevices(
+    _bindings.flutter_recorder_freeListCaptureDevices(
       deviceNames,
       deviceIds,
       deviceIsDefault,
@@ -193,7 +195,7 @@ class RecorderFfi extends RecorderImpl {
     required int sampleRate,
     required RecorderChannels channels,
   }) {
-    final error = _bindings.init(
+    final error = _bindings.flutter_recorder_init(
       deviceID,
       format.value,
       sampleRate,
@@ -213,23 +215,23 @@ class RecorderFfi extends RecorderImpl {
   @override
   void deinit() {
     _silenceCallback = null;
-    _bindings.deinit();
+    _bindings.flutter_recorder_deinit();
     super.deinit();
   }
 
   @override
   bool isDeviceInitialized() {
-    return _bindings.isInited() == 1;
+    return _bindings.flutter_recorder_isInited() == 1;
   }
 
   @override
   bool isDeviceStarted() {
-    return _bindings.isDeviceStarted() == 1;
+    return _bindings.flutter_recorder_isDeviceStarted() == 1;
   }
 
   @override
   void start() {
-    final error = _bindings.start();
+    final error = _bindings.flutter_recorder_start();
     if (error != CaptureErrors.captureNoError) {
       throw RecorderCppException.fromRecorderError(error);
     }
@@ -237,17 +239,17 @@ class RecorderFfi extends RecorderImpl {
 
   @override
   void stop() {
-    _bindings.stop();
+    _bindings.flutter_recorder_stop();
   }
 
   @override
   void startStreamingData() {
-    _bindings.startStreamingData();
+    _bindings.flutter_recorder_startStreamingData();
   }
 
   @override
   void stopStreamingData() {
-    _bindings.stopStreamingData();
+    _bindings.flutter_recorder_stopStreamingData();
   }
 
   @override
@@ -327,7 +329,8 @@ class RecorderFfi extends RecorderImpl {
       throw RecorderInvalidFileNameException(errorDescription);
     }
 
-    final error = _bindings.startRecording(path.toNativeUtf8().cast());
+    final error =
+        _bindings.flutter_recorder_startRecording(path.toNativeUtf8().cast());
     if (error != CaptureErrors.captureNoError) {
       throw RecorderCppException.fromRecorderError(error);
     }
@@ -335,23 +338,23 @@ class RecorderFfi extends RecorderImpl {
 
   @override
   void setPauseRecording({required bool pause}) {
-    _bindings.setPauseRecording(pause);
+    _bindings.flutter_recorder_setPauseRecording(pause);
   }
 
   @override
   void stopRecording() {
-    _bindings.stopRecording();
+    _bindings.flutter_recorder_stopRecording();
   }
 
   @override
   void setFftSmoothing(double smooth) {
-    _bindings.setFftSmoothing(smooth);
+    _bindings.flutter_recorder_setFftSmoothing(smooth);
   }
 
   @override
   Float32List getFft() {
     final ffi.Pointer<ffi.Pointer<ffi.Float>> fft = calloc(256 * 4);
-    _bindings.getFft(fft);
+    _bindings.flutter_recorder_getFft(fft);
 
     final val = ffi.Pointer<ffi.Float>.fromAddress(fft.value.address);
     if (val == ffi.nullptr) return Float32List(256);
@@ -364,7 +367,7 @@ class RecorderFfi extends RecorderImpl {
   @override
   Float32List getWave() {
     final ffi.Pointer<ffi.Pointer<ffi.Float>> wave = calloc(256 * 4);
-    _bindings.getWave(wave);
+    _bindings.flutter_recorder_getWave(wave);
 
     final val = ffi.Pointer<ffi.Float>.fromAddress(wave.value.address);
     if (val == ffi.nullptr) return Float32List(256);
@@ -377,7 +380,7 @@ class RecorderFfi extends RecorderImpl {
   @override
   Float32List getTexture2D() {
     final ffi.Pointer<ffi.Pointer<ffi.Float>> data = calloc(512 * 256 * 4);
-    _bindings.getTexture2D(data);
+    _bindings.flutter_recorder_getTexture2D(data);
 
     final val = ffi.Pointer<ffi.Float>.fromAddress(data.value.address);
     if (val == ffi.nullptr) return Float32List(512 * 256);
@@ -391,7 +394,7 @@ class RecorderFfi extends RecorderImpl {
   @override
   double getVolumeDb() {
     final ffi.Pointer<ffi.Float> volume = calloc(4);
-    _bindings.getVolumeDb(volume);
+    _bindings.flutter_recorder_getVolumeDb(volume);
     final v = volume.value;
     calloc.free(volume);
     return v;
@@ -399,12 +402,12 @@ class RecorderFfi extends RecorderImpl {
 
   @override
   int isFilterActive(RecorderFilterType filterType) {
-    return _bindings.isFilterActive(filterType);
+    return _bindings.flutter_recorder_isFilterActive(filterType);
   }
 
   @override
   void addFilter(RecorderFilterType filterType) {
-    final error = _bindings.addFilter(filterType);
+    final error = _bindings.flutter_recorder_addFilter(filterType);
     if (error != CaptureErrors.captureNoError) {
       throw RecorderCppException.fromRecorderError(error);
     }
@@ -412,7 +415,7 @@ class RecorderFfi extends RecorderImpl {
 
   @override
   CaptureErrors removeFilter(RecorderFilterType filterType) {
-    final error = _bindings.removeFilter(filterType);
+    final error = _bindings.flutter_recorder_removeFilter(filterType);
     if (error != CaptureErrors.captureNoError) {
       throw RecorderCppException.fromRecorderError(error);
     }
@@ -424,13 +427,17 @@ class RecorderFfi extends RecorderImpl {
     final ffi.Pointer<ffi.Pointer<ffi.Char>> names =
         calloc(ffi.sizeOf<ffi.Pointer<ffi.Pointer<ffi.Char>>>() * 30);
     final ffi.Pointer<ffi.Int> paramsCount = calloc(ffi.sizeOf<ffi.Int>());
-    _bindings.getFilterParamNames(filterType, names, paramsCount);
+    _bindings.flutter_recorder_getFilterParamNames(
+      filterType,
+      names,
+      paramsCount,
+    );
     final List<String> ret = [];
     for (var i = 0; i < paramsCount.value; i++) {
       final s1 = (names + i).value;
       final s = s1.cast<Utf8>().toDartString();
       ret.add(s);
-      _bindings.nativeFree(s1.cast<ffi.Void>());
+      _bindings.flutter_recorder_nativeFree(s1.cast<ffi.Void>());
     }
     calloc
       ..free(names)
@@ -444,11 +451,11 @@ class RecorderFfi extends RecorderImpl {
     int attributeId,
     double value,
   ) {
-    _bindings.setFilterParams(filterType, attributeId, value);
+    _bindings.flutter_recorder_setFilterParams(filterType, attributeId, value);
   }
 
   @override
   double getFilterParamValue(RecorderFilterType filterType, int attributeId) {
-    return _bindings.getFilterParams(filterType, attributeId);
+    return _bindings.flutter_recorder_getFilterParams(filterType, attributeId);
   }
 }

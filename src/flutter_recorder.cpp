@@ -29,7 +29,7 @@ dartStreamDataCallback_t nativeStreamDataCallback;
 
 #ifdef __EMSCRIPTEN__
 /// Create the web worker and store a global "RecorderModule.workerUri" in JS.
-FFI_PLUGIN_EXPORT void createWorkerInWasm()
+FFI_PLUGIN_EXPORT void flutter_recorder_createWorkerInWasm()
 {
     EM_ASM({
         if (!RecorderModule.wasmWorker)
@@ -47,7 +47,7 @@ FFI_PLUGIN_EXPORT void createWorkerInWasm()
 }
 
 /// Post a new silence event message with the web worker.
-FFI_PLUGIN_EXPORT void sendSilenceEventToWorker(const char *message, bool isSilent, float energyDb)
+FFI_PLUGIN_EXPORT void flutter_recorder_sendSilenceEventToWorker(const char *message, bool isSilent, float energyDb)
 {
     EM_ASM({
             if (RecorderModule.wasmWorker)
@@ -66,7 +66,7 @@ FFI_PLUGIN_EXPORT void sendSilenceEventToWorker(const char *message, bool isSile
 }
 
 /// Post a stream of audio data with the web worker.
-FFI_PLUGIN_EXPORT void sendStreamToWorker(const char *message, const unsigned char *audioData, int audioDataLength)
+FFI_PLUGIN_EXPORT void flutter_recorder_sendStreamToWorker(const char *message, const unsigned char *audioData, int audioDataLength)
 {
     EM_ASM({
             if (RecorderModule.wasmWorker)
@@ -92,7 +92,7 @@ void silenceChangedCallback(bool *isSilent, float *energyDb)
     // Calling JavaScript from C/C++
     // https://emscripten.org/docs/porting/connecting_cpp_and_javascript/Interacting-with-code.html#interacting-with-code-call-javascript-from-native
     // emscripten_run_script("voiceEndedCallbackJS('1234')");
-    sendSilenceEventToWorker("silenceChangedCallback", *isSilent, *energyDb);
+    flutter_recorder_sendSilenceEventToWorker("silenceChangedCallback", *isSilent, *energyDb);
 #endif
     if (dartSilenceChangedCallback != nullptr)
         dartSilenceChangedCallback(isSilent, energyDb);
@@ -101,14 +101,14 @@ void silenceChangedCallback(bool *isSilent, float *energyDb)
 void streamDataCallback(const unsigned char *samples, const int numSamples)
 {
 #ifdef __EMSCRIPTEN__
-    sendStreamToWorker("streamDataCallback", samples, numSamples);
+flutter_recorder_sendStreamToWorker("streamDataCallback", samples, numSamples);
 #endif
     if (dartStreamDataCallback != nullptr)
         dartStreamDataCallback(samples, numSamples);
 }
 
 /// Set a Dart functions to call when an event occurs.
-FFI_PLUGIN_EXPORT void setDartEventCallback(
+FFI_PLUGIN_EXPORT void flutter_recorder_setDartEventCallback(
     dartSilenceChangedCallback_t silence_changed_callback,
     dartStreamDataCallback_t stream_data_callback)
 {
@@ -119,7 +119,7 @@ FFI_PLUGIN_EXPORT void setDartEventCallback(
     nativeStreamDataCallback = streamDataCallback;
 }
 
-FFI_PLUGIN_EXPORT void nativeFree(void *pointer)
+FFI_PLUGIN_EXPORT void flutter_recorder_nativeFree(void *pointer)
 {
     free(pointer);
 }
@@ -127,7 +127,7 @@ FFI_PLUGIN_EXPORT void nativeFree(void *pointer)
 // ///////////////////////////////
 // Capture bindings functions
 // ///////////////////////////////
-FFI_PLUGIN_EXPORT void listCaptureDevices(
+FFI_PLUGIN_EXPORT void flutter_recorder_listCaptureDevices(
     char **devicesName,
     int **deviceId,
     int **isDefault,
@@ -159,7 +159,7 @@ FFI_PLUGIN_EXPORT void listCaptureDevices(
     *n_devices = numDevices;
 }
 
-FFI_PLUGIN_EXPORT void freeListCaptureDevices(
+FFI_PLUGIN_EXPORT void flutter_recorder_freeListCaptureDevices(
     char **devicesName,
     int **deviceId,
     int **isDefault,
@@ -173,7 +173,7 @@ FFI_PLUGIN_EXPORT void freeListCaptureDevices(
     }
 }
 
-FFI_PLUGIN_EXPORT enum CaptureErrors init(
+FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_init(
     int deviceID,
     int pcmFormat,
     unsigned int sampleRate,
@@ -189,104 +189,104 @@ FFI_PLUGIN_EXPORT enum CaptureErrors init(
     return res;
 }
 
-FFI_PLUGIN_EXPORT void deinit()
+FFI_PLUGIN_EXPORT void flutter_recorder_deinit()
 {
     if (capture.isRecording)
         capture.stopRecording();
     capture.dispose();
 }
 
-FFI_PLUGIN_EXPORT int isInited()
+FFI_PLUGIN_EXPORT int flutter_recorder_isInited()
 {
     return capture.isInited() ? 1 : 0;
 }
 
-FFI_PLUGIN_EXPORT int isDeviceStarted()
+FFI_PLUGIN_EXPORT int flutter_recorder_isDeviceStarted()
 {
     return capture.isDeviceStarted();
 }
 
-FFI_PLUGIN_EXPORT int isCaptureStarted()
+FFI_PLUGIN_EXPORT int flutter_recorder_isCaptureStarted()
 {
     return capture.isDeviceStarted() ? 1 : 0;
 }
 
-FFI_PLUGIN_EXPORT enum CaptureErrors start()
+FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_start()
 {
     if (!capture.isInited())
         return captureNotInited;
     return capture.start();
 }
 
-FFI_PLUGIN_EXPORT void stop()
+FFI_PLUGIN_EXPORT void flutter_recorder_stop()
 {
     if (capture.isRecording)
         capture.stopRecording();
     capture.stop();
 }
 
-FFI_PLUGIN_EXPORT void startStreamingData()
+FFI_PLUGIN_EXPORT void flutter_recorder_startStreamingData()
 {
     if (!capture.isInited())
         return;
     capture.startStreamingData();
 }
 
-FFI_PLUGIN_EXPORT void stopStreamingData()
+FFI_PLUGIN_EXPORT void flutter_recorder_stopStreamingData()
 {
     if (!capture.isInited())
         return;
     capture.stopStreamingData();
 }
 
-FFI_PLUGIN_EXPORT void setSilenceDetection(bool enable)
+FFI_PLUGIN_EXPORT void flutter_recorder_setSilenceDetection(bool enable)
 {
     capture.setSilenceDetection(enable);
 }
 
-FFI_PLUGIN_EXPORT void setSilenceThresholdDb(float silenceThresholdDb)
+FFI_PLUGIN_EXPORT void flutter_recorder_setSilenceThresholdDb(float silenceThresholdDb)
 {
     if (!capture.isInited())
         return;
     capture.setSilenceThresholdDb(silenceThresholdDb);
 }
 
-FFI_PLUGIN_EXPORT void setSilenceDuration(float silenceDuration)
+FFI_PLUGIN_EXPORT void flutter_recorder_setSilenceDuration(float silenceDuration)
 {
     if (!capture.isInited())
         return;
     capture.setSilenceDuration(silenceDuration);
 }
 
-FFI_PLUGIN_EXPORT void setSecondsOfAudioToWriteBefore(float secondsOfAudioToWriteBefore)
+FFI_PLUGIN_EXPORT void flutter_recorder_setSecondsOfAudioToWriteBefore(float secondsOfAudioToWriteBefore)
 {
     if (!capture.isInited())
         return;
     capture.setSecondsOfAudioToWriteBefore(secondsOfAudioToWriteBefore);
 }
 
-FFI_PLUGIN_EXPORT enum CaptureErrors startRecording(const char *path)
+FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_startRecording(const char *path)
 {
     if (!capture.isInited())
         return captureNotInited;
     return capture.startRecording(path);
 }
 
-FFI_PLUGIN_EXPORT void setPauseRecording(bool pause)
+FFI_PLUGIN_EXPORT void flutter_recorder_setPauseRecording(bool pause)
 {
     if (!capture.isInited())
         return;
     capture.setPauseRecording(pause);
 }
 
-FFI_PLUGIN_EXPORT void stopRecording()
+FFI_PLUGIN_EXPORT void flutter_recorder_stopRecording()
 {
     if (!capture.isInited())
         return;
     capture.stopRecording();
 }
 
-FFI_PLUGIN_EXPORT void getVolumeDb(float *volumeDb)
+FFI_PLUGIN_EXPORT void flutter_recorder_getVolumeDb(float *volumeDb)
 {
     if (!capture.isInited())
     {
@@ -296,7 +296,7 @@ FFI_PLUGIN_EXPORT void getVolumeDb(float *volumeDb)
     *volumeDb = capture.getVolumeDb();
 }
 
-FFI_PLUGIN_EXPORT void setFftSmoothing(float smooth)
+FFI_PLUGIN_EXPORT void flutter_recorder_setFftSmoothing(float smooth)
 {
     if (!capture.isInited())
         return;
@@ -304,7 +304,7 @@ FFI_PLUGIN_EXPORT void setFftSmoothing(float smooth)
 }
 
 /// Return a 256 float array containing FFT data.
-FFI_PLUGIN_EXPORT void getFft(float **fft)
+FFI_PLUGIN_EXPORT void flutter_recorder_getFft(float **fft)
 {
     if (!capture.isInited())
         return;
@@ -313,14 +313,14 @@ FFI_PLUGIN_EXPORT void getFft(float **fft)
 }
 
 /// Return a 256 float array containing wave data.
-FFI_PLUGIN_EXPORT void getWave(float **wave)
+FFI_PLUGIN_EXPORT void flutter_recorder_getWave(float **wave)
 {
     if (!capture.isInited())
         return;
     *wave = capture.getWave();
 }
 
-FFI_PLUGIN_EXPORT void getTexture(float *samples)
+FFI_PLUGIN_EXPORT void flutter_recorder_getTexture(float *samples)
 {
     if (!capture.isInited())
         return;
@@ -337,7 +337,7 @@ FFI_PLUGIN_EXPORT void getTexture(float *samples)
 }
 
 float capturedTexture2D[256][512];
-FFI_PLUGIN_EXPORT void getTexture2D(float **samples)
+FFI_PLUGIN_EXPORT void flutter_recorder_getTexture2D(float **samples)
 {
     if (!capture.isInited())
         return;
@@ -350,11 +350,11 @@ FFI_PLUGIN_EXPORT void getTexture2D(float **samples)
     /// shift up 1 row
     memmove(*capturedTexture2D + 512, capturedTexture2D, sizeof(float) * 512 * 255);
     /// store the new 1st row
-    getTexture(capturedTexture2D[0]);
+    flutter_recorder_getTexture(capturedTexture2D[0]);
     *samples = *capturedTexture2D;
 }
 
-FFI_PLUGIN_EXPORT float getTextureValue(int row, int column)
+FFI_PLUGIN_EXPORT float flutter_recorder_getTextureValue(int row, int column)
 {
     if (!capture.isInited())
         return .0f;
@@ -364,22 +364,22 @@ FFI_PLUGIN_EXPORT float getTextureValue(int row, int column)
 /////////////////////////
 /// FILTERS
 /////////////////////////
-FFI_PLUGIN_EXPORT int isFilterActive(enum FilterType filterType)
+FFI_PLUGIN_EXPORT int flutter_recorder_isFilterActive(enum RecorderFilterType filterType)
 {
     return mFilters.get()->isFilterActive(filterType);
 }
 
-FFI_PLUGIN_EXPORT enum CaptureErrors addFilter(enum FilterType filterType)
+FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_addFilter(enum RecorderFilterType filterType)
 {
     return mFilters.get()->addFilter(filterType);
 }
 
-FFI_PLUGIN_EXPORT enum CaptureErrors removeFilter(enum FilterType filterType)
+FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_removeFilter(enum RecorderFilterType filterType)
 {
     return mFilters.get()->removeFilter(filterType);
 }
 
-FFI_PLUGIN_EXPORT void getFilterParamNames(enum FilterType filterType, char **names, int *paramsCount)
+FFI_PLUGIN_EXPORT void flutter_recorder_getFilterParamNames(enum RecorderFilterType filterType, char **names, int *paramsCount)
 {
     std::vector<std::string> pNames = mFilters.get()->getFilterParamNames(filterType);
     *paramsCount = static_cast<int>(pNames.size());
@@ -391,12 +391,12 @@ FFI_PLUGIN_EXPORT void getFilterParamNames(enum FilterType filterType, char **na
     }
 }
 
-FFI_PLUGIN_EXPORT void setFilterParams(enum FilterType filterType, int attributeId, float value)
+FFI_PLUGIN_EXPORT void flutter_recorder_setFilterParams(enum RecorderFilterType filterType, int attributeId, float value)
 {
     mFilters.get()->setFilterParams(filterType, attributeId, value);
 }
 
-FFI_PLUGIN_EXPORT float getFilterParams(enum FilterType filterType, int attributeId)
+FFI_PLUGIN_EXPORT float flutter_recorder_getFilterParams(enum RecorderFilterType filterType, int attributeId)
 {
     return mFilters.get()->getFilterParams(filterType, attributeId);
 }
