@@ -1,3 +1,6 @@
+## 1.0.3
+- update WASM lib
+
 ## 1.0.2
 - resolved conflicts with flutter_soloud #25
 
