@@ -35,7 +35,7 @@ typedef enum PCMFormat
     pcm_f32
 } PCMFormatInternal_t;
 
-typedef enum FilterType
+typedef enum RecorderFilterType
 {
     autogain,
     echoCancellation

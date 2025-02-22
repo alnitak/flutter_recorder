@@ -10,7 +10,7 @@ Filters::Filters(unsigned int samplerate) : mSamplerate(samplerate) {}
 
 Filters::~Filters() {}
 
-int Filters::isFilterActive(FilterType filter)
+int Filters::isFilterActive(RecorderFilterType filter)
 {
     for (int i = 0; i < filters.size(); i++)
     {
@@ -20,12 +20,12 @@ int Filters::isFilterActive(FilterType filter)
     return -1;
 }
 
-std::vector<std::string> Filters::getFilterParamNames(FilterType filterType)
+std::vector<std::string> Filters::getFilterParamNames(RecorderFilterType filterType)
 {
     std::vector<std::string> ret;
     switch (filterType)
     {
-    case FilterType::autogain:
+    case RecorderFilterType::autogain:
     {
         AutoGain f;
         int nParams = f.getParamCount();
@@ -33,7 +33,7 @@ std::vector<std::string> Filters::getFilterParamNames(FilterType filterType)
             ret.push_back(f.getParamName(i));
     }
     break;
-    case FilterType::echoCancellation:
+    case RecorderFilterType::echoCancellation:
     {
         EchoCancellation f;
         int nParams = f.getParamCount();
@@ -48,7 +48,7 @@ std::vector<std::string> Filters::getFilterParamNames(FilterType filterType)
     return ret;
 }
 
-CaptureErrors Filters::addFilter(FilterType filterType)
+CaptureErrors Filters::addFilter(RecorderFilterType filterType)
 {
     // Check if the new filter is already here.
     // Only one kind of filter allowed.
@@ -75,7 +75,7 @@ CaptureErrors Filters::addFilter(FilterType filterType)
     return CaptureErrors::captureNoError;
 }
 
-CaptureErrors Filters::removeFilter(FilterType filterType)
+CaptureErrors Filters::removeFilter(RecorderFilterType filterType)
 {
     int index = isFilterActive(filterType);
     if (index < 0)
@@ -89,7 +89,7 @@ CaptureErrors Filters::removeFilter(FilterType filterType)
     return CaptureErrors::captureNoError;
 }
 
-void Filters::setFilterParams(FilterType filterType, int attributeId, float value)
+void Filters::setFilterParams(RecorderFilterType filterType, int attributeId, float value)
 {
     int index = isFilterActive(filterType);
     if (index < 0)
@@ -97,7 +97,7 @@ void Filters::setFilterParams(FilterType filterType, int attributeId, float valu
     filters[index].get()->filter.get()->setParamValue(attributeId, value);
 }
 
-float Filters::getFilterParams(FilterType filterType, int attributeId)
+float Filters::getFilterParams(RecorderFilterType filterType, int attributeId)
 {
     int index = isFilterActive(filterType);
     // If not active return its default value

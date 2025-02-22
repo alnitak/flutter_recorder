@@ -39,14 +39,11 @@ external JSFunction wasmCccall(
   JSArray<JSAny> args,
 );
 
-@JS('RecorderModule._createWorkerInWasm')
+@JS('RecorderModule._flutter_recorder_createWorkerInWasm')
 external void wasmCreateWorkerInWasm();
 
-@JS('RecorderModule._setDartEventCallback')
+@JS('RecorderModule._flutter_recorder_setDartEventCallback')
 external void wasmSetDartEventCallback(int callbackPtr, int callbackPtr2);
-
-@JS('RecorderModule._sendToWorker')
-external void wasmSendToWorker(int message, int value);
 
 @JS('RecorderModule.wasmWorker')
 external web.Worker wasmWorker;
@@ -55,21 +52,21 @@ external web.Worker wasmWorker;
 // bindings
 // //////////////////////////
 
-@JS('RecorderModule._setSilenceDetection')
+@JS('RecorderModule._flutter_recorder_setSilenceDetection')
 external void wasmSetSilenceDetection(bool enable);
 
-@JS('RecorderModule._setSilenceThresholdDb')
+@JS('RecorderModule._flutter_recorder_setSilenceThresholdDb')
 external void wasmSetSilenceThresholdDb(double silenceThresholdDb);
 
-@JS('RecorderModule._setSilenceDuration')
+@JS('RecorderModule._flutter_recorder_setSilenceDuration')
 external void wasmSetSilenceDuration(double silenceDuration);
 
-@JS('RecorderModule._setSecondsOfAudioToWriteBefore')
+@JS('RecorderModule._flutter_recorder_setSecondsOfAudioToWriteBefore')
 external void wasmSetSecondsOfAudioToWriteBefore(
   double secondsOfAudioToWriteBefore,
 );
 
-@JS('RecorderModule._listCaptureDevices')
+@JS('RecorderModule._flutter_recorder_listCaptureDevices')
 external void wasmListCaptureDevices(
   int namesPtr,
   int deviceIdPtr,
@@ -77,7 +74,7 @@ external void wasmListCaptureDevices(
   int nDevicePtr,
 );
 
-@JS('RecorderModule._freeListCaptureDevices')
+@JS('RecorderModule._flutter_recorder_freeListCaptureDevices')
 external void wasmFreeListCaptureDevices(
   int namesPtr,
   int deviceIdPtr,
@@ -85,79 +82,79 @@ external void wasmFreeListCaptureDevices(
   int nDevicePtr,
 );
 
-@JS('RecorderModule._init')
+@JS('RecorderModule._flutter_recorder_init')
 external int wasmInit(int deviceID, int format, int sampleRate, int channels);
 
-@JS('RecorderModule._deinit')
+@JS('RecorderModule._flutter_recorder_deinit')
 external void wasmDeinit();
 
-@JS('RecorderModule._isInited')
+@JS('RecorderModule._flutter_recorder_isInited')
 external int wasmIsDeviceInitialized();
 
-@JS('RecorderModule._isDeviceStarted')
+@JS('RecorderModule._flutter_recorder_isDeviceStarted')
 external int wasmIsDeviceStarted();
 
-@JS('RecorderModule._start')
+@JS('RecorderModule._flutter_recorder_start')
 external int wasmStart();
 
-@JS('RecorderModule._stop')
+@JS('RecorderModule._flutter_recorder_stop')
 external void wasmStop();
 
-@JS('RecorderModule._startStreamingData')
+@JS('RecorderModule._flutter_recorder_startStreamingData')
 external void wasmStartStreamingData();
 
-@JS('RecorderModule._stopStreamingData')
+@JS('RecorderModule._flutter_recorder_stopStreamingData')
 external void wasmStopStreamingData();
 
-@JS('RecorderModule._startRecording')
+@JS('RecorderModule._flutter_recorder_startRecording')
 external int wasmStartRecording(int pathPtr);
 
-@JS('RecorderModule._setPauseRecording')
+@JS('RecorderModule._flutter_recorder_setPauseRecording')
 external void wasmSetPauseRecording(bool pause);
 
-@JS('RecorderModule._stopRecording')
+@JS('RecorderModule._flutter_recorder_stopRecording')
 external void wasmStopRecording();
 
-@JS('RecorderModule._setFftSmoothing')
+@JS('RecorderModule._flutter_recorder_setFftSmoothing')
 external void wasmSetFftSmoothing(double smooth);
 
-@JS('RecorderModule._getFft')
+@JS('RecorderModule._flutter_recorder_getFft')
 external void wasmGetFft(int samplesPtr);
 
-@JS('RecorderModule._getWave')
+@JS('RecorderModule._flutter_recorder_getWave')
 external void wasmGetWave(int samplesPtr);
 
-@JS('RecorderModule._getTexture')
+@JS('RecorderModule._flutter_recorder_getTexture')
 external void wasmGetTexture(int samplesPtr);
 
-@JS('RecorderModule._getTexture2D')
+@JS('RecorderModule._flutter_recorder_getTexture2D')
 external void wasmGetTexture2D(int samplesPtr);
 
-@JS('RecorderModule._getVolumeDb')
+@JS('RecorderModule._flutter_recorder_getVolumeDb')
 external void wasmGetVolumeDb(int volumeDbPtr);
 
-@JS('RecorderModule._isFilterActive')
+@JS('RecorderModule._flutter_recorder_isFilterActive')
 external int wasmIsFilterActive(int filterTypeId);
 
-@JS('RecorderModule._addFilter')
+@JS('RecorderModule._flutter_recorder_addFilter')
 external int wasmAddFilter(int filterTypeId);
 
-@JS('RecorderModule._removeFilter')
+@JS('RecorderModule._flutter_recorder_removeFilter')
 external int wasmRemoveFilter(int filterTypeId);
 
-@JS('RecorderModule._getFilterParamNames')
+@JS('RecorderModule._flutter_recorder_getFilterParamNames')
 external int wasmGetFilterParamNames(
   int filterTypeId,
   int namesPtr,
   int paramsCountPtr,
 );
 
-@JS('RecorderModule._setFilterParams')
+@JS('RecorderModule._flutter_recorder_setFilterParams')
 external void wasmSetFilterParamValue(
   int filterTypeId,
   int attributeId,
   double value,
 );
 
-@JS('RecorderModule._getFilterParams')
+@JS('RecorderModule._flutter_recorder_getFilterParams')
 external double wasmGetFilterParamValue(int filterTypeId, int attributeId);

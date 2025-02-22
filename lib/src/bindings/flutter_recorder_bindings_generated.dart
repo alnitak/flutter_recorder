@@ -33,53 +33,57 @@ class FlutterRecorderBindings {
           lookup)
       : _lookup = lookup;
 
-  void createWorkerInWasm() {
-    return _createWorkerInWasm();
+  void flutter_recorder_createWorkerInWasm() {
+    return _flutter_recorder_createWorkerInWasm();
   }
 
-  late final _createWorkerInWasmPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function()>>('createWorkerInWasm');
-  late final _createWorkerInWasm =
-      _createWorkerInWasmPtr.asFunction<void Function()>();
+  late final _flutter_recorder_createWorkerInWasmPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function()>>(
+          'flutter_recorder_createWorkerInWasm');
+  late final _flutter_recorder_createWorkerInWasm =
+      _flutter_recorder_createWorkerInWasmPtr.asFunction<void Function()>();
 
-  void setDartEventCallback(
+  void flutter_recorder_setDartEventCallback(
     dartSilenceChangedCallback_t silence_changed_callback,
     dartStreamDataCallback_t stream_data_callback,
   ) {
-    return _setDartEventCallback(
+    return _flutter_recorder_setDartEventCallback(
       silence_changed_callback,
       stream_data_callback,
     );
   }
 
-  late final _setDartEventCallbackPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Void Function(dartSilenceChangedCallback_t,
-              dartStreamDataCallback_t)>>('setDartEventCallback');
-  late final _setDartEventCallback = _setDartEventCallbackPtr.asFunction<
-      void Function(dartSilenceChangedCallback_t, dartStreamDataCallback_t)>();
+  late final _flutter_recorder_setDartEventCallbackPtr = _lookup<
+          ffi.NativeFunction<
+              ffi.Void Function(
+                  dartSilenceChangedCallback_t, dartStreamDataCallback_t)>>(
+      'flutter_recorder_setDartEventCallback');
+  late final _flutter_recorder_setDartEventCallback =
+      _flutter_recorder_setDartEventCallbackPtr.asFunction<
+          void Function(
+              dartSilenceChangedCallback_t, dartStreamDataCallback_t)>();
 
-  void nativeFree(
+  void flutter_recorder_nativeFree(
     ffi.Pointer<ffi.Void> pointer,
   ) {
-    return _nativeFree(
+    return _flutter_recorder_nativeFree(
       pointer,
     );
   }
 
-  late final _nativeFreePtr =
+  late final _flutter_recorder_nativeFreePtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
-          'nativeFree');
-  late final _nativeFree =
-      _nativeFreePtr.asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+          'flutter_recorder_nativeFree');
+  late final _flutter_recorder_nativeFree = _flutter_recorder_nativeFreePtr
+      .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
-  void listCaptureDevices(
+  void flutter_recorder_listCaptureDevices(
     ffi.Pointer<ffi.Pointer<ffi.Char>> devicesName,
     ffi.Pointer<ffi.Pointer<ffi.Int>> deviceId,
     ffi.Pointer<ffi.Pointer<ffi.Int>> isDefault,
     ffi.Pointer<ffi.Int> n_devices,
   ) {
-    return _listCaptureDevices(
+    return _flutter_recorder_listCaptureDevices(
       devicesName,
       deviceId,
       isDefault,
@@ -87,27 +91,28 @@ class FlutterRecorderBindings {
     );
   }
 
-  late final _listCaptureDevicesPtr = _lookup<
+  late final _flutter_recorder_listCaptureDevicesPtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(
               ffi.Pointer<ffi.Pointer<ffi.Char>>,
               ffi.Pointer<ffi.Pointer<ffi.Int>>,
               ffi.Pointer<ffi.Pointer<ffi.Int>>,
-              ffi.Pointer<ffi.Int>)>>('listCaptureDevices');
-  late final _listCaptureDevices = _listCaptureDevicesPtr.asFunction<
-      void Function(
-          ffi.Pointer<ffi.Pointer<ffi.Char>>,
-          ffi.Pointer<ffi.Pointer<ffi.Int>>,
-          ffi.Pointer<ffi.Pointer<ffi.Int>>,
-          ffi.Pointer<ffi.Int>)>();
+              ffi.Pointer<ffi.Int>)>>('flutter_recorder_listCaptureDevices');
+  late final _flutter_recorder_listCaptureDevices =
+      _flutter_recorder_listCaptureDevicesPtr.asFunction<
+          void Function(
+              ffi.Pointer<ffi.Pointer<ffi.Char>>,
+              ffi.Pointer<ffi.Pointer<ffi.Int>>,
+              ffi.Pointer<ffi.Pointer<ffi.Int>>,
+              ffi.Pointer<ffi.Int>)>();
 
-  void freeListCaptureDevices(
+  void flutter_recorder_freeListCaptureDevices(
     ffi.Pointer<ffi.Pointer<ffi.Char>> devicesName,
     ffi.Pointer<ffi.Pointer<ffi.Int>> deviceId,
     ffi.Pointer<ffi.Pointer<ffi.Int>> isDefault,
     int n_devices,
   ) {
-    return _freeListCaptureDevices(
+    return _flutter_recorder_freeListCaptureDevices(
       devicesName,
       deviceId,
       isDefault,
@@ -115,27 +120,28 @@ class FlutterRecorderBindings {
     );
   }
 
-  late final _freeListCaptureDevicesPtr = _lookup<
+  late final _flutter_recorder_freeListCaptureDevicesPtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(
               ffi.Pointer<ffi.Pointer<ffi.Char>>,
               ffi.Pointer<ffi.Pointer<ffi.Int>>,
               ffi.Pointer<ffi.Pointer<ffi.Int>>,
-              ffi.Int)>>('freeListCaptureDevices');
-  late final _freeListCaptureDevices = _freeListCaptureDevicesPtr.asFunction<
-      void Function(
-          ffi.Pointer<ffi.Pointer<ffi.Char>>,
-          ffi.Pointer<ffi.Pointer<ffi.Int>>,
-          ffi.Pointer<ffi.Pointer<ffi.Int>>,
-          int)>();
+              ffi.Int)>>('flutter_recorder_freeListCaptureDevices');
+  late final _flutter_recorder_freeListCaptureDevices =
+      _flutter_recorder_freeListCaptureDevicesPtr.asFunction<
+          void Function(
+              ffi.Pointer<ffi.Pointer<ffi.Char>>,
+              ffi.Pointer<ffi.Pointer<ffi.Int>>,
+              ffi.Pointer<ffi.Pointer<ffi.Int>>,
+              int)>();
 
-  CaptureErrors init(
+  CaptureErrors flutter_recorder_init(
     int deviceID,
     int pcmFormat,
     int sampleRate,
     int channels,
   ) {
-    return CaptureErrors.fromValue(_init(
+    return CaptureErrors.fromValue(_flutter_recorder_init(
       deviceID,
       pcmFormat,
       sampleRate,
@@ -143,361 +149,387 @@ class FlutterRecorderBindings {
     ));
   }
 
-  late final _initPtr = _lookup<
+  late final _flutter_recorder_initPtr = _lookup<
       ffi.NativeFunction<
-          ffi.UnsignedInt Function(
-              ffi.Int, ffi.Int, ffi.UnsignedInt, ffi.UnsignedInt)>>('init');
-  late final _init = _initPtr.asFunction<int Function(int, int, int, int)>();
+          ffi.UnsignedInt Function(ffi.Int, ffi.Int, ffi.UnsignedInt,
+              ffi.UnsignedInt)>>('flutter_recorder_init');
+  late final _flutter_recorder_init =
+      _flutter_recorder_initPtr.asFunction<int Function(int, int, int, int)>();
 
-  void deinit() {
-    return _deinit();
+  void flutter_recorder_deinit() {
+    return _flutter_recorder_deinit();
   }
 
-  late final _deinitPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function()>>('deinit');
-  late final _deinit = _deinitPtr.asFunction<void Function()>();
+  late final _flutter_recorder_deinitPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function()>>(
+          'flutter_recorder_deinit');
+  late final _flutter_recorder_deinit =
+      _flutter_recorder_deinitPtr.asFunction<void Function()>();
 
-  int isInited() {
-    return _isInited();
+  int flutter_recorder_isInited() {
+    return _flutter_recorder_isInited();
   }
 
-  late final _isInitedPtr =
-      _lookup<ffi.NativeFunction<ffi.Int Function()>>('isInited');
-  late final _isInited = _isInitedPtr.asFunction<int Function()>();
+  late final _flutter_recorder_isInitedPtr =
+      _lookup<ffi.NativeFunction<ffi.Int Function()>>(
+          'flutter_recorder_isInited');
+  late final _flutter_recorder_isInited =
+      _flutter_recorder_isInitedPtr.asFunction<int Function()>();
 
-  int isDeviceStarted() {
-    return _isDeviceStarted();
+  int flutter_recorder_isDeviceStarted() {
+    return _flutter_recorder_isDeviceStarted();
   }
 
-  late final _isDeviceStartedPtr =
-      _lookup<ffi.NativeFunction<ffi.Int Function()>>('isDeviceStarted');
-  late final _isDeviceStarted =
-      _isDeviceStartedPtr.asFunction<int Function()>();
+  late final _flutter_recorder_isDeviceStartedPtr =
+      _lookup<ffi.NativeFunction<ffi.Int Function()>>(
+          'flutter_recorder_isDeviceStarted');
+  late final _flutter_recorder_isDeviceStarted =
+      _flutter_recorder_isDeviceStartedPtr.asFunction<int Function()>();
 
-  CaptureErrors start() {
-    return CaptureErrors.fromValue(_start());
+  CaptureErrors flutter_recorder_start() {
+    return CaptureErrors.fromValue(_flutter_recorder_start());
   }
 
-  late final _startPtr =
-      _lookup<ffi.NativeFunction<ffi.UnsignedInt Function()>>('start');
-  late final _start = _startPtr.asFunction<int Function()>();
+  late final _flutter_recorder_startPtr =
+      _lookup<ffi.NativeFunction<ffi.UnsignedInt Function()>>(
+          'flutter_recorder_start');
+  late final _flutter_recorder_start =
+      _flutter_recorder_startPtr.asFunction<int Function()>();
 
-  void stop() {
-    return _stop();
+  void flutter_recorder_stop() {
+    return _flutter_recorder_stop();
   }
 
-  late final _stopPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function()>>('stop');
-  late final _stop = _stopPtr.asFunction<void Function()>();
+  late final _flutter_recorder_stopPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function()>>('flutter_recorder_stop');
+  late final _flutter_recorder_stop =
+      _flutter_recorder_stopPtr.asFunction<void Function()>();
 
-  void startStreamingData() {
-    return _startStreamingData();
+  void flutter_recorder_startStreamingData() {
+    return _flutter_recorder_startStreamingData();
   }
 
-  late final _startStreamingDataPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function()>>('startStreamingData');
-  late final _startStreamingData =
-      _startStreamingDataPtr.asFunction<void Function()>();
+  late final _flutter_recorder_startStreamingDataPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function()>>(
+          'flutter_recorder_startStreamingData');
+  late final _flutter_recorder_startStreamingData =
+      _flutter_recorder_startStreamingDataPtr.asFunction<void Function()>();
 
-  void stopStreamingData() {
-    return _stopStreamingData();
+  void flutter_recorder_stopStreamingData() {
+    return _flutter_recorder_stopStreamingData();
   }
 
-  late final _stopStreamingDataPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function()>>('stopStreamingData');
-  late final _stopStreamingData =
-      _stopStreamingDataPtr.asFunction<void Function()>();
+  late final _flutter_recorder_stopStreamingDataPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function()>>(
+          'flutter_recorder_stopStreamingData');
+  late final _flutter_recorder_stopStreamingData =
+      _flutter_recorder_stopStreamingDataPtr.asFunction<void Function()>();
 
-  void setSilenceDetection(
+  void flutter_recorder_setSilenceDetection(
     bool enable,
   ) {
-    return _setSilenceDetection(
+    return _flutter_recorder_setSilenceDetection(
       enable,
     );
   }
 
-  late final _setSilenceDetectionPtr =
+  late final _flutter_recorder_setSilenceDetectionPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Bool)>>(
-          'setSilenceDetection');
-  late final _setSilenceDetection =
-      _setSilenceDetectionPtr.asFunction<void Function(bool)>();
+          'flutter_recorder_setSilenceDetection');
+  late final _flutter_recorder_setSilenceDetection =
+      _flutter_recorder_setSilenceDetectionPtr
+          .asFunction<void Function(bool)>();
 
-  void setSilenceThresholdDb(
+  void flutter_recorder_setSilenceThresholdDb(
     double silenceThresholdDb,
   ) {
-    return _setSilenceThresholdDb(
+    return _flutter_recorder_setSilenceThresholdDb(
       silenceThresholdDb,
     );
   }
 
-  late final _setSilenceThresholdDbPtr =
+  late final _flutter_recorder_setSilenceThresholdDbPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Float)>>(
-          'setSilenceThresholdDb');
-  late final _setSilenceThresholdDb =
-      _setSilenceThresholdDbPtr.asFunction<void Function(double)>();
+          'flutter_recorder_setSilenceThresholdDb');
+  late final _flutter_recorder_setSilenceThresholdDb =
+      _flutter_recorder_setSilenceThresholdDbPtr
+          .asFunction<void Function(double)>();
 
-  void setSilenceDuration(
+  void flutter_recorder_setSilenceDuration(
     double silenceDuration,
   ) {
-    return _setSilenceDuration(
+    return _flutter_recorder_setSilenceDuration(
       silenceDuration,
     );
   }
 
-  late final _setSilenceDurationPtr =
+  late final _flutter_recorder_setSilenceDurationPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Float)>>(
-          'setSilenceDuration');
-  late final _setSilenceDuration =
-      _setSilenceDurationPtr.asFunction<void Function(double)>();
+          'flutter_recorder_setSilenceDuration');
+  late final _flutter_recorder_setSilenceDuration =
+      _flutter_recorder_setSilenceDurationPtr
+          .asFunction<void Function(double)>();
 
-  void setSecondsOfAudioToWriteBefore(
+  void flutter_recorder_setSecondsOfAudioToWriteBefore(
     double secondsOfAudioToWriteBefore,
   ) {
-    return _setSecondsOfAudioToWriteBefore(
+    return _flutter_recorder_setSecondsOfAudioToWriteBefore(
       secondsOfAudioToWriteBefore,
     );
   }
 
-  late final _setSecondsOfAudioToWriteBeforePtr =
+  late final _flutter_recorder_setSecondsOfAudioToWriteBeforePtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Float)>>(
-          'setSecondsOfAudioToWriteBefore');
-  late final _setSecondsOfAudioToWriteBefore =
-      _setSecondsOfAudioToWriteBeforePtr.asFunction<void Function(double)>();
+          'flutter_recorder_setSecondsOfAudioToWriteBefore');
+  late final _flutter_recorder_setSecondsOfAudioToWriteBefore =
+      _flutter_recorder_setSecondsOfAudioToWriteBeforePtr
+          .asFunction<void Function(double)>();
 
-  CaptureErrors startRecording(
+  CaptureErrors flutter_recorder_startRecording(
     ffi.Pointer<ffi.Char> path,
   ) {
-    return CaptureErrors.fromValue(_startRecording(
+    return CaptureErrors.fromValue(_flutter_recorder_startRecording(
       path,
     ));
   }
 
-  late final _startRecordingPtr = _lookup<
+  late final _flutter_recorder_startRecordingPtr = _lookup<
           ffi.NativeFunction<ffi.UnsignedInt Function(ffi.Pointer<ffi.Char>)>>(
-      'startRecording');
-  late final _startRecording =
-      _startRecordingPtr.asFunction<int Function(ffi.Pointer<ffi.Char>)>();
+      'flutter_recorder_startRecording');
+  late final _flutter_recorder_startRecording =
+      _flutter_recorder_startRecordingPtr
+          .asFunction<int Function(ffi.Pointer<ffi.Char>)>();
 
-  void setPauseRecording(
+  void flutter_recorder_setPauseRecording(
     bool pause,
   ) {
-    return _setPauseRecording(
+    return _flutter_recorder_setPauseRecording(
       pause,
     );
   }
 
-  late final _setPauseRecordingPtr =
+  late final _flutter_recorder_setPauseRecordingPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Bool)>>(
-          'setPauseRecording');
-  late final _setPauseRecording =
-      _setPauseRecordingPtr.asFunction<void Function(bool)>();
+          'flutter_recorder_setPauseRecording');
+  late final _flutter_recorder_setPauseRecording =
+      _flutter_recorder_setPauseRecordingPtr.asFunction<void Function(bool)>();
 
-  void stopRecording() {
-    return _stopRecording();
+  void flutter_recorder_stopRecording() {
+    return _flutter_recorder_stopRecording();
   }
 
-  late final _stopRecordingPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function()>>('stopRecording');
-  late final _stopRecording = _stopRecordingPtr.asFunction<void Function()>();
+  late final _flutter_recorder_stopRecordingPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function()>>(
+          'flutter_recorder_stopRecording');
+  late final _flutter_recorder_stopRecording =
+      _flutter_recorder_stopRecordingPtr.asFunction<void Function()>();
 
-  void getVolumeDb(
+  void flutter_recorder_getVolumeDb(
     ffi.Pointer<ffi.Float> volumeDb,
   ) {
-    return _getVolumeDb(
+    return _flutter_recorder_getVolumeDb(
       volumeDb,
     );
   }
 
-  late final _getVolumeDbPtr =
+  late final _flutter_recorder_getVolumeDbPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Float>)>>(
-          'getVolumeDb');
-  late final _getVolumeDb =
-      _getVolumeDbPtr.asFunction<void Function(ffi.Pointer<ffi.Float>)>();
+          'flutter_recorder_getVolumeDb');
+  late final _flutter_recorder_getVolumeDb = _flutter_recorder_getVolumeDbPtr
+      .asFunction<void Function(ffi.Pointer<ffi.Float>)>();
 
-  void getFft(
+  void flutter_recorder_getFft(
     ffi.Pointer<ffi.Pointer<ffi.Float>> fft,
   ) {
-    return _getFft(
+    return _flutter_recorder_getFft(
       fft,
     );
   }
 
-  late final _getFftPtr = _lookup<
+  late final _flutter_recorder_getFftPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Float>>)>>('getFft');
-  late final _getFft = _getFftPtr
+          ffi.Void Function(
+              ffi.Pointer<ffi.Pointer<ffi.Float>>)>>('flutter_recorder_getFft');
+  late final _flutter_recorder_getFft = _flutter_recorder_getFftPtr
       .asFunction<void Function(ffi.Pointer<ffi.Pointer<ffi.Float>>)>();
 
-  void getWave(
+  void flutter_recorder_getWave(
     ffi.Pointer<ffi.Pointer<ffi.Float>> wave,
   ) {
-    return _getWave(
+    return _flutter_recorder_getWave(
       wave,
     );
   }
 
-  late final _getWavePtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Float>>)>>('getWave');
-  late final _getWave = _getWavePtr
+  late final _flutter_recorder_getWavePtr = _lookup<
+          ffi.NativeFunction<
+              ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Float>>)>>(
+      'flutter_recorder_getWave');
+  late final _flutter_recorder_getWave = _flutter_recorder_getWavePtr
       .asFunction<void Function(ffi.Pointer<ffi.Pointer<ffi.Float>>)>();
 
-  void getTexture(
+  void flutter_recorder_getTexture(
     ffi.Pointer<ffi.Float> samples,
   ) {
-    return _getTexture(
+    return _flutter_recorder_getTexture(
       samples,
     );
   }
 
-  late final _getTexturePtr =
+  late final _flutter_recorder_getTexturePtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Float>)>>(
-          'getTexture');
-  late final _getTexture =
-      _getTexturePtr.asFunction<void Function(ffi.Pointer<ffi.Float>)>();
+          'flutter_recorder_getTexture');
+  late final _flutter_recorder_getTexture = _flutter_recorder_getTexturePtr
+      .asFunction<void Function(ffi.Pointer<ffi.Float>)>();
 
-  void getTexture2D(
+  void flutter_recorder_getTexture2D(
     ffi.Pointer<ffi.Pointer<ffi.Float>> samples,
   ) {
-    return _getTexture2D(
+    return _flutter_recorder_getTexture2D(
       samples,
     );
   }
 
-  late final _getTexture2DPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Void Function(
-              ffi.Pointer<ffi.Pointer<ffi.Float>>)>>('getTexture2D');
-  late final _getTexture2D = _getTexture2DPtr
+  late final _flutter_recorder_getTexture2DPtr = _lookup<
+          ffi.NativeFunction<
+              ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Float>>)>>(
+      'flutter_recorder_getTexture2D');
+  late final _flutter_recorder_getTexture2D = _flutter_recorder_getTexture2DPtr
       .asFunction<void Function(ffi.Pointer<ffi.Pointer<ffi.Float>>)>();
 
-  double getTextureValue(
+  double flutter_recorder_getTextureValue(
     int row,
     int column,
   ) {
-    return _getTextureValue(
+    return _flutter_recorder_getTextureValue(
       row,
       column,
     );
   }
 
-  late final _getTextureValuePtr =
+  late final _flutter_recorder_getTextureValuePtr =
       _lookup<ffi.NativeFunction<ffi.Float Function(ffi.Int, ffi.Int)>>(
-          'getTextureValue');
-  late final _getTextureValue =
-      _getTextureValuePtr.asFunction<double Function(int, int)>();
+          'flutter_recorder_getTextureValue');
+  late final _flutter_recorder_getTextureValue =
+      _flutter_recorder_getTextureValuePtr
+          .asFunction<double Function(int, int)>();
 
-  void setFftSmoothing(
+  void flutter_recorder_setFftSmoothing(
     double smooth,
   ) {
-    return _setFftSmoothing(
+    return _flutter_recorder_setFftSmoothing(
       smooth,
     );
   }
 
-  late final _setFftSmoothingPtr =
+  late final _flutter_recorder_setFftSmoothingPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Float)>>(
-          'setFftSmoothing');
-  late final _setFftSmoothing =
-      _setFftSmoothingPtr.asFunction<void Function(double)>();
+          'flutter_recorder_setFftSmoothing');
+  late final _flutter_recorder_setFftSmoothing =
+      _flutter_recorder_setFftSmoothingPtr.asFunction<void Function(double)>();
 
   /// //////////////////////
   /// FILTERS
   /// //////////////////////
-  int isFilterActive(
+  int flutter_recorder_isFilterActive(
     RecorderFilterType filterType,
   ) {
-    return _isFilterActive(
+    return _flutter_recorder_isFilterActive(
       filterType.value,
     );
   }
 
-  late final _isFilterActivePtr =
+  late final _flutter_recorder_isFilterActivePtr =
       _lookup<ffi.NativeFunction<ffi.Int Function(ffi.UnsignedInt)>>(
-          'isFilterActive');
-  late final _isFilterActive =
-      _isFilterActivePtr.asFunction<int Function(int)>();
+          'flutter_recorder_isFilterActive');
+  late final _flutter_recorder_isFilterActive =
+      _flutter_recorder_isFilterActivePtr.asFunction<int Function(int)>();
 
-  CaptureErrors addFilter(
+  CaptureErrors flutter_recorder_addFilter(
     RecorderFilterType filterType,
   ) {
-    return CaptureErrors.fromValue(_addFilter(
+    return CaptureErrors.fromValue(_flutter_recorder_addFilter(
       filterType.value,
     ));
   }
 
-  late final _addFilterPtr =
+  late final _flutter_recorder_addFilterPtr =
       _lookup<ffi.NativeFunction<ffi.UnsignedInt Function(ffi.UnsignedInt)>>(
-          'addFilter');
-  late final _addFilter = _addFilterPtr.asFunction<int Function(int)>();
+          'flutter_recorder_addFilter');
+  late final _flutter_recorder_addFilter =
+      _flutter_recorder_addFilterPtr.asFunction<int Function(int)>();
 
-  CaptureErrors removeFilter(
+  CaptureErrors flutter_recorder_removeFilter(
     RecorderFilterType filterType,
   ) {
-    return CaptureErrors.fromValue(_removeFilter(
+    return CaptureErrors.fromValue(_flutter_recorder_removeFilter(
       filterType.value,
     ));
   }
 
-  late final _removeFilterPtr =
+  late final _flutter_recorder_removeFilterPtr =
       _lookup<ffi.NativeFunction<ffi.UnsignedInt Function(ffi.UnsignedInt)>>(
-          'removeFilter');
-  late final _removeFilter = _removeFilterPtr.asFunction<int Function(int)>();
+          'flutter_recorder_removeFilter');
+  late final _flutter_recorder_removeFilter =
+      _flutter_recorder_removeFilterPtr.asFunction<int Function(int)>();
 
-  void getFilterParamNames(
+  void flutter_recorder_getFilterParamNames(
     RecorderFilterType filterType,
     ffi.Pointer<ffi.Pointer<ffi.Char>> names,
     ffi.Pointer<ffi.Int> paramsCount,
   ) {
-    return _getFilterParamNames(
+    return _flutter_recorder_getFilterParamNames(
       filterType.value,
       names,
       paramsCount,
     );
   }
 
-  late final _getFilterParamNamesPtr = _lookup<
+  late final _flutter_recorder_getFilterParamNamesPtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(ffi.UnsignedInt, ffi.Pointer<ffi.Pointer<ffi.Char>>,
-              ffi.Pointer<ffi.Int>)>>('getFilterParamNames');
-  late final _getFilterParamNames = _getFilterParamNamesPtr.asFunction<
-      void Function(
-          int, ffi.Pointer<ffi.Pointer<ffi.Char>>, ffi.Pointer<ffi.Int>)>();
+              ffi.Pointer<ffi.Int>)>>('flutter_recorder_getFilterParamNames');
+  late final _flutter_recorder_getFilterParamNames =
+      _flutter_recorder_getFilterParamNamesPtr.asFunction<
+          void Function(
+              int, ffi.Pointer<ffi.Pointer<ffi.Char>>, ffi.Pointer<ffi.Int>)>();
 
-  void setFilterParams(
+  void flutter_recorder_setFilterParams(
     RecorderFilterType filterType,
     int attributeId,
     double value,
   ) {
-    return _setFilterParams(
+    return _flutter_recorder_setFilterParams(
       filterType.value,
       attributeId,
       value,
     );
   }
 
-  late final _setFilterParamsPtr = _lookup<
+  late final _flutter_recorder_setFilterParamsPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Void Function(
-              ffi.UnsignedInt, ffi.Int, ffi.Float)>>('setFilterParams');
-  late final _setFilterParams =
-      _setFilterParamsPtr.asFunction<void Function(int, int, double)>();
+          ffi.Void Function(ffi.UnsignedInt, ffi.Int,
+              ffi.Float)>>('flutter_recorder_setFilterParams');
+  late final _flutter_recorder_setFilterParams =
+      _flutter_recorder_setFilterParamsPtr
+          .asFunction<void Function(int, int, double)>();
 
-  double getFilterParams(
+  double flutter_recorder_getFilterParams(
     RecorderFilterType filterType,
     int attributeId,
   ) {
-    return _getFilterParams(
+    return _flutter_recorder_getFilterParams(
       filterType.value,
       attributeId,
     );
   }
 
-  late final _getFilterParamsPtr =
+  late final _flutter_recorder_getFilterParamsPtr =
       _lookup<ffi.NativeFunction<ffi.Float Function(ffi.UnsignedInt, ffi.Int)>>(
-          'getFilterParams');
-  late final _getFilterParams =
-      _getFilterParamsPtr.asFunction<double Function(int, int)>();
+          'flutter_recorder_getFilterParams');
+  late final _flutter_recorder_getFilterParams =
+      _flutter_recorder_getFilterParamsPtr
+          .asFunction<double Function(int, int)>();
 }
 
 typedef dartSilenceChangedCallback_t
