@@ -132,7 +132,8 @@ class RecorderFfi extends RecorderImpl {
       'secondsOfAudioToWriteBefore must be >= 0',
     );
     _bindings.flutter_recorder_setSecondsOfAudioToWriteBefore(
-        secondsOfAudioToWriteBefore);
+      secondsOfAudioToWriteBefore,
+    );
   }
 
   @override
@@ -427,7 +428,10 @@ class RecorderFfi extends RecorderImpl {
         calloc(ffi.sizeOf<ffi.Pointer<ffi.Pointer<ffi.Char>>>() * 30);
     final ffi.Pointer<ffi.Int> paramsCount = calloc(ffi.sizeOf<ffi.Int>());
     _bindings.flutter_recorder_getFilterParamNames(
-        filterType, names, paramsCount);
+      filterType,
+      names,
+      paramsCount,
+    );
     final List<String> ret = [];
     for (var i = 0; i < paramsCount.value; i++) {
       final s1 = (names + i).value;
