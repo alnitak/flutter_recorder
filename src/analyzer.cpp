@@ -62,6 +62,8 @@ void Analyzer::hammingWindow(float *samples, const float *waveData) const
 
 float *Analyzer::calcFFT(float *waveData)
 {
+    if (waveData == nullptr)
+        return nullptr;
     blackmanWindow(temp, waveData);
     // hanningWindow(temp, waveData);
     // hammingWindow(temp, waveData);

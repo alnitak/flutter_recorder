@@ -357,7 +357,10 @@ class RecorderFfi extends RecorderImpl {
     _bindings.flutter_recorder_getFft(fft);
 
     final val = ffi.Pointer<ffi.Float>.fromAddress(fft.value.address);
-    if (val == ffi.nullptr) return Float32List(256);
+    if (val == ffi.nullptr) {
+      calloc.free(fft);
+      return Float32List(0);
+    }
 
     final fftList = val.cast<ffi.Float>().asTypedList(256);
     calloc.free(fft);
@@ -370,7 +373,10 @@ class RecorderFfi extends RecorderImpl {
     _bindings.flutter_recorder_getWave(wave);
 
     final val = ffi.Pointer<ffi.Float>.fromAddress(wave.value.address);
-    if (val == ffi.nullptr) return Float32List(256);
+    if (val == ffi.nullptr) {
+      calloc.free(wave);
+      return Float32List(0);
+    }
 
     final waveList = val.cast<ffi.Float>().asTypedList(256);
     calloc.free(wave);

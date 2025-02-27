@@ -493,13 +493,29 @@ void Capture::stopRecording()
 float *Capture::getWave()
 {
     float *src = capturedBuffer;
-    float *dst = waveData;
+    float currentWave[256];
     for (int i = 0; i < 256; i++)
     {
-        *dst++ = (src[0] + src[1] + src[2] + src[3]) / 4;
+        currentWave[i] = (src[0] + src[1] + src[2] + src[3]) / 4;
         src += 4;
     }
-    return waveData;
+    if (memcmp(waveData, currentWave, sizeof(waveData)) != 0) {
+        memcpy(waveData, currentWave, sizeof(waveData));
+        printf("waveData new\n");
+        return waveData;
+    }
+    
+    printf("waveData same as previous currentWave: %f waveData: %f\n", currentWave[0], waveData[0]);
+    return nullptr;
+    
+    // float *src = capturedBuffer;
+    // float *dst = waveData;
+    // for (int i = 0; i < 256; i++)
+    // {
+    //     *dst++ = (src[0] + src[1] + src[2] + src[3]) / 4;
+    //     src += 4;
+    // }
+    // return waveData;
 }
 
 float Capture::getVolumeDb()

@@ -51,33 +51,33 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
         mainAxisSize: MainAxisSize.max,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          VuMeter(
-            width: 50,
-            height: 256,
-            vuMeter: vuMeter,
-            db: db,
-          ),
+          // VuMeter(
+          //   width: 50,
+          //   height: 256,
+          //   vuMeter: vuMeter,
+          //   db: db,
+          // ),
 
-          const SizedBox(width: 8),
+          // const SizedBox(width: 8),
 
           /// FFT and wave audio data.
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               /// FFT
-              ColoredBox(
-                color: const Color.fromARGB(255, 55, 55, 55),
-                child: RepaintBoundary(
-                  child: ClipRRect(
-                    child: CustomPaint(
-                      key: UniqueKey(),
-                      size: const Size(320, 124),
-                      painter: const FftPainter(),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
+              // ColoredBox(
+              //   color: const Color.fromARGB(255, 55, 55, 55),
+              //   child: RepaintBoundary(
+              //     child: ClipRRect(
+              //       child: CustomPaint(
+              //         key: UniqueKey(),
+              //         size: const Size(320, 124),
+              //         painter: const FftPainter(),
+              //       ),
+              //     ),
+              //   ),
+              // ),
+              // const SizedBox(height: 8),
 
               /// Wave
               ColoredBox(
