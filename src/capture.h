@@ -69,7 +69,7 @@ public:
 
     void stopRecording();
 
-    float *getWave();
+    float *getWave(bool *isTheSameAsBefore);
 
     float getVolumeDb();
 

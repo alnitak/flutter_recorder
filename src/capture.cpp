@@ -490,7 +490,7 @@ void Capture::stopRecording()
     isRecording = false;
 }
 
-float *Capture::getWave()
+float *Capture::getWave(bool *isTheSameAsBefore)
 {
     float *src = capturedBuffer;
     float currentWave[256];
@@ -500,22 +500,12 @@ float *Capture::getWave()
         src += 4;
     }
     if (memcmp(waveData, currentWave, sizeof(waveData)) != 0) {
-        memcpy(waveData, currentWave, sizeof(waveData));
-        printf("waveData new\n");
-        return waveData;
+        *isTheSameAsBefore = false;
+    } else {
+        *isTheSameAsBefore = true;
     }
-    
-    printf("waveData same as previous currentWave: %f waveData: %f\n", currentWave[0], waveData[0]);
-    return nullptr;
-    
-    // float *src = capturedBuffer;
-    // float *dst = waveData;
-    // for (int i = 0; i < 256; i++)
-    // {
-    //     *dst++ = (src[0] + src[1] + src[2] + src[3]) / 4;
-    //     src += 4;
-    // }
-    // return waveData;
+    memcpy(waveData, currentWave, sizeof(waveData));
+    return waveData;
 }
 
 float Capture::getVolumeDb()

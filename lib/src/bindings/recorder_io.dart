@@ -352,9 +352,16 @@ class RecorderFfi extends RecorderImpl {
   }
 
   @override
-  Float32List getFft() {
-    final ffi.Pointer<ffi.Pointer<ffi.Float>> fft = calloc(256 * 4);
-    _bindings.flutter_recorder_getFft(fft);
+  Float32List getFft({bool alwaysReturnData = true}) {
+    final ffi.Pointer<ffi.Pointer<ffi.Float>> fft = calloc();
+    final isTheSameAsBefore = calloc<ffi.Bool>();
+    _bindings.flutter_recorder_getFft(fft, isTheSameAsBefore);
+    if (!alwaysReturnData && isTheSameAsBefore.value) {
+      calloc
+        ..free(isTheSameAsBefore)
+        ..free(fft);
+      return Float32List(0);
+    }
 
     final val = ffi.Pointer<ffi.Float>.fromAddress(fft.value.address);
     if (val == ffi.nullptr) {
@@ -368,9 +375,16 @@ class RecorderFfi extends RecorderImpl {
   }
 
   @override
-  Float32List getWave() {
-    final ffi.Pointer<ffi.Pointer<ffi.Float>> wave = calloc(256 * 4);
-    _bindings.flutter_recorder_getWave(wave);
+  Float32List getWave({bool alwaysReturnData = true}) {
+    final ffi.Pointer<ffi.Pointer<ffi.Float>> wave = calloc();
+    final isTheSameAsBefore = calloc<ffi.Bool>();
+    _bindings.flutter_recorder_getWave(wave, isTheSameAsBefore);
+    if (!alwaysReturnData && isTheSameAsBefore.value) {
+      calloc
+        ..free(isTheSameAsBefore)
+        ..free(wave);
+      return Float32List(0);
+    }
 
     final val = ffi.Pointer<ffi.Float>.fromAddress(wave.value.address);
     if (val == ffi.nullptr) {
@@ -384,9 +398,39 @@ class RecorderFfi extends RecorderImpl {
   }
 
   @override
-  Float32List getTexture2D() {
-    final ffi.Pointer<ffi.Pointer<ffi.Float>> data = calloc(512 * 256 * 4);
-    _bindings.flutter_recorder_getTexture2D(data);
+  Float32List getTexture({bool alwaysReturnData = true}) {
+    final ffi.Pointer<ffi.Pointer<ffi.Float>> data = calloc();
+    final isTheSameAsBefore = calloc<ffi.Bool>();
+    _bindings.flutter_recorder_getTexture(data, isTheSameAsBefore);
+    if (!alwaysReturnData && isTheSameAsBefore.value) {
+      calloc
+        ..free(isTheSameAsBefore)
+        ..free(data);
+      return Float32List(0);
+    }
+
+    final val = data.value;
+    if (val == ffi.nullptr) return Float32List(512);
+
+    final textureList = val.cast<ffi.Float>().asTypedList(512);
+    calloc
+      ..free(isTheSameAsBefore)
+      ..free(data);
+
+    return textureList;
+  }
+
+  @override
+  Float32List getTexture2D({bool alwaysReturnData = true}) {
+    final ffi.Pointer<ffi.Pointer<ffi.Float>> data = calloc();
+    final isTheSameAsBefore = calloc<ffi.Bool>();
+    _bindings.flutter_recorder_getTexture2D(data, isTheSameAsBefore);
+    if (!alwaysReturnData && isTheSameAsBefore.value) {
+      calloc
+        ..free(isTheSameAsBefore)
+        ..free(data);
+      return Float32List(0);
+    }
 
     final val = ffi.Pointer<ffi.Float>.fromAddress(data.value.address);
     if (val == ffi.nullptr) return Float32List(512 * 256);
