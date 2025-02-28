@@ -304,54 +304,72 @@ FFI_PLUGIN_EXPORT void flutter_recorder_setFftSmoothing(float smooth)
 }
 
 /// Return a 256 float array containing FFT data.
-FFI_PLUGIN_EXPORT void flutter_recorder_getFft(float **fft)
+FFI_PLUGIN_EXPORT void flutter_recorder_getFft(float **fft, bool *isTheSameAsBefore)
 {
     if (!capture.isInited())
         return;
-    float *wave = capture.getWave();
+    float *wave = capture.getWave(isTheSameAsBefore);
     *fft = analyzerCapture.get()->calcFFT(wave);
 }
 
 /// Return a 256 float array containing wave data.
-FFI_PLUGIN_EXPORT void flutter_recorder_getWave(float **wave)
+FFI_PLUGIN_EXPORT void flutter_recorder_getWave(float **wave, bool *isTheSameAsBefore)
 {
     if (!capture.isInited())
         return;
-    *wave = capture.getWave();
+    *wave = capture.getWave(isTheSameAsBefore);
 }
 
-FFI_PLUGIN_EXPORT void flutter_recorder_getTexture(float *samples)
+float capturedTexture[512];
+FFI_PLUGIN_EXPORT void flutter_recorder_getTexture(float **samples, bool *isTheSameAsBefore)
 {
     if (!capture.isInited())
         return;
     if (analyzerCapture.get() == nullptr || !capture.isInited())
     {
-        memset(samples, 0, sizeof(float) * 512);
+        *samples = capturedTexture;
+        memset(*samples, 0, sizeof(float) * 512);
+        *isTheSameAsBefore = true;
         return;
     }
-    float *wave = capture.getWave();
-    float *fft = analyzerCapture.get()->calcFFT(wave);
 
-    memcpy(samples, fft, sizeof(float) * 256);
-    memcpy(samples + 256, wave, sizeof(float) * 256);
+    float *wave = capture.getWave(isTheSameAsBefore);
+    float *fft = analyzerCapture.get()->calcFFT(wave);
+    
+    memcpy(capturedTexture, fft, sizeof(float) * 256);
+    memcpy(capturedTexture + 256, wave, sizeof(float) * 256);
+    *samples = capturedTexture;
 }
 
 float capturedTexture2D[256][512];
-FFI_PLUGIN_EXPORT void flutter_recorder_getTexture2D(float **samples)
+FFI_PLUGIN_EXPORT void flutter_recorder_getTexture2D(float **samples, bool *isTheSameAsBefore)
 {
     if (!capture.isInited())
         return;
-    if (analyzerCapture.get() == nullptr || !capture.isInited())
+    if (analyzerCapture.get() == nullptr)
     {
         *samples = *capturedTexture2D;
         memset(*samples, 0, sizeof(float) * 512 * 256);
+        *isTheSameAsBefore = true;
         return;
     }
+    
+    float *wave = capture.getWave(isTheSameAsBefore);
+    float *fft = analyzerCapture.get()->calcFFT(wave);
+    if (*isTheSameAsBefore)
+    {
+        *samples = *capturedTexture2D;
+        return;
+    }
+
     /// shift up 1 row
-    memmove(*capturedTexture2D + 512, capturedTexture2D, sizeof(float) * 512 * 255);
+    memmove(capturedTexture2D[1], capturedTexture2D[0], sizeof(float) * 512 * 255);
     /// store the new 1st row
-    flutter_recorder_getTexture(capturedTexture2D[0]);
+    memcpy(capturedTexture2D[0], fft, sizeof(float) * 256);
+    memcpy(capturedTexture2D[0]+256, wave, sizeof(float) * 256);
+    
     *samples = *capturedTexture2D;
+    *isTheSameAsBefore = false;
 }
 
 FFI_PLUGIN_EXPORT float flutter_recorder_getTextureValue(int row, int column)

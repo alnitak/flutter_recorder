@@ -9,7 +9,10 @@ class WavePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (!Recorder.instance.isDeviceStarted()) return;
 
-    final waveData = Recorder.instance.getWave();
+    final waveData = Recorder.instance.getWave(alwaysReturnData: true);
+    // Using `alwaysReturnData: true` this will always return a non-empty list
+    // even if the audio data is the same as the previous one.
+    if (waveData.isEmpty) return;
 
     final barWidth = size.width / 256;
     final paint = Paint()..color = Colors.yellow;

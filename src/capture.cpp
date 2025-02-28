@@ -490,15 +490,21 @@ void Capture::stopRecording()
     isRecording = false;
 }
 
-float *Capture::getWave()
+float *Capture::getWave(bool *isTheSameAsBefore)
 {
     float *src = capturedBuffer;
-    float *dst = waveData;
+    float currentWave[256];
     for (int i = 0; i < 256; i++)
     {
-        *dst++ = (src[0] + src[1] + src[2] + src[3]) / 4;
+        currentWave[i] = (src[0] + src[1] + src[2] + src[3]) / 4;
         src += 4;
     }
+    if (memcmp(waveData, currentWave, sizeof(waveData)) != 0) {
+        *isTheSameAsBefore = false;
+    } else {
+        *isTheSameAsBefore = true;
+    }
+    memcpy(waveData, currentWave, sizeof(waveData));
     return waveData;
 }
 

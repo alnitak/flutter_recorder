@@ -340,62 +340,78 @@ class FlutterRecorderBindings {
 
   void flutter_recorder_getFft(
     ffi.Pointer<ffi.Pointer<ffi.Float>> fft,
+    ffi.Pointer<ffi.Bool> isTheSameAsBefore,
   ) {
     return _flutter_recorder_getFft(
       fft,
+      isTheSameAsBefore,
     );
   }
 
   late final _flutter_recorder_getFftPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Void Function(
-              ffi.Pointer<ffi.Pointer<ffi.Float>>)>>('flutter_recorder_getFft');
-  late final _flutter_recorder_getFft = _flutter_recorder_getFftPtr
-      .asFunction<void Function(ffi.Pointer<ffi.Pointer<ffi.Float>>)>();
+          ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Float>>,
+              ffi.Pointer<ffi.Bool>)>>('flutter_recorder_getFft');
+  late final _flutter_recorder_getFft = _flutter_recorder_getFftPtr.asFunction<
+      void Function(
+          ffi.Pointer<ffi.Pointer<ffi.Float>>, ffi.Pointer<ffi.Bool>)>();
 
   void flutter_recorder_getWave(
     ffi.Pointer<ffi.Pointer<ffi.Float>> wave,
+    ffi.Pointer<ffi.Bool> isTheSameAsBefore,
   ) {
     return _flutter_recorder_getWave(
       wave,
+      isTheSameAsBefore,
     );
   }
 
   late final _flutter_recorder_getWavePtr = _lookup<
-          ffi.NativeFunction<
-              ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Float>>)>>(
-      'flutter_recorder_getWave');
-  late final _flutter_recorder_getWave = _flutter_recorder_getWavePtr
-      .asFunction<void Function(ffi.Pointer<ffi.Pointer<ffi.Float>>)>();
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Float>>,
+              ffi.Pointer<ffi.Bool>)>>('flutter_recorder_getWave');
+  late final _flutter_recorder_getWave =
+      _flutter_recorder_getWavePtr.asFunction<
+          void Function(
+              ffi.Pointer<ffi.Pointer<ffi.Float>>, ffi.Pointer<ffi.Bool>)>();
 
   void flutter_recorder_getTexture(
-    ffi.Pointer<ffi.Float> samples,
+    ffi.Pointer<ffi.Pointer<ffi.Float>> samples,
+    ffi.Pointer<ffi.Bool> isTheSameAsBefore,
   ) {
     return _flutter_recorder_getTexture(
       samples,
+      isTheSameAsBefore,
     );
   }
 
-  late final _flutter_recorder_getTexturePtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Float>)>>(
-          'flutter_recorder_getTexture');
-  late final _flutter_recorder_getTexture = _flutter_recorder_getTexturePtr
-      .asFunction<void Function(ffi.Pointer<ffi.Float>)>();
+  late final _flutter_recorder_getTexturePtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Float>>,
+              ffi.Pointer<ffi.Bool>)>>('flutter_recorder_getTexture');
+  late final _flutter_recorder_getTexture =
+      _flutter_recorder_getTexturePtr.asFunction<
+          void Function(
+              ffi.Pointer<ffi.Pointer<ffi.Float>>, ffi.Pointer<ffi.Bool>)>();
 
   void flutter_recorder_getTexture2D(
     ffi.Pointer<ffi.Pointer<ffi.Float>> samples,
+    ffi.Pointer<ffi.Bool> isTheSameAsBefore,
   ) {
     return _flutter_recorder_getTexture2D(
       samples,
+      isTheSameAsBefore,
     );
   }
 
   late final _flutter_recorder_getTexture2DPtr = _lookup<
-          ffi.NativeFunction<
-              ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Float>>)>>(
-      'flutter_recorder_getTexture2D');
-  late final _flutter_recorder_getTexture2D = _flutter_recorder_getTexture2DPtr
-      .asFunction<void Function(ffi.Pointer<ffi.Pointer<ffi.Float>>)>();
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Float>>,
+              ffi.Pointer<ffi.Bool>)>>('flutter_recorder_getTexture2D');
+  late final _flutter_recorder_getTexture2D =
+      _flutter_recorder_getTexture2DPtr.asFunction<
+          void Function(
+              ffi.Pointer<ffi.Pointer<ffi.Float>>, ffi.Pointer<ffi.Bool>)>();
 
   double flutter_recorder_getTextureValue(
     int row,

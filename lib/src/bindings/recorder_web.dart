@@ -237,9 +237,17 @@ class RecorderWeb extends RecorderImpl {
   }
 
   @override
-  Float32List getFft() {
+  Float32List getFft({bool alwaysReturnData = true}) {
     final samplesPtr = wasmMalloc(4);
-    wasmGetFft(samplesPtr);
+    final isTheSameAsBeforePtr = wasmMalloc(4);
+    wasmGetFft(samplesPtr, isTheSameAsBeforePtr);
+    final isSameData = wasmGetI32Value(isTheSameAsBeforePtr, 'i32');
+    wasmFree(isTheSameAsBeforePtr);
+    if (!alwaysReturnData && isSameData == 1) {
+      wasmFree(samplesPtr);
+      return Float32List(0);
+    }
+
     final samplesPtr2 = wasmGetI32Value(samplesPtr, '*');
     final samples = Float32List(256);
     for (var i = 0; i < 256; i++) {
@@ -250,9 +258,17 @@ class RecorderWeb extends RecorderImpl {
   }
 
   @override
-  Float32List getWave() {
+  Float32List getWave({bool alwaysReturnData = true}) {
     final samplesPtr = wasmMalloc(4);
-    wasmGetWave(samplesPtr);
+    final isTheSameAsBeforePtr = wasmMalloc(4);
+    wasmGetWave(samplesPtr, isTheSameAsBeforePtr);
+    final isSameData = wasmGetI32Value(isTheSameAsBeforePtr, 'i32');
+    wasmFree(isTheSameAsBeforePtr);
+    if (!alwaysReturnData && isSameData == 1) {
+      wasmFree(samplesPtr);
+      return Float32List(0);
+    }
+
     final samplesPtr2 = wasmGetI32Value(samplesPtr, '*');
     final samples = Float32List(256);
     for (var i = 0; i < 256; i++) {
@@ -263,9 +279,38 @@ class RecorderWeb extends RecorderImpl {
   }
 
   @override
-  Float32List getTexture2D() {
+  Float32List getTexture({bool alwaysReturnData = true}) {
     final samplesPtr = wasmMalloc(4);
-    wasmGetTexture2D(samplesPtr);
+    final isTheSameAsBeforePtr = wasmMalloc(4);
+    wasmGetTexture(samplesPtr, isTheSameAsBeforePtr);
+    final isSameData = wasmGetI32Value(isTheSameAsBeforePtr, 'i32');
+    wasmFree(isTheSameAsBeforePtr);
+    if (!alwaysReturnData && isSameData == 1) {
+      wasmFree(samplesPtr);
+      return Float32List(0);
+    }
+
+    final samplesPtr2 = wasmGetI32Value(samplesPtr, '*');
+    final samples = Float32List(512);
+    for (var i = 0; i < 512; i++) {
+      samples[i] = wasmGetF32Value(samplesPtr2 + i * 4, 'float');
+    }
+    wasmFree(samplesPtr);
+    return samples;
+  }
+
+  @override
+  Float32List getTexture2D({bool alwaysReturnData = true}) {
+    final samplesPtr = wasmMalloc(4);
+    final isTheSameAsBeforePtr = wasmMalloc(4);
+    wasmGetTexture2D(samplesPtr, isTheSameAsBeforePtr);
+    final isSameData = wasmGetI32Value(isTheSameAsBeforePtr, 'i32');
+    wasmFree(isTheSameAsBeforePtr);
+    if (!alwaysReturnData && isSameData == 1) {
+      wasmFree(samplesPtr);
+      return Float32List(0);
+    }
+
     final samplesPtr2 = wasmGetI32Value(samplesPtr, '*');
     final samples = Float32List(512 * 256);
     for (var i = 0; i < 512 * 256; i++) {
