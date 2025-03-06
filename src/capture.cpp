@@ -490,18 +490,44 @@ void Capture::stopRecording()
     isRecording = false;
 }
 
+// Standard arithmetic mean averaging
+void shrink_buffer_mean(const float *input, float *output, int input_size, int chunk_size) {
+    int output_size = input_size / chunk_size;
+    for (int i = 0; i < output_size; i++) {
+        float sum = 0.0f;
+        for (int j = 0; j < chunk_size; j++) {
+            sum += input[i * chunk_size + j];
+        }
+        output[i] = sum / chunk_size;  // Average of 4 samples
+    }
+}
+
+// Root Mean Square (RMS) averaging.
+// This is more accurate than the arithmetic mean but maybe a bit slower.
+void shrink_buffer_rms(const float *input, float *output, int input_size, int chunk_size) {
+    int output_size = input_size / chunk_size;
+    for (int i = 0; i < output_size; i++) {
+        float sum_sq = 0.0f;
+        for (int j = 0; j < chunk_size; j++) {
+            sum_sq += input[i * chunk_size + j] * input[i * chunk_size + j];
+        }
+        output[i] = sqrtf(sum_sq / chunk_size);  // RMS average
+    }
+}
+
 float *Capture::getWave(bool *isTheSameAsBefore)
 {
     float *src = capturedBuffer;
     float currentWave[256];
-    for (int i = 0; i < 256; i++)
+
+    shrink_buffer_rms(capturedBuffer, currentWave, BUFFER_SIZE, 4);
+
+    if (memcmp(waveData, currentWave, sizeof(waveData)) != 0)
     {
-        currentWave[i] = (src[0] + src[1] + src[2] + src[3]) / 4;
-        src += 4;
-    }
-    if (memcmp(waveData, currentWave, sizeof(waveData)) != 0) {
         *isTheSameAsBefore = false;
-    } else {
+    }
+    else
+    {
         *isTheSameAsBefore = true;
     }
     memcpy(waveData, currentWave, sizeof(waveData));
