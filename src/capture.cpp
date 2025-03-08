@@ -505,28 +505,14 @@ void Capture::stopRecording()
 /// @param channels The number of channels.
 void shrink_buffer(float *inputBuffer, float *outputBuffer, int channels)
 {
-    int samplesPerChannel = BUFFER_SIZE;
-    if (channels == 1)
-        samplesPerChannel = BUFFER_SIZE;
-    else
-        samplesPerChannel = BUFFER_SIZE / 2;
-
     for (int i = 0; i < 256; ++i)
     {
-        float sum = 0.0f;
-        for (int j = 0; j < samplesPerChannel / 256; ++j)
+        if (channels == 1)
         {
-            int index = i * (samplesPerChannel / 256) * channels + j * channels;
-            if (channels == 1)
-            {
-                sum += fabs(inputBuffer[index]);
-            }
-            else
-            {
-                sum += fabs(inputBuffer[index]) + fabs(inputBuffer[index + 1]);
-            }
+            outputBuffer[i] = inputBuffer[i * channels];
+        } else {
+            outputBuffer[i] = (inputBuffer[i * channels] + inputBuffer[i * channels + 1]) * 0.5f;
         }
-        outputBuffer[i] = sum / (samplesPerChannel / 256) / channels;
     }
 }
 
