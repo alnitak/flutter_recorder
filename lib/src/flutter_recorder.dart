@@ -359,11 +359,13 @@ interface class Recorder {
     _recoreder.impl.setFftSmoothing(smooth);
   }
 
-  /// Return a 256 float array containing FFT data in the range [-1.0, 1.0]
-  /// not clamped.
+  /// Conveninet way to get FFT data. Return a 256 float array containing
+  /// FFT data in the range [-1.0, 1.0] not clamped.
+  ///
+  /// If also wave data is needed consider using [getTexture] or [getTexture2D].
   ///
   /// **NOTE**: use this only with format [PCMFormat.f32le].
-  Float32List getFft() {
+  Float32List getFft({bool alwaysReturnData = true}) {
     if (!_isInitialized) {
       _log.warning(() => 'getFft: recorder is not initialized.');
       return Float32List(256);
@@ -378,14 +380,14 @@ interface class Recorder {
       );
       return Float32List(256);
     }
-    return _recoreder.impl.getFft();
+    return _recoreder.impl.getFft(alwaysReturnData: alwaysReturnData);
   }
 
   /// Return a 256 float array containing wave data in the range [-1.0, 1.0]
   /// not clamped.
   ///
   /// **NOTE**: use this only with format [PCMFormat.f32le].
-  Float32List getWave() {
+  Float32List getWave({bool alwaysReturnData = true}) {
     if (!_isInitialized) {
       _log.warning(() => 'getWave: recorder is not initialized.');
       return Float32List(256);
@@ -400,14 +402,30 @@ interface class Recorder {
       );
       return Float32List(256);
     }
-    return _recoreder.impl.getWave();
+    return _recoreder.impl.getWave(alwaysReturnData: alwaysReturnData);
   }
 
   /// Get the audio data representing an array of 256 floats FFT data and
   /// 256 float of wave data.
   ///
   /// **NOTE**: use this only with format [PCMFormat.f32le].
-  Float32List getTexture2D() {
+  Float32List getTexture({bool alwaysReturnData = true}) {
+    if (!_isInitialized) {
+      _log.warning(() => 'getTexture: recorder is not initialized.');
+      return Float32List(256);
+    }
+    if (!_isStarted) {
+      _log.warning(() => 'getTexture: recorder is not started.');
+      return Float32List(256);
+    }
+    return _recoreder.impl.getTexture(alwaysReturnData: alwaysReturnData);
+  }
+
+  /// Get the audio data representing an array of 256 floats FFT data and
+  /// 256 float of wave data.
+  ///
+  /// **NOTE**: use this only with format [PCMFormat.f32le].
+  Float32List getTexture2D({bool alwaysReturnData = true}) {
     if (!_isInitialized) {
       _log.warning(() => 'getTexture2D: recorder is not initialized.');
       return Float32List(256);
@@ -422,7 +440,7 @@ interface class Recorder {
       );
       return Float32List(256);
     }
-    return _recoreder.impl.getTexture2D();
+    return _recoreder.impl.getTexture2D(alwaysReturnData: alwaysReturnData);
   }
 
   /// Get the current volume in dB. Returns -100 if the capture is not inited.

@@ -119,16 +119,16 @@ external void wasmStopRecording();
 external void wasmSetFftSmoothing(double smooth);
 
 @JS('RecorderModule._flutter_recorder_getFft')
-external void wasmGetFft(int samplesPtr);
+external void wasmGetFft(int samplesPtr, int isTheSameAsBeforePtr);
 
 @JS('RecorderModule._flutter_recorder_getWave')
-external void wasmGetWave(int samplesPtr);
+external void wasmGetWave(int samplesPtr, int isTheSameAsBeforePtr);
 
 @JS('RecorderModule._flutter_recorder_getTexture')
-external void wasmGetTexture(int samplesPtr);
+external void wasmGetTexture(int samplesPtr, int isTheSameAsBeforePtr);
 
 @JS('RecorderModule._flutter_recorder_getTexture2D')
-external void wasmGetTexture2D(int samplesPtr);
+external void wasmGetTexture2D(int samplesPtr, int isTheSameAsBeforePtr);
 
 @JS('RecorderModule._flutter_recorder_getVolumeDb')
 external void wasmGetVolumeDb(int volumeDbPtr);

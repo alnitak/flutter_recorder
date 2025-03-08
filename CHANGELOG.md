@@ -1,3 +1,7 @@
+## 1.0.4
+- added getTexture and a check for all get* methods to know if the current data is the same audio data computed previously.
+- better FFT data
+
 ## 1.0.3
 - update WASM lib
 
