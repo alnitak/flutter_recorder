@@ -107,10 +107,7 @@ float* Analyzer::calcFFT(float* waveData, float minFrequency, float maxFrequency
         float imag = temp[i * 2 + 1];
         float mag = sqrtf(real*real+imag*imag);
         // The "+ 1.0" is to make sure I don't get negative values,
-        // Multiplying the log10 by the usual 20, by 2 seems to have a better visualization
         float t = 20.0f * log10f(mag+0.995f);
-        // float t = 30.0f * (exp(mag)-1.0f);  // the + 1.0 is to make sure I don't get negative values, this is the value you should use in your audio reactive system
-        // t *= 8.0f*log10(i+1.4f);
 
         if (t > 1.0f) t = 1.0f;
         else if (t < 0.00001) t = 0.0f;
@@ -118,7 +115,6 @@ float* Analyzer::calcFFT(float* waveData, float minFrequency, float maxFrequency
             FFTData[i] = t;
         else {
             // smooth when decreasing the new value with the previous
-            // outputFftData[i] = outputFftData[i] - (outputFftData[i] - t) / 4.0f;
             FFTData[i] = fftSmoothing * FFTData[i] + (1.0f-fftSmoothing) * t;
         }
     }
