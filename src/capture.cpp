@@ -8,6 +8,23 @@
 #include <atomic>
 #include <time.h>
 #include "fft/soloud_fft.h"
+#include <mutex>
+
+// 1024 means 1/(44100*2)*1024 = 0.0116 ms
+#define BUFFER_SIZE 1024                   // Buffer length in frames
+#define STREAM_BUFFER_SIZE (BUFFER_SIZE * 2) // Buffer length in frames
+#define MOVING_AVERAGE_SIZE 4              // Moving average window size
+float capturedBuffer[BUFFER_SIZE * 2];     // Captured audio buffer
+std::mutex capturedBufferMutex;           // Mutex for protecting capturedBuffer
+std::atomic<bool> is_silent{true};     // Initial state
+bool delayed_silence_started = false;  // Whether the silence is delayed
+std::atomic<float> energy_db{-100.0f}; // Current energy
+
+/// the buffer used for capturing audio.
+std::unique_ptr<CircularBuffer<float>> circularBuffer;
+
+/// the buffer used for streaming.
+std::unique_ptr<std::vector<unsigned char>> streamBuffer;
 
 #ifdef _IS_WIN_
 #define CLOCK_REALTIME 0
@@ -45,21 +62,6 @@ double getElapsed(struct timespec since)
     return ((double)(now.tv_sec - since.tv_sec) +
             (double)(now.tv_nsec - since.tv_nsec) / 1.0e9L);
 }
-
-// 1024 means 1/(44100*2)*1024 = 0.0116 ms
-#define BUFFER_SIZE 1024                   // Buffer length in frames
-#define STREAM_BUFFER_SIZE (BUFFER_SIZE * 2) // Buffer length in frames
-#define MOVING_AVERAGE_SIZE 4              // Moving average window size
-float capturedBuffer[BUFFER_SIZE];
-std::atomic<bool> is_silent{true};     // Initial state
-bool delayed_silence_started = false;  // Whether the silence is delayed
-std::atomic<float> energy_db{-100.0f}; // Current energy
-
-/// the buffer used for capturing audio.
-std::unique_ptr<CircularBuffer<float>> circularBuffer;
-
-/// the buffer used for streaming.
-std::unique_ptr<std::vector<unsigned char>> streamBuffer;
 
 // Function to convert energy to decibels
 float energy_to_db(float energy)
@@ -166,6 +168,8 @@ void detectSilence(Capture *userData)
     }
 }
 
+// A "frame" is one sample for each channel. For example, in a stereo stream (2 channels),
+//one frame is 2 samples: one for the left, one for the right.
 void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
 {
     // Process the captured audio data as needed.
@@ -186,7 +190,11 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
     }
 
     // Do something with the captured audio data...
-    memcpy(capturedBuffer, captured, sizeof(float) * BUFFER_SIZE);
+    // Protect the write to capturedBuffer
+    {
+        std::lock_guard<std::mutex> lock(capturedBufferMutex);
+        memcpy(capturedBuffer, captured, sizeof(float) * frameCount * userData->deviceConfig.capture.channels);
+    }
 
     if (userData->deviceConfig.capture.format == ma_format_f32)
         calculateEnergy(captured, frameCount);
@@ -490,37 +498,48 @@ void Capture::stopRecording()
     isRecording = false;
 }
 
-// Standard arithmetic mean averaging
-void shrink_buffer_mean(const float *input, float *output, int input_size, int chunk_size) {
-    int output_size = input_size / chunk_size;
-    for (int i = 0; i < output_size; i++) {
+
+/// @brief Shrinks the captured audio buffer to 256 floats.
+/// @param inputBuffer The captured audio buffer.
+/// @param outputBuffer The output buffer.
+/// @param channels The number of channels.
+void shrink_buffer(float *inputBuffer, float *outputBuffer, int channels)
+{
+    int samplesPerChannel = BUFFER_SIZE;
+    if (channels == 1)
+        samplesPerChannel = BUFFER_SIZE;
+    else
+        samplesPerChannel = BUFFER_SIZE / 2;
+
+    for (int i = 0; i < 256; ++i)
+    {
         float sum = 0.0f;
-        for (int j = 0; j < chunk_size; j++) {
-            sum += input[i * chunk_size + j];
+        for (int j = 0; j < samplesPerChannel / 256; ++j)
+        {
+            int index = i * (samplesPerChannel / 256) * channels + j * channels;
+            if (channels == 1)
+            {
+                sum += fabs(inputBuffer[index]);
+            }
+            else
+            {
+                sum += fabs(inputBuffer[index]) + fabs(inputBuffer[index + 1]);
+            }
         }
-        output[i] = sum / chunk_size;  // Average of 4 samples
+        outputBuffer[i] = sum / (samplesPerChannel / 256) / channels;
     }
 }
 
-// Root Mean Square (RMS) averaging.
-// This is more accurate than the arithmetic mean but maybe a bit slower.
-void shrink_buffer_rms(const float *input, float *output, int input_size, int chunk_size) {
-    int output_size = input_size / chunk_size;
-    for (int i = 0; i < output_size; i++) {
-        float sum_sq = 0.0f;
-        for (int j = 0; j < chunk_size; j++) {
-            sum_sq += input[i * chunk_size + j] * input[i * chunk_size + j];
-        }
-        output[i] = sqrtf(sum_sq / chunk_size);  // RMS average
-    }
-}
 
 float *Capture::getWave(bool *isTheSameAsBefore)
 {
-    float *src = capturedBuffer;
     float currentWave[256];
 
-    shrink_buffer_rms(capturedBuffer, currentWave, BUFFER_SIZE, 4);
+    // Protect the read from capturedBuffer
+    {
+        std::lock_guard<std::mutex> lock(capturedBufferMutex);
+        shrink_buffer(capturedBuffer, currentWave, deviceConfig.capture.channels);
+    }
 
     if (memcmp(waveData, currentWave, sizeof(waveData)) != 0)
     {
@@ -538,3 +557,4 @@ float Capture::getVolumeDb()
 {
     return energy_db;
 }
+
