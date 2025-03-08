@@ -16,7 +16,7 @@
 #endif
 
 Capture capture;
-std::unique_ptr<Analyzer> analyzerCapture = std::make_unique<Analyzer>(1024);
+std::unique_ptr<Analyzer> analyzerCapture = std::make_unique<Analyzer>(4096);
 std::unique_ptr<Filters> mFilters = std::make_unique<Filters>(0);
 
 dartSilenceChangedCallback_t dartSilenceChangedCallback;

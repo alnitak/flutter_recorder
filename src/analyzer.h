@@ -24,7 +24,7 @@ private:
     /// @brief elaborate FFT data with the hamm windowing algorithm
     void hammingWindow(float* samples, const float *waveData) const;
 
-    void plainWindow(float* samples, const float *waveData) const;
+    void gaussWindow(float *samples, const float *waveData) const;
 
     /// array used by filling it with audio samples and calculate FFT
     float temp[1024];  // Needs to be 1024 for fft1024
