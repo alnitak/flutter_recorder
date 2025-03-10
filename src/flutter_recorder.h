@@ -67,13 +67,13 @@ extern "C"
 
     FFI_PLUGIN_EXPORT void flutter_recorder_getVolumeDb(float *volumeDb);
 
-    FFI_PLUGIN_EXPORT void flutter_recorder_getFft(float **fft);
+    FFI_PLUGIN_EXPORT void flutter_recorder_getFft(float **fft, bool *isTheSameAsBefore);
 
-    FFI_PLUGIN_EXPORT void flutter_recorder_getWave(float **wave);
+    FFI_PLUGIN_EXPORT void flutter_recorder_getWave(float **wave, bool *isTheSameAsBefore);
 
-    FFI_PLUGIN_EXPORT void flutter_recorder_getTexture(float *samples);
+    FFI_PLUGIN_EXPORT void flutter_recorder_getTexture(float **samples, bool *isTheSameAsBefore);
 
-    FFI_PLUGIN_EXPORT void flutter_recorder_getTexture2D(float **samples);
+    FFI_PLUGIN_EXPORT void flutter_recorder_getTexture2D(float **samples, bool *isTheSameAsBefore);
 
     FFI_PLUGIN_EXPORT float flutter_recorder_getTextureValue(int row, int column);
 

@@ -57,7 +57,6 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
             vuMeter: vuMeter,
             db: db,
           ),
-
           const SizedBox(width: 8),
 
           /// FFT and wave audio data.
