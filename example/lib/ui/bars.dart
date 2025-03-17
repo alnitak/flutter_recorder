@@ -52,7 +52,7 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           VuMeter(
-            width: 50,
+            width: 40,
             height: 256,
             vuMeter: vuMeter,
             db: db,
@@ -70,7 +70,7 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
                   child: ClipRRect(
                     child: CustomPaint(
                       key: UniqueKey(),
-                      size: const Size(320, 124),
+                      size: const Size(300, 124),
                       painter: const FftPainter(),
                     ),
                   ),
@@ -85,7 +85,7 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
                   child: ClipRRect(
                     child: CustomPaint(
                       key: UniqueKey(),
-                      size: const Size(320, 124),
+                      size: const Size(300, 124),
                       painter: const WavePainter(),
                     ),
                   ),
