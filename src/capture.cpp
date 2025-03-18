@@ -8,6 +8,23 @@
 #include <atomic>
 #include <time.h>
 #include "fft/soloud_fft.h"
+#include <mutex>
+
+// 1024 means 1/(44100*2)*1024 = 0.0116 ms
+#define BUFFER_SIZE 1024                   // Buffer length in frames
+#define STREAM_BUFFER_SIZE (BUFFER_SIZE * 2) // Buffer length in frames
+#define MOVING_AVERAGE_SIZE 4              // Moving average window size
+float capturedBuffer[BUFFER_SIZE * 2];     // Captured audio buffer
+std::mutex capturedBufferMutex;           // Mutex for protecting capturedBuffer
+std::atomic<bool> is_silent{true};     // Initial state
+bool delayed_silence_started = false;  // Whether the silence is delayed
+std::atomic<float> energy_db{-100.0f}; // Current energy
+
+/// the buffer used for capturing audio.
+std::unique_ptr<CircularBuffer<float>> circularBuffer;
+
+/// the buffer used for streaming.
+std::unique_ptr<std::vector<unsigned char>> streamBuffer;
 
 #ifdef _IS_WIN_
 #define CLOCK_REALTIME 0
@@ -45,21 +62,6 @@ double getElapsed(struct timespec since)
     return ((double)(now.tv_sec - since.tv_sec) +
             (double)(now.tv_nsec - since.tv_nsec) / 1.0e9L);
 }
-
-// 1024 means 1/(44100*2)*1024 = 0.0116 ms
-#define BUFFER_SIZE 1024                   // Buffer length in frames
-#define STREAM_BUFFER_SIZE (BUFFER_SIZE * 2) // Buffer length in frames
-#define MOVING_AVERAGE_SIZE 4              // Moving average window size
-float capturedBuffer[BUFFER_SIZE];
-std::atomic<bool> is_silent{true};     // Initial state
-bool delayed_silence_started = false;  // Whether the silence is delayed
-std::atomic<float> energy_db{-100.0f}; // Current energy
-
-/// the buffer used for capturing audio.
-std::unique_ptr<CircularBuffer<float>> circularBuffer;
-
-/// the buffer used for streaming.
-std::unique_ptr<std::vector<unsigned char>> streamBuffer;
 
 // Function to convert energy to decibels
 float energy_to_db(float energy)
@@ -166,6 +168,8 @@ void detectSilence(Capture *userData)
     }
 }
 
+// A "frame" is one sample for each channel. For example, in a stereo stream (2 channels),
+//one frame is 2 samples: one for the left, one for the right.
 void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
 {
     // Process the captured audio data as needed.
@@ -186,7 +190,11 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
     }
 
     // Do something with the captured audio data...
-    memcpy(capturedBuffer, captured, sizeof(float) * BUFFER_SIZE);
+    // Protect the write to capturedBuffer
+    {
+        std::lock_guard<std::mutex> lock(capturedBufferMutex);
+        memcpy(capturedBuffer, captured, sizeof(float) * frameCount * userData->deviceConfig.capture.channels);
+    }
 
     if (userData->deviceConfig.capture.format == ma_format_f32)
         calculateEnergy(captured, frameCount);
@@ -490,15 +498,44 @@ void Capture::stopRecording()
     isRecording = false;
 }
 
-float *Capture::getWave()
+
+/// @brief Shrinks the captured audio buffer to 256 floats.
+/// @param inputBuffer The captured audio buffer.
+/// @param outputBuffer The output buffer.
+/// @param channels The number of channels.
+void shrink_buffer(float *inputBuffer, float *outputBuffer, int channels)
 {
-    float *src = capturedBuffer;
-    float *dst = waveData;
-    for (int i = 0; i < 256; i++)
+    for (int i = 0; i < 256; ++i)
     {
-        *dst++ = (src[0] + src[1] + src[2] + src[3]) / 4;
-        src += 4;
+        if (channels == 1)
+        {
+            outputBuffer[i] = inputBuffer[i * channels];
+        } else {
+            outputBuffer[i] = (inputBuffer[i * channels] + inputBuffer[i * channels + 1]) * 0.5f;
+        }
     }
+}
+
+
+float *Capture::getWave(bool *isTheSameAsBefore)
+{
+    float currentWave[256];
+
+    // Protect the read from capturedBuffer
+    {
+        std::lock_guard<std::mutex> lock(capturedBufferMutex);
+        shrink_buffer(capturedBuffer, currentWave, deviceConfig.capture.channels);
+    }
+
+    if (memcmp(waveData, currentWave, sizeof(waveData)) != 0)
+    {
+        *isTheSameAsBefore = false;
+    }
+    else
+    {
+        *isTheSameAsBefore = true;
+    }
+    memcpy(waveData, currentWave, sizeof(waveData));
     return waveData;
 }
 
@@ -506,3 +543,4 @@ float Capture::getVolumeDb()
 {
     return energy_db;
 }
+

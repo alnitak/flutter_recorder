@@ -10,7 +10,10 @@ class FftPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (!Recorder.instance.isDeviceStarted()) return;
 
-    final fftData = Recorder.instance.getFft();
+    final fftData = Recorder.instance.getFft(alwaysReturnData: true);
+    // Using `alwaysReturnData: true` this will always return a non-empty list
+    // even if the audio data is the same as the previous one.
+    if (fftData.isEmpty) return;
     final barWidth = size.width / 256;
 
     final paint = Paint()..color = Colors.yellow;
