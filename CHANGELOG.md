@@ -1,3 +1,7 @@
+## 1.1.0
+- when calling AudioData.getAudioData is now possible to check if the audio data is the same as before. Useful to visualize waveforms. This is because AudioData.getAudioData returns the current data in the buffer and if it is called before the buffer has been updated, it will return the previous data.
+- better FFT data for a better visualization.
+
 ## 1.0.4
 - added getTexture and a check for all get* methods to know if the current data is the same audio data computed previously.
 - better FFT data
