@@ -1,0 +1,2 @@
+/home/deimos/FLUTTER/libs/flutter_recorder/example/android/app/.cxx/Debug/5i1255y6/x86/CMakeFiles/edit_cache.dir
+/home/deimos/FLUTTER/libs/flutter_recorder/example/android/app/.cxx/Debug/5i1255y6/x86/CMakeFiles/rebuild_cache.dir
