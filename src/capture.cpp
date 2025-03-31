@@ -10,6 +10,13 @@
 #include "fft/soloud_fft.h"
 #include <mutex>
 
+#ifdef _IS_ANDROID_
+#include <jni.h>
+#include <android/log.h>
+
+#define LOG_TAG "FlutterRecorder"
+#endif
+
 // 1024 means 1/(44100*2)*1024 = 0.0116 ms
 #define BUFFER_SIZE 1024                   // Buffer length in frames
 #define STREAM_BUFFER_SIZE (BUFFER_SIZE * 2) // Buffer length in frames
@@ -287,7 +294,11 @@ Capture::~Capture()
 
 std::vector<CaptureDevice> Capture::listCaptureDevices()
 {
-    // printf("***************** LIST DEVICES START\n");
+#ifdef _IS_ANDROID_
+    __android_log_print(ANDROID_LOG_INFO, LOG_TAG, "***************** LIST DEVICES START\n");
+#else
+    printf("***************** LIST DEVICES START\n");
+#endif       
     std::vector<CaptureDevice> ret;
     if ((result = ma_context_init(NULL, 0, NULL, &context)) != MA_SUCCESS)
     {
@@ -311,17 +322,28 @@ std::vector<CaptureDevice> Capture::listCaptureDevices()
     // to give the user the opportunity to choose which device they'd prefer.
     for (ma_uint32 i = 0; i < captureCount; i++)
     {
-        // printf("######%s %d - %s\n",
-        //        pCaptureInfos[i].isDefault ? " X" : "-",
-        //        i,
-        //        pCaptureInfos[i].name);
+#ifdef _IS_ANDROID_
+        __android_log_print(ANDROID_LOG_INFO, LOG_TAG, "************ Device: %s %d - %s",
+               pCaptureInfos[i].isDefault ? " X" : "-",
+               i,
+               pCaptureInfos[i].name);
+#else
+        printf("************ Device: %s %d - %s\n",
+            pCaptureInfos[i].isDefault ? " X" : "-",
+            i,
+            pCaptureInfos[i].name);
+#endif        
         CaptureDevice cd;
         cd.name = strdup(pCaptureInfos[i].name);
         cd.isDefault = pCaptureInfos[i].isDefault;
         cd.id = i;
         ret.push_back(cd);
     }
-    // printf("***************** LIST DEVICES END\n");
+#ifdef _IS_ANDROID_
+    __android_log_print(ANDROID_LOG_INFO, LOG_TAG, "***************** LIST DEVICES END\n");
+#else
+    printf("***************** LIST DEVICES END\n");
+#endif
     return ret;
 }
 
