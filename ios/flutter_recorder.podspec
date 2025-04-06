@@ -26,8 +26,8 @@ A new Flutter FFI plugin project.
     'DEFINES_MODULE' => 'YES',
     'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386',
     "CLANG_CXX_LANGUAGE_STANDARD" => "c++17",
-    'OTHER_CFLAGS' => '-Ofast -ffast-math -flto -funroll-loops -msse -msse2 -msse3 -pthread',
-    'OTHER_CPLUSPLUSFLAGS' => '-Ofast -ffast-math -flto -funroll-loops -msse -msse2 -msse3 -pthread',
+    'OTHER_CFLAGS' => '-O3 -ffast-math -ffast-math -flto -funroll-loops -pthread',
+    'OTHER_CPLUSPLUSFLAGS' => '-O3 -ffast-math -ffast-math -flto -funroll-loops -pthread',
     'GCC_OPTIMIZATION_LEVEL' => '3',
     # Add audio and threading optimization flags
     'GCC_PREPROCESSOR_DEFINITIONS' => 'MA_NO_RUNTIME_LINKING=1 NDEBUG=1 _REENTRANT=1',

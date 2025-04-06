@@ -26,8 +26,8 @@ A new Flutter FFI plugin project.
     'DEFINES_MODULE' => 'YES',
     "CLANG_CXX_LANGUAGE_STANDARD" => "c++17",
     # Enhanced optimization flags
-    'OTHER_CFLAGS' => '-Ofast -march=native -mtune=native -ffast-math -flto -funroll-loops -msse -msse2 -msse3 -pthread -Wno-strict-prototypes',
-    'OTHER_CPLUSPLUSFLAGS' => '-Ofast -march=native -mtune=native -ffast-math -flto -funroll-loops -msse -msse2 -msse3 -pthread -Wno-strict-prototypes',
+    'OTHER_CFLAGS' => '-O3 -ffast-math -march=native -mtune=native -ffast-math -flto -funroll-loops -pthread -Wno-strict-prototypes',
+    'OTHER_CPLUSPLUSFLAGS' => '-O3 -ffast-math -march=native -mtune=native -ffast-math -flto -funroll-loops -pthread -Wno-strict-prototypes',
     'GCC_OPTIMIZATION_LEVEL' => '3',
     # Add audio and threading optimization flags
     'GCC_PREPROCESSOR_DEFINITIONS' => 'MA_NO_RUNTIME_LINKING=1 NDEBUG=1 _REENTRANT=1',
