@@ -1,3 +1,7 @@
+## 1.1.2
+- fix: `listPlaybackDevices` fails to retrieve devices when the device prefix contains Chinese characters #35 by @WHYBBE
+- fix: some legitimate paths are unavailable on Windows #38 by @WHYBBE
+
 ## 1.1.1
 - fix building issue with XCode 16.3 #32
 
