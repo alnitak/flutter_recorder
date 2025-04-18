@@ -1,9 +1,7 @@
-## 1.1.2
-- fix: `listPlaybackDevices` fails to retrieve devices when the device prefix contains Chinese characters #35 by @WHYBBE
-- fix: some legitimate paths are unavailable on Windows #38 by @WHYBBE
-
 ## 1.1.1
 - fix building issue with XCode 16.3 #32
+- fix: `listPlaybackDevices` fails to retrieve devices when the device prefix contains Chinese characters #35 by @WHYBBE
+- fix: some legitimate paths are unavailable on Windows #38 by @WHYBBE
 
 ## 1.1.0
 - when calling AudioData.getAudioData is now possible to check if the audio data is the same as before. Useful to visualize waveforms. This is because AudioData.getAudioData returns the current data in the buffer and if it is called before the buffer has been updated, it will return the previous data.
