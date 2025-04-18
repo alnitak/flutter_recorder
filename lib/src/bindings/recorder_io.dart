@@ -267,13 +267,33 @@ class RecorderFfi extends RecorderImpl {
 
       switch (defaultTargetPlatform) {
         case TargetPlatform.windows:
+          bool isValidDriveChar(int value) {
+            return ((value | 0x20) - 'a'.codeUnitAt(0)) <=
+                ('z'.codeUnitAt(0) - 'a'.codeUnitAt(0));
+          }
+
+          bool isDriveCharWithVolumeSeparatorChar(String path) {
+            return path.length >= 2 &&
+                isValidDriveChar(path.codeUnitAt(0)) &&
+                path[1] == ':';
+          }
+
           // Split path into components
           final pathParts = path.split(RegExp(r'[/\\]'));
+
+          var needSkipCheckFirst = isDriveCharWithVolumeSeparatorChar(path);
 
           // Check each component
           for (final part in pathParts) {
             // Skip empty parts
             if (part.isEmpty) continue;
+
+            if (needSkipCheckFirst) {
+              needSkipCheckFirst = false;
+              continue;
+            }
+
+            if (part.length == 1 && part == '.') continue;
 
             // Check for invalid characters in each part
             if (part.contains(RegExp('[:*?"<>|]')) ||
