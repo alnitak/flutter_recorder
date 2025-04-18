@@ -142,7 +142,7 @@ FFI_PLUGIN_EXPORT void flutter_recorder_listCaptureDevices(
         /// check if the device name has some strange chars (happens on Linux)
         for (int n = 0; n < 5; n++)
         {
-            if (d[i].name[n] < 0x20)
+            if (d[i].name[n] < 0x20 && d[i].name[n] >= 0)
                 hasSpecialChar = true;
         }
         if (strlen(d[i].name) <= 5 || hasSpecialChar)
