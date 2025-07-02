@@ -25,7 +25,7 @@ endif ()
 
 # list( APPEND CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Wno-error -fPIC")
 # message("*************************************************1 ${CMAKE_CXX_FLAGS} *************************************************")
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Wno-error -fPIC -msse2 -msse -mavx -mavx2 -mfma")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O2 -Wall -Wno-error -fPIC -msse2 -msse -mavx -mavx2 -mfma")
 # message("*************************************************2 ${CMAKE_CXX_FLAGS} *************************************************")
 
 # Invoke the build for native code shared with the other target platforms.

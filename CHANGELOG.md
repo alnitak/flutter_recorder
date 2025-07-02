@@ -1,3 +1,6 @@
+## 1.1.2
+- fix: macOS cross-compilation #39 by @Vild
+
 ## 1.1.1
 - fix building issue with XCode 16.3 #32
 - fix: `listPlaybackDevices` fails to retrieve devices when the device prefix contains Chinese characters #35 by @WHYBBE
