@@ -22,12 +22,12 @@ A new Flutter FFI plugin project.
   s.dependency 'FlutterMacOS'
 
   s.platform = :osx, '10.11'
-  s.pod_target_xcconfig = { 
+  s.pod_target_xcconfig = {
     'DEFINES_MODULE' => 'YES',
     "CLANG_CXX_LANGUAGE_STANDARD" => "c++17",
     # Enhanced optimization flags
-    'OTHER_CFLAGS' => '-O3 -ffast-math -march=native -mtune=native -ffast-math -flto -funroll-loops -pthread -Wno-strict-prototypes',
-    'OTHER_CPLUSPLUSFLAGS' => '-O3 -ffast-math -march=native -mtune=native -ffast-math -flto -funroll-loops -pthread -Wno-strict-prototypes',
+    'OTHER_CFLAGS' => '-O3 -ffast-math -flto -funroll-loops -pthread -Wno-strict-prototypes',
+    'OTHER_CPLUSPLUSFLAGS' => '-O3 -ffast-math -flto -funroll-loops -pthread -Wno-strict-prototypes',
     'GCC_OPTIMIZATION_LEVEL' => '3',
     # Add audio and threading optimization flags
     'GCC_PREPROCESSOR_DEFINITIONS' => 'MA_NO_RUNTIME_LINKING=1 NDEBUG=1 _REENTRANT=1',
