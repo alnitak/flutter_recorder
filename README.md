@@ -118,6 +118,8 @@ Recorder.instance.setSilenceDuration(0.5);
 Recorder.instance.setSecondsOfAudioToWriteBefore(0.0);
 ```
 
+***NOTE: this is only available when initializing the recorder with `PCMFormat.f32le` format.***
+
 ### 📊 Audio, FFT, and Volume Data
 You can also access raw audio data and volume information like this:
 
