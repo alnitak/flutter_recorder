@@ -148,11 +148,11 @@ FFI_PLUGIN_EXPORT void flutter_recorder_listCaptureDevices(
         if (strlen(d[i].name) <= 5 || hasSpecialChar)
             continue;
 
-        devicesName[i] = strdup(d[i].name);
-        isDefault[i] = (int *)malloc(sizeof(int *));
-        *isDefault[i] = d[i].isDefault;
-        deviceId[i] = (int *)malloc(sizeof(int *));
-        *deviceId[i] = d[i].id;
+        devicesName[numDevices] = strdup(d[i].name);
+        isDefault[numDevices] = (int *)malloc(sizeof(int *));
+        *isDefault[numDevices] = d[i].isDefault;
+        deviceId[numDevices] = (int *)malloc(sizeof(int *));
+        *deviceId[numDevices] = d[i].id;
 
         numDevices++;
     }
@@ -375,6 +375,8 @@ FFI_PLUGIN_EXPORT void flutter_recorder_getTexture2D(float **samples, bool *isTh
 FFI_PLUGIN_EXPORT float flutter_recorder_getTextureValue(int row, int column)
 {
     if (!capture.isInited())
+        return .0f;
+    if (row < 0 || row >= 256 || column < 0 || column >= 512)
         return .0f;
     return capturedTexture2D[row][column];
 }

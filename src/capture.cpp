@@ -159,6 +159,10 @@ void detectSilence(Capture *userData) {
         getTime(&startSilence);
         is_silent = false;
         delayed_silence_started = false;
+        if (nativeSilenceChangedCallback != nullptr) {
+          float energy_value = energy_db.load();
+          nativeSilenceChangedCallback(&delayed_silence_started, &energy_value);
+        }
       }
     }
   }
@@ -386,9 +390,9 @@ CaptureErrors Capture::init(Filters *filters, int deviceID, PCMFormat pcmFormat,
 void Capture::dispose() {
   mInited = false;
   wav.close();
-  if (!circularBuffer)
+  if (circularBuffer)
     circularBuffer.reset();
-  if (!streamBuffer)
+  if (streamBuffer)
     streamBuffer.reset();
   isRecording = false;
 
@@ -418,7 +422,7 @@ CaptureErrors Capture::start() {
 void Capture::stop() { ma_device_stop(&device); }
 
 void Capture::startStreamingData() {
-  if (!streamBuffer)
+  if (streamBuffer)
     streamBuffer.reset();
   streamBuffer = std::make_unique<std::vector<unsigned char>>();
   streamBuffer->reserve(STREAM_BUFFER_SIZE * 6);
@@ -427,7 +431,7 @@ void Capture::startStreamingData() {
 
 void Capture::stopStreamingData() {
   isStreamingData = false;
-  if (!streamBuffer)
+  if (streamBuffer)
     streamBuffer.reset();
 }
 
