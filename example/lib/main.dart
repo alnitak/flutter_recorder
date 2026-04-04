@@ -157,8 +157,26 @@ class _MyAppState extends State<MyApp> {
                       /// On web platform, it will be asked internally
                       /// from the browser.
                       if (!kIsWeb) {
-                        final downloadsDir = await getDownloadsDirectory();
-                        filePath = '${downloadsDir!.path}/flutter_recorder.wav';
+                        final Directory saveDir;
+                        if (defaultTargetPlatform == TargetPlatform.iOS ||
+                            defaultTargetPlatform == TargetPlatform.android) {
+                          // On mobile, use app documents directory
+                          saveDir = await getApplicationDocumentsDirectory();
+                        } else {
+                          // On desktop, use downloads directory
+                          final downloadsDir = await getDownloadsDirectory();
+                          if (downloadsDir == null) {
+                            debugPrint('-------------- startRecording() '
+                                'Could not get downloads directory\n');
+                            return;
+                          }
+                          saveDir = downloadsDir;
+                        }
+                        // Ensure the directory exists
+                        if (!saveDir.existsSync()) {
+                          saveDir.createSync(recursive: true);
+                        }
+                        filePath = '${saveDir.path}/flutter_recorder.wav';
                         recorder.startRecording(completeFilePath: filePath!);
                       } else {
                         recorder.startRecording();
@@ -206,13 +224,21 @@ class _MyAppState extends State<MyApp> {
                     recorder.startStreamingData();
 
                     if (!kIsWeb) {
-                      savingDir = await getDownloadsDirectory();
-                      if (savingDir == null) {
-                        debugPrint('Cannot get download directory!');
-                        return;
+                      final Directory baseDir;
+                      if (defaultTargetPlatform == TargetPlatform.iOS ||
+                          defaultTargetPlatform == TargetPlatform.android) {
+                        // On mobile, use app documents directory
+                        baseDir = await getApplicationDocumentsDirectory();
+                      } else {
+                        // On desktop, use downloads directory
+                        final downloadsDir = await getDownloadsDirectory();
+                        if (downloadsDir == null) {
+                          debugPrint('Cannot get download directory!');
+                          return;
+                        }
+                        baseDir = downloadsDir;
                       }
-                      savingDir =
-                          Directory('${savingDir!.path}/flutter_recorder');
+                      savingDir = Directory('${baseDir.path}/flutter_recorder');
                       savingDir!.createSync();
 
                       file = File(
@@ -381,13 +407,14 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> showFileRecordedDialog(String filePath) async {
+    final fileExists = await File(filePath).exists();
     return showDialog<void>(
       context: context,
       barrierDismissible: true,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Recording saved!'),
-          content: Text('Audio saved to:\n$filePath'),
+          content: Text('Audio saved to:\n$filePath\nFile exists: $fileExists'),
           actions: <Widget>[
             TextButton(
               child: const Text('open'),

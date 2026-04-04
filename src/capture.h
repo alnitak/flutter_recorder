@@ -1,120 +1,117 @@
 #ifndef CAPTURE_H
 #define CAPTURE_H
 
-#include "enums.h"
 #include "common.h"
-#include "wav.h"
+#include "enums.h"
 #include "miniaudio.h"
+#include "wav.h"
 
-#include <vector>
-#include <string>
 #include "filters/filters.h"
+#include <string>
+#include <vector>
 
-struct CaptureDevice
-{
-    char *name;
-    unsigned int isDefault;
-    unsigned int id;
+struct CaptureDevice {
+  char *name;
+  unsigned int isDefault;
+  unsigned int id;
 };
 
-class Capture
-{
+class Capture {
 public:
-    Capture();
-    ~Capture();
+  Capture();
+  ~Capture();
 
-    /// stores a list of available capture devices
-    /// detected by miniaudio
-    std::vector<CaptureDevice> listCaptureDevices();
+  /// stores a list of available capture devices
+  /// detected by miniaudio
+  std::vector<CaptureDevice> listCaptureDevices();
 
-    /// @brief initialize the capture with a [deviceID]. A list of devices
-    ///     can be acquired with [listCaptureDevices].
-    ///     If [deviceID] is -1, the default will be used
-    /// @param filters the filters
-    /// @param deviceID the device ID chosen to be initialized
-    /// @param pcmFormat the PCM format
-    /// @param sampleRate the sample rate
-    /// @param channels the number of channels
-    /// @return `captureNoError` if no error or else `captureInitFailed`
-    CaptureErrors init(
-        Filters *filters,
-        int deviceID,
-        PCMFormat pcmFormat,
-        unsigned int sampleRate,
-        unsigned int channels);
+  /// @brief initialize the capture with a [deviceID]. A list of devices
+  ///     can be acquired with [listCaptureDevices].
+  ///     If [deviceID] is -1, the default will be used
+  /// @param filters the filters
+  /// @param deviceID the device ID chosen to be initialized
+  /// @param pcmFormat the PCM format
+  /// @param sampleRate the sample rate
+  /// @param channels the number of channels
+  /// @return `captureNoError` if no error or else `captureInitFailed`
+  CaptureErrors init(Filters *filters, int deviceID, PCMFormat pcmFormat,
+                     unsigned int sampleRate, unsigned int channels);
 
-    /// @brief Must be called when there is no more need of the capture or when closing the app
-    void dispose();
+  /// @brief Must be called when there is no more need of the capture or when
+  /// closing the app
+  void dispose();
 
-    bool isInited();
+  bool isInited();
 
-    bool isDeviceStarted();
+  bool isDeviceStarted();
 
-    CaptureErrors start();
+  CaptureErrors start();
 
-    void stop();
+  void stop();
 
-    void startStreamingData();
-    void stopStreamingData();
+  void startStreamingData();
+  void stopStreamingData();
 
-    void setSilenceDetection(bool enable);
+  void setSilenceDetection(bool enable);
 
-    void setSilenceThresholdDb(float silenceThresholdDb);
-    void setSilenceDuration(float silenceDuration);
-    void setSecondsOfAudioToWriteBefore(float secondsOfAudioToWriteBefore);
+  void setSilenceThresholdDb(float silenceThresholdDb);
+  void setSilenceDuration(float silenceDuration);
+  void setSecondsOfAudioToWriteBefore(float secondsOfAudioToWriteBefore);
 
-    CaptureErrors startRecording(const char *path);
+  CaptureErrors startRecording(const char *path);
 
-    void setPauseRecording(bool pause);
+  void setPauseRecording(bool pause);
 
-    void stopRecording();
+  void stopRecording();
 
-    float *getWave(bool *isTheSameAsBefore);
+  float *getWave(bool *isTheSameAsBefore);
 
-    float getVolumeDb();
+  float getVolumeDb();
 
-    ma_device_config deviceConfig;
+  ma_device_config deviceConfig;
 
-    /// Wheter or not the callback is detecting silence.
-    bool isDetectingSilence;
+  /// Wheter or not the callback is detecting silence.
+  bool isDetectingSilence;
 
-    /// The threshold for detecting silence.
-    float silenceThresholdDb;
+  /// The threshold for detecting silence.
+  float silenceThresholdDb;
 
-    /// The duration of silence in seconds after which the silence is considered silence.
-    float silenceDuration;
+  /// The duration of silence in seconds after which the silence is considered
+  /// silence.
+  float silenceDuration;
 
-    /// ms of audio to write occurred before starting recording againg after silence.
-    float secondsOfAudioToWriteBefore;
+  /// ms of audio to write occurred before starting recording againg after
+  /// silence.
+  float secondsOfAudioToWriteBefore;
 
-    ///
-    WriteAudio::Wav wav;
+  ///
+  WriteAudio::Wav wav;
 
-    /// true when the capture device is recording.
-    bool isRecording;
+  /// true when the capture device is recording.
+  bool isRecording;
 
-    /// true when the capture device is paused.
-    bool isRecordingPaused;
+  /// true when the capture device is paused.
+  bool isRecordingPaused;
 
-    /// true when the capture device is streaming data.
-    bool isStreamingData;
+  /// true when the capture device is streaming data.
+  bool isStreamingData;
 
-    /// the number of bytes per sample
-    int bytesPerSample;
+  /// the number of bytes per sample
+  int bytesPerSample;
 
-    Filters *mFilters;
+  Filters *mFilters;
+
 private:
-    ma_context context;
-    ma_device_info *pPlaybackInfos;
-    ma_uint32 playbackCount;
-    ma_device_info *pCaptureInfos;
-    ma_uint32 captureCount;
-    ma_result result;
-    ma_device device;
+  ma_context context;
+  ma_device_info *pPlaybackInfos;
+  ma_uint32 playbackCount;
+  ma_device_info *pCaptureInfos;
+  ma_uint32 captureCount;
+  ma_result result;
+  ma_device device;
 
-
-    /// true when the capture device is initialized.
-    bool mInited;
+  /// true when the capture device is initialized.
+  bool mInited;
 };
 
 #endif // CAPTURE_H

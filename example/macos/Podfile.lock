@@ -25,9 +25,9 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin
 
 SPEC CHECKSUMS:
-  flutter_recorder: c93092a2b731a51bf81e2e0bcfc3021870c5a628
-  flutter_soloud: 5fd8e08d9e9258da2993ef11bb0996cfe187da02
-  FlutterMacOS: 8f6f14fa908a6fb3fba0cd85dbd81ec4b251fb24
+  flutter_recorder: 3169f597fdaed0ea9257da441e6ea055bf4ca370
+  flutter_soloud: 27bbb9bc4f68aa0ca41b61683871db9660f59283
+  FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
   path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
 
 PODFILE CHECKSUM: 9ebaf0ce3d369aaa26a9ea0e159195ed94724cf3
