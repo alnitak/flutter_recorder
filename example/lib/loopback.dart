@@ -344,6 +344,9 @@ class _AutoGainSlidersState extends State<AutoGainSliders> {
                 min: autoGain.queryTargetRms.min,
                 max: autoGain.queryTargetRms.max,
                 onChanged: (v) {
+                  if (v <= autoGain.queryTargetRms.min) return;
+                  if (v >= autoGain.queryTargetRms.max) return;
+                  print('Changing targetRms to $v. Range: ${autoGain.queryTargetRms.min} - ${autoGain.queryTargetRms.max}');
                   setState(() {
                     autoGain.targetRms.value = v;
                   });
@@ -365,6 +368,8 @@ class _AutoGainSlidersState extends State<AutoGainSliders> {
                 min: autoGain.queryAttackTime.min,
                 max: autoGain.queryAttackTime.max,
                 onChanged: (v) {
+                  if (v <= autoGain.queryAttackTime.min) return;
+                  if (v >= autoGain.queryAttackTime.max) return;
                   setState(() {
                     autoGain.attackTime.value = v;
                   });
@@ -386,6 +391,8 @@ class _AutoGainSlidersState extends State<AutoGainSliders> {
                 min: autoGain.queryReleaseTime.min,
                 max: autoGain.queryReleaseTime.max,
                 onChanged: (v) {
+                  if (v <= autoGain.queryReleaseTime.min) return;
+                  if (v >= autoGain.queryReleaseTime.max) return;
                   setState(() {
                     autoGain.releaseTime.value = v;
                   });
@@ -407,6 +414,8 @@ class _AutoGainSlidersState extends State<AutoGainSliders> {
                 min: autoGain.queryGainSmoothing.min,
                 max: autoGain.queryGainSmoothing.max,
                 onChanged: (v) {
+                  if (v <= autoGain.queryGainSmoothing.min) return;
+                  if (v >= autoGain.queryGainSmoothing.max) return;
                   setState(() {
                     autoGain.gainSmoothing.value = v;
                   });
@@ -428,6 +437,8 @@ class _AutoGainSlidersState extends State<AutoGainSliders> {
                 min: autoGain.queryMaxGain.min,
                 max: autoGain.queryMaxGain.max,
                 onChanged: (v) {
+                  if (v <= autoGain.queryMaxGain.min) return;
+                  if (v >= autoGain.queryMaxGain.max) return;
                   setState(() {
                     autoGain.maxGain.value = v;
                   });
@@ -449,6 +460,8 @@ class _AutoGainSlidersState extends State<AutoGainSliders> {
                 min: autoGain.queryMinGain.min,
                 max: autoGain.queryMinGain.max,
                 onChanged: (v) {
+                  if (v <= autoGain.queryMinGain.min) return;
+                  if (v >= autoGain.queryMinGain.max) return;
                   setState(() {
                     autoGain.minGain.value = v;
                   });
