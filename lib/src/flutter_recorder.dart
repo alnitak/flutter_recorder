@@ -99,7 +99,7 @@ interface class Recorder {
   @experimental
   final filters = const Filters();
 
-  final _recoreder = RecorderController();
+  final _recorder = RecorderController();
 
   /// Whether the device is initialized.
   bool _isInitialized = false;
@@ -112,7 +112,7 @@ interface class Recorder {
 
   /// Listening to silence state changes.
   Stream<SilenceState> get silenceChangedEvents =>
-      _recoreder.impl.silenceChangedEvents;
+      _recorder.impl.silenceChangedEvents;
 
   /// Listen to audio data.
   ///
@@ -126,7 +126,7 @@ interface class Recorder {
   /// objects, but when you attempt to read them, you will find that all
   /// the items contain the same data.
   Stream<AudioDataContainer> get uint8ListStream =>
-      _recoreder.impl.uint8ListStream;
+      _recorder.impl.uint8ListStream;
 
   /// Enable or disable silence detection.
   ///
@@ -136,7 +136,7 @@ interface class Recorder {
     required bool enable,
     SilenceCallback? onSilenceChanged,
   }) {
-    _recoreder.impl.setSilenceDetection(
+    _recorder.impl.setSilenceDetection(
       enable: enable,
       onSilenceChanged: onSilenceChanged,
     );
@@ -156,7 +156,7 @@ interface class Recorder {
   /// - Negative dB values indicate that the signal's energy is lower compared
   /// to this maximum.
   void setSilenceThresholdDb(double silenceThresholdDb) {
-    _recoreder.impl.setSilenceThresholdDb(silenceThresholdDb);
+    _recorder.impl.setSilenceThresholdDb(silenceThresholdDb);
   }
 
   /// Set the value in seconds of silence after which silence is considered
@@ -167,7 +167,7 @@ interface class Recorder {
   /// triggered or the Stream [silenceChangedEvents] will emit silence state.
   /// Default to 2 seconds.
   void setSilenceDuration(double silenceDuration) {
-    _recoreder.impl.setSilenceDuration(silenceDuration);
+    _recorder.impl.setSilenceDuration(silenceDuration);
   }
 
   /// Set seconds of audio to write before starting recording again after
@@ -181,13 +181,13 @@ interface class Recorder {
   ///             ^ secondsOfAudioToWriteBefore (write some before silence ends)
   /// ```
   void setSecondsOfAudioToWriteBefore(double secondsOfAudioToWriteBefore) {
-    _recoreder.impl.setSecondsOfAudioToWriteBefore(secondsOfAudioToWriteBefore);
+    _recorder.impl.setSecondsOfAudioToWriteBefore(secondsOfAudioToWriteBefore);
   }
 
   /// List available input devices. Useful on desktop to choose
   /// which input device to use.
   List<CaptureDevice> listCaptureDevices() {
-    final ret = _recoreder.impl.listCaptureDevices();
+    final ret = _recorder.impl.listCaptureDevices();
 
     return ret;
   }
@@ -208,7 +208,7 @@ interface class Recorder {
     int sampleRate = 22050,
     RecorderChannels channels = RecorderChannels.mono,
   }) async {
-    await _recoreder.impl.setDartEventCallbacks();
+    await _recorder.impl.setDartEventCallbacks();
 
     // Sets the [_isInitialized].
     // Usefult when the consumer use the hot restart and that flag
@@ -224,7 +224,7 @@ interface class Recorder {
       deinit();
     }
 
-    _recoreder.impl.init(
+    _recorder.impl.init(
       deviceID: deviceID,
       format: format,
       sampleRate: sampleRate,
@@ -236,22 +236,22 @@ interface class Recorder {
 
   /// Dispose capture device.
   void deinit() {
-    _isInitialized = false;
     stop();
-    _recoreder.impl.deinit();
+    _isInitialized = false;
+    _recorder.impl.deinit();
   }
 
   /// Whether the device is initialized.
   bool isDeviceInitialized() {
     // ignore: join_return_with_assignment
-    _isInitialized = _recoreder.impl.isDeviceInitialized();
+    _isInitialized = _recorder.impl.isDeviceInitialized();
     return _isInitialized;
   }
 
   /// Whether the device is started.
   bool isDeviceStarted() {
     // ignore: join_return_with_assignment
-    _isStarted = _recoreder.impl.isDeviceStarted();
+    _isStarted = _recorder.impl.isDeviceStarted();
     return _isStarted;
   }
 
@@ -267,7 +267,7 @@ interface class Recorder {
       _log.warning(() => 'start(): recorder is not initialized.');
       throw const RecorderNotInitializedException();
     }
-    _recoreder.impl.start();
+    _recorder.impl.start();
     _isStarted = true;
   }
 
@@ -278,7 +278,7 @@ interface class Recorder {
       return;
     }
     _isStarted = false;
-    _recoreder.impl.stop();
+    _recorder.impl.stop();
   }
 
   /// Start streaming data.
@@ -289,7 +289,7 @@ interface class Recorder {
       _log.warning(() => 'startStreamingData(): recorder is not initialized.');
       throw const RecorderNotInitializedException();
     }
-    _recoreder.impl.startStreamingData();
+    _recorder.impl.startStreamingData();
   }
 
   /// Stop streaming data.
@@ -298,7 +298,7 @@ interface class Recorder {
       _log.warning(() => 'stopStreamingData(): recorder is not initialized.');
       return;
     }
-    _recoreder.impl.stopStreamingData();
+    _recorder.impl.stopStreamingData();
   }
 
   /// Start recording.
@@ -330,19 +330,19 @@ interface class Recorder {
       _log.warning(() => 'startRecording(): recorder is not started.');
       throw const RecorderCaptureNotStartededException();
     }
-    _recoreder.impl.startRecording(completeFilePath);
+    _recorder.impl.startRecording(completeFilePath);
   }
 
   /// Pause recording.
   void setPauseRecording({required bool pause}) {
     if (!_isStarted) return;
-    _recoreder.impl.setPauseRecording(pause: pause);
+    _recorder.impl.setPauseRecording(pause: pause);
   }
 
   /// Stop recording.
   void stopRecording() {
     if (!_isStarted) return;
-    _recoreder.impl.stopRecording();
+    _recorder.impl.stopRecording();
   }
 
   /// Smooth FFT data.
@@ -356,7 +356,11 @@ interface class Recorder {
   /// the new value is calculated with:
   /// newFreq = smooth * oldFreq + (1 - smooth) * newFreq
   void setFftSmoothing(double smooth) {
-    _recoreder.impl.setFftSmoothing(smooth);
+    if (!_isInitialized) {
+      _log.warning(() => 'setFftSmoothing: recorder is not initialized.');
+      return;
+    }
+    _recorder.impl.setFftSmoothing(smooth);
   }
 
   /// Conveninet way to get FFT data. Return a 256 float array containing
@@ -380,7 +384,7 @@ interface class Recorder {
       );
       return Float32List(256);
     }
-    return _recoreder.impl.getFft(alwaysReturnData: alwaysReturnData);
+    return _recorder.impl.getFft(alwaysReturnData: alwaysReturnData);
   }
 
   /// Return a 256 float array containing wave data in the range [-1.0, 1.0]
@@ -402,7 +406,7 @@ interface class Recorder {
       );
       return Float32List(256);
     }
-    return _recoreder.impl.getWave(alwaysReturnData: alwaysReturnData);
+    return _recorder.impl.getWave(alwaysReturnData: alwaysReturnData);
   }
 
   /// Get the audio data representing an array of 256 floats FFT data and
@@ -418,7 +422,13 @@ interface class Recorder {
       _log.warning(() => 'getTexture: recorder is not started.');
       return Float32List(256);
     }
-    return _recoreder.impl.getTexture(alwaysReturnData: alwaysReturnData);
+    if (_recorderFormat != PCMFormat.f32le) {
+      _log.warning(
+        () => 'getTexture: texture can be get only using f32le format.',
+      );
+      return Float32List(256);
+    }
+    return _recorder.impl.getTexture(alwaysReturnData: alwaysReturnData);
   }
 
   /// Get the audio data representing an array of 256 floats FFT data and
@@ -440,7 +450,7 @@ interface class Recorder {
       );
       return Float32List(256);
     }
-    return _recoreder.impl.getTexture2D(alwaysReturnData: alwaysReturnData);
+    return _recorder.impl.getTexture2D(alwaysReturnData: alwaysReturnData);
   }
 
   /// Get the current volume in dB. Returns -100 if the capture is not inited.
@@ -462,7 +472,7 @@ interface class Recorder {
       );
       return -100;
     }
-    return _recoreder.impl.getVolumeDb();
+    return _recorder.impl.getVolumeDb();
   }
 
   // ///////////////////////
@@ -472,7 +482,7 @@ interface class Recorder {
   /// Check if a filter is active.
   /// Return -1 if the filter is not active or its index.
   int isFilterActive(RecorderFilterType filterType) {
-    return _recoreder.impl.isFilterActive(filterType);
+    return _recorder.impl.isFilterActive(filterType);
   }
 
   /// Add a filter.
@@ -481,20 +491,20 @@ interface class Recorder {
   /// been added.
   /// Throws [RecorderFilterNotFoundException] if the filter could not be found.
   void addFilter(RecorderFilterType filterType) {
-    _recoreder.impl.addFilter(filterType);
+    _recorder.impl.addFilter(filterType);
   }
 
   /// Remove a filter.
   ///
-  /// Throws [RecorderFilterNotFoundException] if trying to a non active
+  /// Throws [RecorderFilterNotFoundException] if trying to remove a non active
   /// filter.
-  CaptureErrors removeFilter(RecorderFilterType filterType) {
-    return _recoreder.impl.removeFilter(filterType);
+  void removeFilter(RecorderFilterType filterType) {
+    _recorder.impl.removeFilter(filterType);
   }
 
   /// Get filter param names.
   List<String> getFilterParamNames(RecorderFilterType filterType) {
-    return _recoreder.impl.getFilterParamNames(filterType);
+    return _recorder.impl.getFilterParamNames(filterType);
   }
 
   /// Set filter param value.
@@ -503,11 +513,11 @@ interface class Recorder {
     int attributeId,
     double value,
   ) {
-    _recoreder.impl.setFilterParamValue(filterType, attributeId, value);
+    _recorder.impl.setFilterParamValue(filterType, attributeId, value);
   }
 
   /// Get filter param value.
   double getFilterParamValue(RecorderFilterType filterType, int attributeId) {
-    return _recoreder.impl.getFilterParamValue(filterType, attributeId);
+    return _recorder.impl.getFilterParamValue(filterType, attributeId);
   }
 }

@@ -136,8 +136,8 @@ class _LoopBackState extends State<LoopBack> {
 
   @override
   void dispose() {
-    soloud.deinit();
     recorder.deinit();
+    soloud.deinit();
     super.dispose();
   }
 
@@ -176,17 +176,18 @@ class _LoopBackState extends State<LoopBack> {
           mainAxisSize: MainAxisSize.min,
           children: [
             OutlinedButton(
-              onPressed: () {
-                init();
+              onPressed: () async {
+                await init();
               },
               child: const Text('Init loopback'),
             ),
             OutlinedButton(
               onPressed: () {
-                soloud.deinit();
+                // First deinit the recorder and then the player
                 recorder
                   ..stopStreamingData()
                   ..deinit();
+                soloud.deinit();
                 audioSource = null;
               },
               child: const Text('Stop'),
