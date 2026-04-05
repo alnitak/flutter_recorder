@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:developer' as dev;
 
+import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_recorder/flutter_recorder.dart';
@@ -72,6 +74,31 @@ class _LoopBackState extends State<LoopBack> {
   bool autoGain = false;
   // bool echoCancellation = false;
 
+  /// Current audio devices
+  String _currentInput = 'None';
+  String _currentOutput = 'None';
+
+  /// Timer for polling audio devices (since devicesStream doesn't always work on iOS)
+  Timer? _devicePollTimer;
+
+  /// Subscription to recorder stream (need to cancel on dispose)
+  StreamSubscription<AudioDataContainer>? _recorderSubscription;
+
+  /// Update the current audio devices display
+  Future<void> _updateAudioDevices() async {
+    final session = await AudioSession.instance;
+    final devices = await session.getDevices();
+    final input = devices.where((d) => d.isInput).firstOrNull?.name ?? 'None';
+    final output = devices.where((d) => d.isOutput).firstOrNull?.name ?? 'None';
+
+    if (mounted && (input != _currentInput || output != _currentOutput)) {
+      setState(() {
+        _currentInput = input;
+        _currentOutput = output;
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -84,14 +111,33 @@ class _LoopBackState extends State<LoopBack> {
       });
     }
 
+    /// Listen for audio route changes and update UI.
+    AudioSession.instance.then((session) {
+      // Initial update
+      _updateAudioDevices();
+
+      // Listen to stream changes
+      session.devicesStream.listen((devices) {
+        final input =
+            devices.where((d) => d.isInput).map((d) => d.name).join(', ');
+        final output =
+            devices.where((d) => d.isOutput).map((d) => d.name).join(', ');
+        dev.log(
+          'Audio devices changed: input=$input, output=$output',
+          name: 'AudioSession',
+        );
+        _updateAudioDevices();
+      });
+    });
+
+    // Poll for device changes every second since devicesStream doesn't always work on iOS
+    _devicePollTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _updateAudioDevices();
+    });
+
     /// Listen for microphne data.
-    recorder.uint8ListStream.listen((chunks) {
+    _recorderSubscription = recorder.uint8ListStream.listen((chunks) {
       if (audioSource != null) {
-        // StringBuffer sb = StringBuffer();
-        // for (var i = 0; i < 10; i++) {
-        //   sb.write(chunks.rawData[i].toRadixString(16).padLeft(2, '0'));
-        // }
-        // print('Received ${chunks.length} chunks  ${sb.toString()}');
         soloud.addAudioDataStream(
           audioSource!,
           chunks.toF32List(from: PCMFormat.f32le).buffer.asUint8List(),
@@ -136,12 +182,51 @@ class _LoopBackState extends State<LoopBack> {
 
   @override
   void dispose() {
+    if (audioSource != null) {
+      soloud.setDataIsEnded(audioSource!);
+    }
+    _devicePollTimer?.cancel();
+    _recorderSubscription?.cancel();
     recorder.deinit();
     soloud.deinit();
+
+    /// Deactivate the audio session when done.
+    AudioSession.instance.then((session) => session.setActive(false));
     super.dispose();
   }
 
   Future<void> init() async {
+    /// Configure the audio session for play and record.
+    /// This is important when using multiple audio plugins together.
+    final session = await AudioSession.instance;
+    await session.configure(
+      AudioSessionConfiguration(
+        avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
+        avAudioSessionCategoryOptions:
+            AVAudioSessionCategoryOptions.allowBluetooth |
+                AVAudioSessionCategoryOptions.defaultToSpeaker,
+        avAudioSessionMode: AVAudioSessionMode.voiceChat,
+        // Android configuration
+        androidAudioAttributes: const AndroidAudioAttributes(
+          usage: AndroidAudioUsage.voiceCommunication,
+          contentType: AndroidAudioContentType.speech,
+          flags: AndroidAudioFlags.none,
+        ),
+        androidWillPauseWhenDucked: false,
+      ),
+    );
+
+    /// Activate the audio session before initializing audio plugins.
+    await session.setActive(true);
+
+    /// Debug: Log current audio route
+    final devices = await session.getDevices();
+    dev.log(
+      'Audio route before init: input=${devices.where((d) => d.isInput).map((d) => d.name).join(', ')}, '
+      'output=${devices.where((d) => d.isOutput).map((d) => d.name).join(', ')}',
+      name: 'AudioSession',
+    );
+
     /// Initialize the player and the recorder.
     await disposeAudioSource();
     await soloud.init(channels: Channels.mono, sampleRate: sampleRate);
@@ -159,6 +244,17 @@ class _LoopBackState extends State<LoopBack> {
       ..start()
       ..startStreamingData();
 
+    /// Debug: Log audio route after init
+    final devicesAfter = await session.getDevices();
+    dev.log(
+      'Audio route after init: input=${devicesAfter.where((d) => d.isInput).map((d) => d.name).join(', ')}, '
+      'output=${devicesAfter.where((d) => d.isOutput).map((d) => d.name).join(', ')}',
+      name: 'AudioSession',
+    );
+
+    // Update the device display
+    await _updateAudioDevices();
+
     if (context.mounted) {
       setState(() {});
     }
@@ -171,6 +267,26 @@ class _LoopBackState extends State<LoopBack> {
       spacing: 10,
       children: [
         const Text('Please, use headset to prevent audio feedback'),
+        // Audio route info
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Column(
+              children: [
+                Text('Input: $_currentInput',
+                    style: const TextStyle(fontSize: 12)),
+                Text('Output: $_currentOutput',
+                    style: const TextStyle(fontSize: 12)),
+              ],
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.refresh, size: 16),
+              onPressed: _updateAudioDevices,
+              tooltip: 'Refresh devices',
+            ),
+          ],
+        ),
         // Start / Stop
         Row(
           mainAxisSize: MainAxisSize.min,
@@ -347,7 +463,6 @@ class _AutoGainSlidersState extends State<AutoGainSliders> {
                 onChanged: (v) {
                   if (v <= autoGain.queryTargetRms.min) return;
                   if (v >= autoGain.queryTargetRms.max) return;
-                  print('Changing targetRms to $v. Range: ${autoGain.queryTargetRms.min} - ${autoGain.queryTargetRms.max}');
                   setState(() {
                     autoGain.targetRms.value = v;
                   });

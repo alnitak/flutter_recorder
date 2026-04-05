@@ -359,7 +359,7 @@ CaptureErrors Capture::init(Filters *filters, int deviceID, PCMFormat pcmFormat,
   deviceConfig.pUserData = this;
 
 #if defined(MA_HAS_COREAUDIO)
-  // Disable CoreAudio context
+  // Use explicit context with noAudioSessionActivate to let audio_session manage AVAudioSession
   ma_context_config contextConfig = ma_context_config_init();
   contextConfig.coreaudio.sessionCategory = ma_ios_session_category_none;
   contextConfig.coreaudio.noAudioSessionActivate = true;
@@ -377,7 +377,6 @@ CaptureErrors Capture::init(Filters *filters, int deviceID, PCMFormat pcmFormat,
 #else
   if (ma_device_init(NULL, &deviceConfig, &device) != MA_SUCCESS) {
     printf("Failed to initialize capture device.\n");
-    ma_context_uninit(&context);
     return captureInitFailed;
   }
 #endif
@@ -397,6 +396,9 @@ void Capture::dispose() {
   isRecording = false;
 
   ma_device_uninit(&device);
+#if defined(MA_HAS_COREAUDIO)
+  ma_context_uninit(&context);
+#endif
 }
 
 bool Capture::isInited() { return mInited; }

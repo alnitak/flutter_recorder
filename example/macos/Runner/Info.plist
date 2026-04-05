@@ -28,6 +28,10 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>flutter_recorder needs your permission to use the mic</string>
 	<key>NSDownloadsFolderUsageDescription</key>

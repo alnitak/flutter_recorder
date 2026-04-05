@@ -1,4 +1,6 @@
 PODS:
+  - audio_session (0.0.1):
+    - Flutter
   - Flutter (1.0.0)
   - flutter_recorder (0.0.1):
     - Flutter
@@ -13,6 +15,7 @@ PODS:
     - Flutter
 
 DEPENDENCIES:
+  - audio_session (from `.symlinks/plugins/audio_session/ios`)
   - Flutter (from `Flutter`)
   - flutter_recorder (from `.symlinks/plugins/flutter_recorder/ios`)
   - flutter_soloud (from `.symlinks/plugins/flutter_soloud/ios`)
@@ -21,6 +24,8 @@ DEPENDENCIES:
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
 
 EXTERNAL SOURCES:
+  audio_session:
+    :path: ".symlinks/plugins/audio_session/ios"
   Flutter:
     :path: Flutter
   flutter_recorder:
@@ -35,6 +40,7 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/permission_handler_apple/ios"
 
 SPEC CHECKSUMS:
+  audio_session: 9bb7f6c970f21241b19f5a3658097ae459681ba0
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_recorder: ed50a95fdc1de98847f1caf155e2a35c0c55a06d
   flutter_soloud: b97deedf9e50353d2904336a5b8c2c65abc76e2f
