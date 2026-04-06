@@ -78,9 +78,6 @@ class _LoopBackState extends State<LoopBack> {
   String _currentInput = 'None';
   String _currentOutput = 'None';
 
-  /// Timer for polling audio devices (since devicesStream doesn't always work on iOS)
-  Timer? _devicePollTimer;
-
   /// Subscription to recorder stream (need to cancel on dispose)
   StreamSubscription<AudioDataContainer>? _recorderSubscription;
 
@@ -88,9 +85,39 @@ class _LoopBackState extends State<LoopBack> {
   Future<void> _updateAudioDevices() async {
     final session = await AudioSession.instance;
     final devices = await session.getDevices();
-    final input = devices.where((d) => d.isInput).firstOrNull?.name ?? 'None';
-    final output = devices.where((d) => d.isOutput).firstOrNull?.name ?? 'None';
-
+    
+    // Log all devices for debugging
+    final allInputs = devices.where((d) => d.isInput).map((d) => d.name).toList();
+    final allOutputs = devices.where((d) => d.isOutput).map((d) => d.name).toList();
+    dev.log(
+      'All devices: input=$allInputs, output=$allOutputs',
+      name: 'AudioSession',
+    );
+    
+    // On Android, getDevices() returns all available devices, not just active ones.
+    // Try to find a headset/Bluetooth device first, otherwise use the first one.
+    String findBestDevice(List<AudioDevice> deviceList) {
+      if (deviceList.isEmpty) return 'None';
+      
+      // Look for Bluetooth or wired headset first
+      for (final device in deviceList) {
+        final name = device.name.toLowerCase();
+        if (name.contains('bluetooth') || 
+            name.contains('headset') || 
+            name.contains('headphone') ||
+            name.contains('btr') ||  // FiiO BTR3K
+            name.contains('fiio')) {
+          return device.name;
+        }
+      }
+      
+      // Fall back to first device
+      return deviceList.first.name;
+    }
+    
+    final input = findBestDevice(devices.where((d) => d.isInput).toList());
+    final output = findBestDevice(devices.where((d) => d.isOutput).toList());
+    
     if (mounted && (input != _currentInput || output != _currentOutput)) {
       setState(() {
         _currentInput = input;
@@ -130,11 +157,6 @@ class _LoopBackState extends State<LoopBack> {
       });
     });
 
-    // Poll for device changes every second since devicesStream doesn't always work on iOS
-    _devicePollTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      _updateAudioDevices();
-    });
-
     /// Listen for microphne data.
     _recorderSubscription = recorder.uint8ListStream.listen((chunks) {
       if (audioSource != null) {
@@ -164,6 +186,7 @@ class _LoopBackState extends State<LoopBack> {
       format: audioStreamFormat,
       sampleRate: sampleRate,
       bufferingTimeNeeds: 0.2,
+      bufferingType: BufferingType.released,
     );
 
     audioSource!.allInstancesFinished.listen((data) async {
@@ -185,7 +208,6 @@ class _LoopBackState extends State<LoopBack> {
     if (audioSource != null) {
       soloud.setDataIsEnded(audioSource!);
     }
-    _devicePollTimer?.cancel();
     _recorderSubscription?.cancel();
     recorder.deinit();
     soloud.deinit();
