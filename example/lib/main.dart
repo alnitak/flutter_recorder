@@ -408,6 +408,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> showFileRecordedDialog(String filePath) async {
     final fileExists = await File(filePath).exists();
+    if (!mounted) return;
     return showDialog<void>(
       context: context,
       barrierDismissible: true,
