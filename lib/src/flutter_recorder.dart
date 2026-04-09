@@ -132,6 +132,9 @@ interface class Recorder {
   ///
   /// [enable] wheter to enable or disable silence detection. Default to false.
   /// [onSilenceChanged] callback when silence state is changed.
+  ///
+  /// **NOTE**: this is only available when initializing the recorder
+  /// with [PCMFormat.f32le] format.
   void setSilenceDetection({
     required bool enable,
     SilenceCallback? onSilenceChanged,
@@ -155,6 +158,9 @@ interface class Recorder {
   /// without distortion.
   /// - Negative dB values indicate that the signal's energy is lower compared
   /// to this maximum.
+  ///
+  /// **NOTE**: this is only available when initializing the recorder
+  /// with [PCMFormat.f32le] format.
   void setSilenceThresholdDb(double silenceThresholdDb) {
     _recorder.impl.setSilenceThresholdDb(silenceThresholdDb);
   }
@@ -166,6 +172,9 @@ interface class Recorder {
   /// remains silent for this duration, the [SilenceCallback] callback will be
   /// triggered or the Stream [silenceChangedEvents] will emit silence state.
   /// Default to 2 seconds.
+  ///
+  /// **NOTE**: this is only available when initializing the recorder
+  /// with [PCMFormat.f32le] format.
   void setSilenceDuration(double silenceDuration) {
     _recorder.impl.setSilenceDuration(silenceDuration);
   }
@@ -368,7 +377,8 @@ interface class Recorder {
   ///
   /// If also wave data is needed consider using [getTexture] or [getTexture2D].
   ///
-  /// **NOTE**: use this only with format [PCMFormat.f32le].
+  /// **NOTE**: this is only available when initializing the recorder
+  /// with [PCMFormat.f32le] format.
   Float32List getFft({bool alwaysReturnData = true}) {
     if (!_isInitialized) {
       _log.warning(() => 'getFft: recorder is not initialized.');
@@ -390,7 +400,8 @@ interface class Recorder {
   /// Return a 256 float array containing wave data in the range [-1.0, 1.0]
   /// not clamped.
   ///
-  /// **NOTE**: use this only with format [PCMFormat.f32le].
+  /// **NOTE**: this is only available when initializing the recorder
+  /// with [PCMFormat.f32le] format.
   Float32List getWave({bool alwaysReturnData = true}) {
     if (!_isInitialized) {
       _log.warning(() => 'getWave: recorder is not initialized.');
@@ -412,7 +423,8 @@ interface class Recorder {
   /// Get the audio data representing an array of 256 floats FFT data and
   /// 256 float of wave data.
   ///
-  /// **NOTE**: use this only with format [PCMFormat.f32le].
+  /// **NOTE**: this is only available when initializing the recorder
+  /// with [PCMFormat.f32le] format.
   Float32List getTexture({bool alwaysReturnData = true}) {
     if (!_isInitialized) {
       _log.warning(() => 'getTexture: recorder is not initialized.');
@@ -434,7 +446,8 @@ interface class Recorder {
   /// Get the audio data representing an array of 256 floats FFT data and
   /// 256 float of wave data.
   ///
-  /// **NOTE**: use this only with format [PCMFormat.f32le].
+  /// **NOTE**: this is only available when initializing the recorder
+  /// with [PCMFormat.f32le] format.
   Float32List getTexture2D({bool alwaysReturnData = true}) {
     if (!_isInitialized) {
       _log.warning(() => 'getTexture2D: recorder is not initialized.');
@@ -456,7 +469,8 @@ interface class Recorder {
   /// Get the current volume in dB. Returns -100 if the capture is not inited.
   /// 0 is the max volume the capture device can handle.
   ///
-  /// **NOTE**: use this only with format [PCMFormat.f32le].
+  /// **NOTE**: this is only available when initializing the recorder
+  /// with [PCMFormat.f32le] format.
   double getVolumeDb() {
     if (!_isInitialized) {
       _log.warning(() => 'getVolumeDb: recorder is not initialized.');

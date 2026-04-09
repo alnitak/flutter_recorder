@@ -1,3 +1,8 @@
+## 1.1.3
+- fix issue when using together with flutter_soloud
+- updated loopback example using audio_session
+- miniaudio backend updated
+
 ## 1.1.2
 - fix: macOS cross-compilation #39 by @Vild
 
