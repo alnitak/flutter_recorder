@@ -60,10 +60,10 @@ class LoopBack extends StatefulWidget {
 
 class _LoopBackState extends State<LoopBack> {
   final audioStreamChannels = Channels.mono;
-  final audioStreamFormat = BufferType.f32le;
+  final audioStreamFormat = BufferType.s16le;
 
   final recorderChannels = RecorderChannels.mono;
-  final recorderFormat = PCMFormat.f32le;
+  final recorderFormat = PCMFormat.s16le;
 
   final sampleRate = 22050;
 
@@ -74,57 +74,8 @@ class _LoopBackState extends State<LoopBack> {
   bool autoGain = false;
   // bool echoCancellation = false;
 
-  /// Current audio devices
-  String _currentInput = 'None';
-  String _currentOutput = 'None';
-
   /// Subscription to recorder stream (need to cancel on dispose)
   StreamSubscription<AudioDataContainer>? _recorderSubscription;
-
-  /// Update the current audio devices display
-  Future<void> _updateAudioDevices() async {
-    final session = await AudioSession.instance;
-    final devices = await session.getDevices();
-    
-    // Log all devices for debugging
-    final allInputs = devices.where((d) => d.isInput).map((d) => d.name).toList();
-    final allOutputs = devices.where((d) => d.isOutput).map((d) => d.name).toList();
-    dev.log(
-      'All devices: input=$allInputs, output=$allOutputs',
-      name: 'AudioSession',
-    );
-    
-    // On Android, getDevices() returns all available devices, not just active ones.
-    // Try to find a headset/Bluetooth device first, otherwise use the first one.
-    String findBestDevice(List<AudioDevice> deviceList) {
-      if (deviceList.isEmpty) return 'None';
-      
-      // Look for Bluetooth or wired headset first
-      for (final device in deviceList) {
-        final name = device.name.toLowerCase();
-        if (name.contains('bluetooth') || 
-            name.contains('headset') || 
-            name.contains('headphone') ||
-            name.contains('btr') ||  // FiiO BTR3K
-            name.contains('fiio')) {
-          return device.name;
-        }
-      }
-      
-      // Fall back to first device
-      return deviceList.first.name;
-    }
-    
-    final input = findBestDevice(devices.where((d) => d.isInput).toList());
-    final output = findBestDevice(devices.where((d) => d.isOutput).toList());
-    
-    if (mounted && (input != _currentInput || output != _currentOutput)) {
-      setState(() {
-        _currentInput = input;
-        _currentOutput = output;
-      });
-    }
-  }
 
   @override
   void initState() {
@@ -140,10 +91,7 @@ class _LoopBackState extends State<LoopBack> {
 
     /// Listen for audio route changes and update UI.
     AudioSession.instance.then((session) {
-      // Initial update
-      _updateAudioDevices();
-
-      // Listen to stream changes
+      // Listen to list of audio devices changes
       session.devicesStream.listen((devices) {
         final input =
             devices.where((d) => d.isInput).map((d) => d.name).join(', ');
@@ -153,7 +101,16 @@ class _LoopBackState extends State<LoopBack> {
           'Audio devices changed: input=$input, output=$output',
           name: 'AudioSession',
         );
-        _updateAudioDevices();
+      });
+
+      session.becomingNoisyEventStream.listen((_) {
+        dev.log('Audio route became noisy (e.g. unplugged headphones)',
+            name: 'AudioSession');
+      });
+
+      session.devicesChangedEventStream.listen((event) {
+        dev.log('Devices added:   ${event.devicesAdded}');
+        dev.log('Devices removed: ${event.devicesRemoved}');
       });
     });
 
@@ -185,7 +142,7 @@ class _LoopBackState extends State<LoopBack> {
       channels: audioStreamChannels,
       format: audioStreamFormat,
       sampleRate: sampleRate,
-      bufferingTimeNeeds: 0.2,
+      bufferingTimeNeeds: 0.0,
       bufferingType: BufferingType.released,
     );
 
@@ -251,7 +208,11 @@ class _LoopBackState extends State<LoopBack> {
 
     /// Initialize the player and the recorder.
     await disposeAudioSource();
-    await soloud.init(channels: Channels.mono, sampleRate: sampleRate);
+    await soloud.init(
+      bufferSize: 1024,
+      channels: Channels.mono,
+      sampleRate: sampleRate,
+    );
     // soloud.filters.echoFilter.activate();
     // soloud.filters.echoFilter.delay.value = 0.1;
     // soloud.filters.echoFilter.decay.value = 0.2;
@@ -274,9 +235,6 @@ class _LoopBackState extends State<LoopBack> {
       name: 'AudioSession',
     );
 
-    // Update the device display
-    await _updateAudioDevices();
-
     if (context.mounted) {
       setState(() {});
     }
@@ -289,26 +247,6 @@ class _LoopBackState extends State<LoopBack> {
       spacing: 10,
       children: [
         const Text('Please, use headset to prevent audio feedback'),
-        // Audio route info
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Column(
-              children: [
-                Text('Input: $_currentInput',
-                    style: const TextStyle(fontSize: 12)),
-                Text('Output: $_currentOutput',
-                    style: const TextStyle(fontSize: 12)),
-              ],
-            ),
-            const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.refresh, size: 16),
-              onPressed: _updateAudioDevices,
-              tooltip: 'Refresh devices',
-            ),
-          ],
-        ),
         // Start / Stop
         Row(
           mainAxisSize: MainAxisSize.min,
@@ -372,7 +310,7 @@ class _LoopBackState extends State<LoopBack> {
 
         // if (echoCancellation) EchoCancellationSliders(),
 
-        const Bars(),
+        if (recorderFormat == PCMFormat.f32le) const Bars(),
       ],
     );
   }
