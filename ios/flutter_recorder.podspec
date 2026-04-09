@@ -30,7 +30,7 @@ A new Flutter FFI plugin project.
     'OTHER_CPLUSPLUSFLAGS' => '-O3 -ffast-math -ffast-math -flto -funroll-loops -pthread',
     'GCC_OPTIMIZATION_LEVEL' => '3',
     # Add audio and threading optimization flags
-    'GCC_PREPROCESSOR_DEFINITIONS' => 'MA_NO_RUNTIME_LINKING=1 NDEBUG=1 _REENTRANT=1',
+    'GCC_PREPROCESSOR_DEFINITIONS' => '$(inherited) MA_NO_RUNTIME_LINKING=1 NDEBUG=1 _REENTRANT=1 ma_ios_notification_handler=fr_ma_ios_notification_handler',
     'HEADER_SEARCH_PATHS' => '$(inherited) $(PODS_TARGET_SRCROOT)/src'
   }
   s.swift_version = '5.0'

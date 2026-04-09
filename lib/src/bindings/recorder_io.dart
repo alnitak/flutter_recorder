@@ -13,7 +13,6 @@ import 'package:flutter_recorder/src/enums.dart';
 import 'package:flutter_recorder/src/exceptions/exceptions.dart';
 import 'package:flutter_recorder/src/filters/filters.dart';
 import 'package:flutter_recorder/src/flutter_recorder.dart';
-import 'package:meta/meta.dart';
 
 @internal
 class RecorderController {

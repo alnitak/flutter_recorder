@@ -70,7 +70,7 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
                   child: ClipRRect(
                     child: CustomPaint(
                       key: UniqueKey(),
-                      size: const Size(300, 124),
+                      size: const Size(280, 124),
                       painter: const FftPainter(),
                     ),
                   ),
@@ -85,7 +85,7 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
                   child: ClipRRect(
                     child: CustomPaint(
                       key: UniqueKey(),
-                      size: const Size(300, 124),
+                      size: const Size(280, 124),
                       painter: const WavePainter(),
                     ),
                   ),

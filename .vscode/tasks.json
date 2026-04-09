@@ -28,6 +28,11 @@
             "type": "shell"
         },
         {
+            "label": "compile macos debug",
+            "command": "cd ${workspaceFolder}/example; flutter build macos -t lib/main.dart --debug",
+            "type": "shell"
+        },
+        {
             "label": "compile web release",
             "command": "cd ${workspaceFolder}/example; flutter run -d chrome --web-renderer canvaskit --web-browser-flag '--disable-web-security' -t lib/loopback.dart --release",
             "type": "shell"
