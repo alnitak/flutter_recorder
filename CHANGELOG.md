@@ -1,3 +1,6 @@
+## 1.1.4
+- fix compilation issue on macOS #43
+
 ## 1.1.3
 - fix issue when using together with flutter_soloud
 - updated loopback example using audio_session
