@@ -114,6 +114,9 @@ private:
 
   /// true when the capture device is initialized.
   bool mInited;
+
+  /// true when the capture owns an explicit miniaudio context.
+  bool mUsesContext;
 };
 
 #endif // CAPTURE_H
