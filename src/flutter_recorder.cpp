@@ -177,14 +177,15 @@ FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_init(
     int deviceID,
     int pcmFormat,
     unsigned int sampleRate,
-    unsigned int channels)
+    unsigned int channels,
+    int androidInputPreset)
 {
     if (!mFilters || mFilters.get()->mSamplerate != sampleRate)
     {
         mFilters.reset();
         mFilters = std::make_unique<Filters>(sampleRate);
     }
-    CaptureErrors res = capture.init(mFilters.get(), deviceID, (PCMFormat)pcmFormat, sampleRate, channels);
+    CaptureErrors res = capture.init(mFilters.get(), deviceID, (PCMFormat)pcmFormat, sampleRate, channels, androidInputPreset);
 
     return res;
 }

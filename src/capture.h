@@ -33,9 +33,11 @@ public:
   /// @param pcmFormat the PCM format
   /// @param sampleRate the sample rate
   /// @param channels the number of channels
+  /// @param androidInputPreset Android input preset. 0 leaves it unset.
   /// @return `captureNoError` if no error or else `captureInitFailed`
   CaptureErrors init(Filters *filters, int deviceID, PCMFormat pcmFormat,
-                     unsigned int sampleRate, unsigned int channels);
+                     unsigned int sampleRate, unsigned int channels,
+                     int androidInputPreset);
 
   /// @brief Must be called when there is no more need of the capture or when
   /// closing the app

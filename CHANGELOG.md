@@ -1,3 +1,6 @@
+## Unreleased
+- add Android input preset selection for recorder initialization
+
 ## 1.1.4
 - fix compilation issue on macOS #43
 

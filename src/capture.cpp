@@ -33,6 +33,49 @@ std::unique_ptr<CircularBuffer<float>> circularBuffer;
 /// the buffer used for streaming.
 std::unique_ptr<std::vector<unsigned char>> streamBuffer;
 
+static CaptureErrors setAndroidInputPreset(ma_device_config *config,
+                                           int androidInputPreset) {
+  switch (androidInputPreset) {
+  case 0:
+    return captureNoError;
+  case 1:
+#ifdef _IS_ANDROID_
+    config->aaudio.inputPreset = ma_aaudio_input_preset_generic;
+    config->opensl.recordingPreset = ma_opensl_recording_preset_generic;
+#endif
+    return captureNoError;
+  case 2:
+#ifdef _IS_ANDROID_
+    config->aaudio.inputPreset = ma_aaudio_input_preset_camcorder;
+    config->opensl.recordingPreset = ma_opensl_recording_preset_camcorder;
+#endif
+    return captureNoError;
+  case 3:
+#ifdef _IS_ANDROID_
+    config->aaudio.inputPreset = ma_aaudio_input_preset_voice_recognition;
+    config->opensl.recordingPreset =
+        ma_opensl_recording_preset_voice_recognition;
+#endif
+    return captureNoError;
+  case 4:
+#ifdef _IS_ANDROID_
+    config->aaudio.inputPreset = ma_aaudio_input_preset_voice_communication;
+    config->opensl.recordingPreset =
+        ma_opensl_recording_preset_voice_communication;
+#endif
+    return captureNoError;
+  case 5:
+#ifdef _IS_ANDROID_
+    config->aaudio.inputPreset = ma_aaudio_input_preset_unprocessed;
+    config->opensl.recordingPreset =
+        ma_opensl_recording_preset_voice_unprocessed;
+#endif
+    return captureNoError;
+  default:
+    return captureInitFailed;
+  }
+}
+
 #ifdef _IS_WIN_
 #define CLOCK_REALTIME 0
 // struct timespec { long long tv_sec; long tv_nsec; };    //header part
@@ -318,7 +361,8 @@ std::vector<CaptureDevice> Capture::listCaptureDevices() {
 }
 
 CaptureErrors Capture::init(Filters *filters, int deviceID, PCMFormat pcmFormat,
-                            unsigned int sampleRate, unsigned int channels) {
+                            unsigned int sampleRate, unsigned int channels,
+                            int androidInputPreset) {
   deviceConfig = ma_device_config_init(ma_device_type_capture);
   deviceConfig.periodSizeInFrames = BUFFER_SIZE;
   if (deviceID != -1) {
@@ -357,6 +401,12 @@ CaptureErrors Capture::init(Filters *filters, int deviceID, PCMFormat pcmFormat,
   deviceConfig.sampleRate = sampleRate;
   deviceConfig.dataCallback = data_callback;
   deviceConfig.pUserData = this;
+
+  CaptureErrors presetResult =
+      setAndroidInputPreset(&deviceConfig, androidInputPreset);
+  if (presetResult != captureNoError) {
+    return presetResult;
+  }
 
 #if defined(MA_HAS_COREAUDIO)
   // Use explicit context with noAudioSessionActivate to let audio_session manage AVAudioSession
