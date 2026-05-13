@@ -35,7 +35,8 @@ extern "C"
         int deviceID,
         int pcmFormat,
         unsigned int sampleRate,
-        unsigned int channels);
+        unsigned int channels,
+        int androidInputPreset);
 
     FFI_PLUGIN_EXPORT void flutter_recorder_deinit();
 

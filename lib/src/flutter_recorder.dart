@@ -208,6 +208,8 @@ interface class Recorder {
   /// [format] PCM format. Default to [PCMFormat.s16le].
   /// [sampleRate] sample rate in Hz. Default to 22050.
   /// [channels] number of channels. Default to [RecorderChannels.mono].
+  /// [androidInputPreset] Android capture input preset. If null, the platform
+  /// default is used. Ignored on non-Android platforms.
   ///
   /// Thows [RecorderInitializeFailedException] if something goes wrong, ie. no
   /// device found with [deviceID] id.
@@ -216,6 +218,7 @@ interface class Recorder {
     PCMFormat format = PCMFormat.s16le,
     int sampleRate = 22050,
     RecorderChannels channels = RecorderChannels.mono,
+    AndroidInputPreset? androidInputPreset,
   }) async {
     await _recorder.impl.setDartEventCallbacks();
 
@@ -238,6 +241,7 @@ interface class Recorder {
       format: format,
       sampleRate: sampleRate,
       channels: channels,
+      androidInputPreset: androidInputPreset,
     );
     _recorderFormat = format;
     _isInitialized = true;

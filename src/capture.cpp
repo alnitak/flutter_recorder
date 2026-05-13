@@ -33,6 +33,49 @@ std::unique_ptr<CircularBuffer<float>> circularBuffer;
 /// the buffer used for streaming.
 std::unique_ptr<std::vector<unsigned char>> streamBuffer;
 
+static CaptureErrors setAndroidInputPreset(ma_device_config *config,
+                                           int androidInputPreset) {
+  switch (androidInputPreset) {
+  case 0:
+    return captureNoError;
+  case 1:
+#ifdef _IS_ANDROID_
+    config->aaudio.inputPreset = ma_aaudio_input_preset_generic;
+    config->opensl.recordingPreset = ma_opensl_recording_preset_generic;
+#endif
+    return captureNoError;
+  case 2:
+#ifdef _IS_ANDROID_
+    config->aaudio.inputPreset = ma_aaudio_input_preset_camcorder;
+    config->opensl.recordingPreset = ma_opensl_recording_preset_camcorder;
+#endif
+    return captureNoError;
+  case 3:
+#ifdef _IS_ANDROID_
+    config->aaudio.inputPreset = ma_aaudio_input_preset_voice_recognition;
+    config->opensl.recordingPreset =
+        ma_opensl_recording_preset_voice_recognition;
+#endif
+    return captureNoError;
+  case 4:
+#ifdef _IS_ANDROID_
+    config->aaudio.inputPreset = ma_aaudio_input_preset_voice_communication;
+    config->opensl.recordingPreset =
+        ma_opensl_recording_preset_voice_communication;
+#endif
+    return captureNoError;
+  case 5:
+#ifdef _IS_ANDROID_
+    config->aaudio.inputPreset = ma_aaudio_input_preset_unprocessed;
+    config->opensl.recordingPreset =
+        ma_opensl_recording_preset_voice_unprocessed;
+#endif
+    return captureNoError;
+  default:
+    return captureInitFailed;
+  }
+}
+
 #ifdef _IS_WIN_
 #define CLOCK_REALTIME 0
 // struct timespec { long long tv_sec; long tv_nsec; };    //header part
@@ -263,7 +306,7 @@ Capture::Capture()
     : isDetectingSilence(false), silenceThresholdDb(-40.0f),
       silenceDuration(2.0f), secondsOfAudioToWriteBefore(0.0f),
       isRecording(false), isRecordingPaused(false), isStreamingData(false),
-      mInited(false) {
+      mInited(false), mUsesContext(false) {
   memset(waveData, 0, sizeof(float) * 256);
 }
 
@@ -318,8 +361,10 @@ std::vector<CaptureDevice> Capture::listCaptureDevices() {
 }
 
 CaptureErrors Capture::init(Filters *filters, int deviceID, PCMFormat pcmFormat,
-                            unsigned int sampleRate, unsigned int channels) {
+                            unsigned int sampleRate, unsigned int channels,
+                            int androidInputPreset) {
   deviceConfig = ma_device_config_init(ma_device_type_capture);
+  mUsesContext = false;
   deviceConfig.periodSizeInFrames = BUFFER_SIZE;
   if (deviceID != -1) {
     auto devices = listCaptureDevices();
@@ -358,7 +403,39 @@ CaptureErrors Capture::init(Filters *filters, int deviceID, PCMFormat pcmFormat,
   deviceConfig.dataCallback = data_callback;
   deviceConfig.pUserData = this;
 
+  CaptureErrors presetResult =
+      setAndroidInputPreset(&deviceConfig, androidInputPreset);
+  if (presetResult != captureNoError) {
+    return presetResult;
+  }
+
+#if defined(_IS_ANDROID_) && defined(MA_HAS_OPENSL)
+  if (deviceID == -1 && deviceConfig.opensl.recordingPreset ==
+                            ma_opensl_recording_preset_voice_communication) {
+    ma_backend backend = ma_backend_opensl;
+    ma_context_config contextConfig = ma_context_config_init();
+    // On some Android/OEM AAudio voice communication paths, requestStart()
+    // succeeds but the STARTING -> STARTED transition is reported late. OpenSL
+    // supports the same recording preset without that AAudio state race.
+    __android_log_print(
+        ANDROID_LOG_WARN, LOG_TAG,
+        "Using OpenSL backend for voiceCommunication input preset.");
+
+    if (ma_context_init(&backend, 1, &contextConfig, &context) != MA_SUCCESS) {
+      printf("Failed to initialize capture context.\n");
+      return captureInitFailed;
+    }
+    mUsesContext = true;
+    if (ma_device_init(&context, &deviceConfig, &device) != MA_SUCCESS) {
+      printf("Failed to initialize capture device.\n");
+      ma_context_uninit(&context);
+      mUsesContext = false;
+      return captureInitFailed;
+    }
+  } else
+#endif
 #if defined(MA_HAS_COREAUDIO)
+  {
   // Use explicit context with noAudioSessionActivate to let audio_session manage AVAudioSession
   ma_context_config contextConfig = ma_context_config_init();
   contextConfig.coreaudio.sessionCategory = ma_ios_session_category_none;
@@ -369,15 +446,20 @@ CaptureErrors Capture::init(Filters *filters, int deviceID, PCMFormat pcmFormat,
     printf("Failed to initialize capture context.\n");
     return captureInitFailed;
   }
+  mUsesContext = true;
   if (ma_device_init(&context, &deviceConfig, &device) != MA_SUCCESS) {
     printf("Failed to initialize capture device.\n");
     ma_context_uninit(&context);
+    mUsesContext = false;
     return captureInitFailed;
   }
+  }
 #else
+  {
   if (ma_device_init(NULL, &deviceConfig, &device) != MA_SUCCESS) {
     printf("Failed to initialize capture device.\n");
     return captureInitFailed;
+  }
   }
 #endif
 
@@ -396,9 +478,10 @@ void Capture::dispose() {
   isRecording = false;
 
   ma_device_uninit(&device);
-#if defined(MA_HAS_COREAUDIO)
-  ma_context_uninit(&context);
-#endif
+  if (mUsesContext) {
+    ma_context_uninit(&context);
+    mUsesContext = false;
+  }
 }
 
 bool Capture::isInited() { return mInited; }
@@ -414,8 +497,14 @@ CaptureErrors Capture::start() {
 
   result = ma_device_start(&device);
   if (result != MA_SUCCESS) {
-    ma_device_uninit(&device);
-    printf("Failed to start device.\n");
+#ifdef _IS_ANDROID_
+    __android_log_print(ANDROID_LOG_ERROR, LOG_TAG,
+                        "Failed to start device: %d (%s).", result,
+                        ma_result_description(result));
+#else
+    printf("Failed to start device: %d (%s).\n", result,
+           ma_result_description(result));
+#endif
     return failedToStartDevice;
   }
   return captureNoError;

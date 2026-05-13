@@ -149,6 +149,7 @@ class RecorderWeb extends RecorderImpl {
     required PCMFormat format,
     required int sampleRate,
     required RecorderChannels channels,
+    required AndroidInputPreset? androidInputPreset,
   }) {
     final error = wasmInit(deviceID, format.value, sampleRate, channels.count);
     if (CaptureErrors.fromValue(error) != CaptureErrors.captureNoError) {
@@ -161,6 +162,7 @@ class RecorderWeb extends RecorderImpl {
       format: format,
       sampleRate: sampleRate,
       channels: channels,
+      androidInputPreset: androidInputPreset,
     );
   }
 

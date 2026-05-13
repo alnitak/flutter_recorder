@@ -196,12 +196,14 @@ class RecorderFfi extends RecorderImpl {
     required PCMFormat format,
     required int sampleRate,
     required RecorderChannels channels,
+    required AndroidInputPreset? androidInputPreset,
   }) {
     final error = _bindings.flutter_recorder_init(
       deviceID,
       format.value,
       sampleRate,
       channels.count,
+      androidInputPreset?.value ?? 0,
     );
     if (error != CaptureErrors.captureNoError) {
       throw RecorderCppException.fromRecorderError(error);
@@ -211,6 +213,7 @@ class RecorderFfi extends RecorderImpl {
       format: format,
       sampleRate: sampleRate,
       channels: channels,
+      androidInputPreset: androidInputPreset,
     );
   }
 

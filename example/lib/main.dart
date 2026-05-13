@@ -61,8 +61,28 @@ class _MyAppState extends State<MyApp> {
   var thresholdDb = -20.0;
   var silenceDuration = 2.0;
   var secondsOfAudioToWriteBefore = 0.0;
+  var androidInputPresetValue = 0;
 
   File? file;
+
+  AndroidInputPreset? get selectedAndroidInputPreset =>
+      switch (androidInputPresetValue) {
+        1 => AndroidInputPreset.generic,
+        2 => AndroidInputPreset.camcorder,
+        3 => AndroidInputPreset.voiceRecognition,
+        4 => AndroidInputPreset.voiceCommunication,
+        5 => AndroidInputPreset.unprocessed,
+        _ => null,
+      };
+
+  String androidInputPresetLabel(int value) => switch (value) {
+        1 => 'Generic',
+        2 => 'Camcorder',
+        3 => 'Voice recognition',
+        4 => 'Voice communication',
+        5 => 'Unprocessed',
+        _ => 'System default',
+      };
 
   @override
   void initState() {
@@ -105,6 +125,31 @@ class _MyAppState extends State<MyApp> {
               runSpacing: 6,
               spacing: 6,
               children: [
+                if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('Android input preset: '),
+                      DropdownButton<int>(
+                        value: androidInputPresetValue,
+                        items: List<DropdownMenuItem<int>>.generate(
+                          AndroidInputPreset.values.length + 1,
+                          (index) => DropdownMenuItem<int>(
+                            value: index,
+                            child: Text(androidInputPresetLabel(index)),
+                          ),
+                        ),
+                        onChanged: (value) {
+                          if (value == null) {
+                            return;
+                          }
+                          setState(() {
+                            androidInputPresetValue = value;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
                 OutlinedButton(
                   onPressed: () {
                     showDeviceListDialog();
@@ -118,6 +163,7 @@ class _MyAppState extends State<MyApp> {
                         format: format,
                         sampleRate: sampleRate,
                         channels: channels,
+                        androidInputPreset: selectedAndroidInputPreset,
                       );
                     } on Exception catch (e) {
                       debugPrint('-------------- init() error: $e\n');
