@@ -59,13 +59,10 @@ final class Filters {
   ///   - Long release (e.g., 0.2-0.5) creates smoother transitions for
   /// dynamic content like music.
   /// 4. **Gain Smoothing (gainSmoothing)**
-  ///   - Purpose: Controls how quickly the gain changes overall, acting as
-  /// a dampening factor.
-  ///   - Typical Value: 0.01 to 0.1.
-  ///   - Lower values (e.g., 0.01) result in slow gain adjustments, reducing
-  /// artifacts but possibly underreacting to fast changes.
-  ///   - Higher values (e.g., 0.05-0.1) provide faster responsiveness but
-  /// may sound less smooth.
+  ///   - Purpose: Sets the RMS detector smoothing time in seconds.
+  ///   - Typical Value: 0.01 to 0.2 seconds.
+  ///   - Lower values follow level changes faster.
+  ///   - Higher values smooth the detector more and reduce pumping.
   /// 5. **Maximum Gain (maxGain)**
   ///   - Purpose: Caps the maximum amplification to avoid over-amplification
   /// or distortion.
@@ -76,6 +73,17 @@ final class Filters {
   ///   - Purpose: Prevents excessive attenuation of the signal.
   ///   - Typical Value: 0.1 to 0.5.
   ///   - Adjust to: Avoid muting low signals unless silence is acceptable.
+  /// 7. **Noise Floor dB (noiseFloorDb)**
+  ///   - Purpose: Avoids increasing gain while the input is below the
+  /// configured noise floor.
+  ///   - Typical Value: -60 to -45 dBFS for speech.
+  /// 8. **Headroom dB (headroomDb)**
+  ///   - Purpose: Keeps output below full scale before the limiter.
+  ///   - Typical Value: 1 to 6 dB.
+  ///
+  /// Runtime metrics are exposed as read-only filter values: `currentGain`,
+  /// `inputRms`, `outputPeak`, `limiterClipCount`,
+  /// `totalLimiterClipCount`, and `lastFrameCount`.
   ///
   /// #### Recommended Settings for Common Scenarios
   ///
@@ -142,6 +150,21 @@ class FilterParam {
   }
 }
 
+/// Read-only runtime value exposed by a filter.
+class FilterMetric {
+  /// Creates a filter metric accessor.
+  FilterMetric(this._type, this._attributeId);
+
+  final RecorderFilterType _type;
+  final int _attributeId;
+
+  /// Get the metric value.
+  double get value => Recorder.instance.getFilterParamValue(
+        _type,
+        _attributeId,
+      );
+}
+
 /// The different types of audio filters.
 enum RecorderFilterType {
   /// Auto gain filter.
@@ -171,7 +194,7 @@ enum RecorderFilterType {
 
   /// The number of parameter this filter owns.
   int get numParameters => switch (this) {
-        RecorderFilterType.autogain => 6,
+        RecorderFilterType.autogain => 14,
         RecorderFilterType.echoCancellation => 2,
       };
 

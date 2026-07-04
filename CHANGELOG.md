@@ -1,3 +1,7 @@
+## Unreleased
+- improve native Auto Gain with stateful RMS tracking, noise-floor gating, headroom limiting, PCM-safe clipping, and runtime telemetry.
+- add Auto Gain `noiseFloorDb` and `headroomDb` parameters plus read-only metrics for current gain, input RMS, output peak, limiter counts, and last callback frame count.
+
 ## 1.1.5
 - add Android input preset selection for recorder initialization #45. Thanks to @ Avejack
 

@@ -7,15 +7,85 @@ enum AutoGainEnum {
   releaseTime,
   gainSmoothing,
   maxGain,
-  minGain;
+  minGain,
+  noiseFloorDb,
+  headroomDb,
+  currentGain,
+  inputRms,
+  outputPeak,
+  limiterClipCount,
+  totalLimiterClipCount,
+  lastFrameCount;
 
-  final List<double> _defs = const [0.1, 0.1, 0.2, 0.05, 6, 0.2];
-  final List<double> _mins = const [0.01, 0.01, 0.01, 0.001, 1, 0.1];
-  final List<double> _maxs = const [1, 0.5, 0.5, 1, 6, 1];
+  static const List<double> _defs = <double>[
+    0.1,
+    0.1,
+    0.2,
+    0.05,
+    6,
+    0.2,
+    -55,
+    1,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+  ];
+  static const List<double> _mins = <double>[
+    0.001,
+    0.001,
+    0.001,
+    0.001,
+    1,
+    0,
+    -100,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+  ];
+  static const List<double> _maxs = <double>[
+    0.95,
+    2,
+    5,
+    1,
+    12,
+    1,
+    -10,
+    24,
+    12,
+    1,
+    1,
+    double.maxFinite,
+    double.maxFinite,
+    double.maxFinite,
+  ];
+  static const List<bool> _writable = <bool>[
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+  ];
 
   double get min => _mins[index];
   double get max => _maxs[index];
   double get def => _defs[index];
+  bool get isWritable => _writable[index];
 
   @override
   String toString() => switch (this) {
@@ -25,6 +95,14 @@ enum AutoGainEnum {
         AutoGainEnum.gainSmoothing => 'Gain Smoothing',
         AutoGainEnum.maxGain => 'Max Gain',
         AutoGainEnum.minGain => 'Min Gain',
+        AutoGainEnum.noiseFloorDb => 'Noise Floor dB',
+        AutoGainEnum.headroomDb => 'Headroom dB',
+        AutoGainEnum.currentGain => 'Current Gain',
+        AutoGainEnum.inputRms => 'Input RMS',
+        AutoGainEnum.outputPeak => 'Output Peak',
+        AutoGainEnum.limiterClipCount => 'Limiter Clip Count',
+        AutoGainEnum.totalLimiterClipCount => 'Total Limiter Clip Count',
+        AutoGainEnum.lastFrameCount => 'Last Frame Count',
       };
 }
 
@@ -37,6 +115,15 @@ abstract class _AutoGainInternal extends FilterBase {
   AutoGainEnum get queryGainSmoothing => AutoGainEnum.gainSmoothing;
   AutoGainEnum get queryMaxGain => AutoGainEnum.maxGain;
   AutoGainEnum get queryMinGain => AutoGainEnum.minGain;
+  AutoGainEnum get queryNoiseFloorDb => AutoGainEnum.noiseFloorDb;
+  AutoGainEnum get queryHeadroomDb => AutoGainEnum.headroomDb;
+  AutoGainEnum get queryCurrentGain => AutoGainEnum.currentGain;
+  AutoGainEnum get queryInputRms => AutoGainEnum.inputRms;
+  AutoGainEnum get queryOutputPeak => AutoGainEnum.outputPeak;
+  AutoGainEnum get queryLimiterClipCount => AutoGainEnum.limiterClipCount;
+  AutoGainEnum get queryTotalLimiterClipCount =>
+      AutoGainEnum.totalLimiterClipCount;
+  AutoGainEnum get queryLastFrameCount => AutoGainEnum.lastFrameCount;
 }
 
 class AutoGain extends _AutoGainInternal {
@@ -82,5 +169,49 @@ class AutoGain extends _AutoGainInternal {
         AutoGainEnum.minGain.index,
         AutoGainEnum.minGain.min,
         AutoGainEnum.minGain.max,
+      );
+
+  FilterParam get noiseFloorDb => FilterParam(
+        filterType,
+        AutoGainEnum.noiseFloorDb.index,
+        AutoGainEnum.noiseFloorDb.min,
+        AutoGainEnum.noiseFloorDb.max,
+      );
+
+  FilterParam get headroomDb => FilterParam(
+        filterType,
+        AutoGainEnum.headroomDb.index,
+        AutoGainEnum.headroomDb.min,
+        AutoGainEnum.headroomDb.max,
+      );
+
+  FilterMetric get currentGain => FilterMetric(
+        filterType,
+        AutoGainEnum.currentGain.index,
+      );
+
+  FilterMetric get inputRms => FilterMetric(
+        filterType,
+        AutoGainEnum.inputRms.index,
+      );
+
+  FilterMetric get outputPeak => FilterMetric(
+        filterType,
+        AutoGainEnum.outputPeak.index,
+      );
+
+  FilterMetric get limiterClipCount => FilterMetric(
+        filterType,
+        AutoGainEnum.limiterClipCount.index,
+      );
+
+  FilterMetric get totalLimiterClipCount => FilterMetric(
+        filterType,
+        AutoGainEnum.totalLimiterClipCount.index,
+      );
+
+  FilterMetric get lastFrameCount => FilterMetric(
+        filterType,
+        AutoGainEnum.lastFrameCount.index,
       );
 }
