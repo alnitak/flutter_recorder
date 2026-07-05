@@ -1,7 +1,8 @@
 // ignore_for_file: omit_local_variable_types
 // ignore_for_file: avoid_positional_boolean_parameters, public_member_api_docs
 
-import 'package:flutter/foundation.dart';
+import 'dart:typed_data' show Float32List, Uint8List;
+
 import 'package:flutter_recorder/src/audio_data_container.dart';
 import 'package:flutter_recorder/src/bindings/js_extension.dart';
 import 'package:flutter_recorder/src/bindings/recorder.dart';
@@ -10,6 +11,7 @@ import 'package:flutter_recorder/src/exceptions/exceptions.dart';
 import 'package:flutter_recorder/src/filters/filters.dart';
 import 'package:flutter_recorder/src/flutter_recorder.dart';
 import 'package:flutter_recorder/src/worker/worker.dart';
+import 'package:meta/meta.dart';
 
 @internal
 class RecorderController {
@@ -147,6 +149,7 @@ class RecorderWeb extends RecorderImpl {
     required PCMFormat format,
     required int sampleRate,
     required RecorderChannels channels,
+    required AndroidInputPreset? androidInputPreset,
   }) {
     final error = wasmInit(deviceID, format.value, sampleRate, channels.count);
     if (CaptureErrors.fromValue(error) != CaptureErrors.captureNoError) {
@@ -159,6 +162,7 @@ class RecorderWeb extends RecorderImpl {
       format: format,
       sampleRate: sampleRate,
       channels: channels,
+      androidInputPreset: androidInputPreset,
     );
   }
 

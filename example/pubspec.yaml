@@ -13,8 +13,8 @@ dependencies:
   flutter_recorder:
     path: ../
 
-  flutter_soloud: #^4.0.0
-    path: ../../flutter_soloud
+  flutter_soloud: ^4.0.0
+    # path: ../../flutter_soloud
   audio_session: ^0.2.3
 
   cupertino_icons: ^1.0.8

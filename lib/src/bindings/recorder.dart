@@ -27,6 +27,9 @@ abstract class RecorderImpl {
   /// Channels used to initialize the device.
   RecorderChannels? channels;
 
+  /// Android input preset used to initialize the device.
+  AndroidInputPreset? androidInputPreset;
+
   /// Controller to listen to silence changed event.
   late final StreamController<SilenceState> silenceChangedEventController =
       StreamController.broadcast();
@@ -109,11 +112,13 @@ abstract class RecorderImpl {
     required PCMFormat format,
     required int sampleRate,
     required RecorderChannels channels,
+    required AndroidInputPreset? androidInputPreset,
   }) {
     this.deviceID = deviceID;
     this.format = format;
     this.sampleRate = sampleRate;
     this.channels = channels;
+    this.androidInputPreset = androidInputPreset;
   }
 
   /// Dispose capture device.
@@ -124,6 +129,7 @@ abstract class RecorderImpl {
     format = null;
     sampleRate = null;
     channels = null;
+    androidInputPreset = null;
   }
 
   /// Whether the device is initialized.

@@ -113,3 +113,29 @@ enum PCMFormat {
         _ => throw ArgumentError('Unknown value for PCMFormat: $value'),
       };
 }
+
+/// Android capture input presets.
+///
+/// This is only applied on Android. Other platforms accept the value but
+/// ignore it.
+enum AndroidInputPreset {
+  /// Android generic capture preset.
+  generic(1),
+
+  /// Android camcorder capture preset.
+  camcorder(2),
+
+  /// Android voice recognition capture preset.
+  voiceRecognition(3),
+
+  /// Android voice communication capture preset.
+  voiceCommunication(4),
+
+  /// Android unprocessed capture preset.
+  unprocessed(5);
+
+  const AndroidInputPreset(this.value);
+
+  /// Internal value passed to the native recorder.
+  final int value;
+}

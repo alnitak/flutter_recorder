@@ -3,9 +3,11 @@
 
 import 'dart:ffi' as ffi;
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter_recorder/src/audio_data_container.dart';
 import 'package:flutter_recorder/src/bindings/flutter_recorder_bindings_generated.dart';
 import 'package:flutter_recorder/src/bindings/recorder.dart';
@@ -13,6 +15,7 @@ import 'package:flutter_recorder/src/enums.dart';
 import 'package:flutter_recorder/src/exceptions/exceptions.dart';
 import 'package:flutter_recorder/src/filters/filters.dart';
 import 'package:flutter_recorder/src/flutter_recorder.dart';
+import 'package:meta/meta.dart';
 
 @internal
 class RecorderController {
@@ -193,12 +196,14 @@ class RecorderFfi extends RecorderImpl {
     required PCMFormat format,
     required int sampleRate,
     required RecorderChannels channels,
+    required AndroidInputPreset? androidInputPreset,
   }) {
     final error = _bindings.flutter_recorder_init(
       deviceID,
       format.value,
       sampleRate,
       channels.count,
+      androidInputPreset?.value ?? 0,
     );
     if (error != CaptureErrors.captureNoError) {
       throw RecorderCppException.fromRecorderError(error);
@@ -208,6 +213,7 @@ class RecorderFfi extends RecorderImpl {
       format: format,
       sampleRate: sampleRate,
       channels: channels,
+      androidInputPreset: androidInputPreset,
     );
   }
 

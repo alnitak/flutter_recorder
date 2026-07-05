@@ -32,6 +32,21 @@ Add the permission in the `AndroidManifest.xml`.
 <uses-permission android:name="android.permission.RECORD_AUDIO" />
 ```
 
+Android also supports choosing the capture input preset used by miniaudio:
+
+```dart
+await Recorder.instance.init(
+    androidInputPreset: AndroidInputPreset.voiceCommunication,
+);
+```
+
+If `androidInputPreset` is omitted, the platform default is left unchanged.
+The option is ignored on non-Android platforms. Presets request Android capture
+source and processing behavior, but the actual result depends on the device,
+Android version, and OEM audio stack. For speech, `voiceCommunication` or
+`camcorder` can sound louder or more processed on some devices, while
+`voiceRecognition` and `unprocessed` are useful when less processing is desired.
+
 #### MacOS, iOS
 Add the permission in `Runner/Info.plist`.
 ```
@@ -95,6 +110,7 @@ Recorder.instance.stopRecording();
 **Tip**: Use `Recorder.instance.listCaptureDevices()` to see available devices and pass an optional `deviceID` to `init()`.
 **Tip2**: Use the `format`, `sampleRate` and `channels` with the `init()` method to define recorder parameters.
 **Tip3**: When recording with silence detection and want to record a little bit before the threshold db is reached, use the `setSecondsOfAudioToWriteBefore()` method.
+**Tip4**: On Android, pass `androidInputPreset` to `init()` to compare capture presets such as `voiceRecognition`, `voiceCommunication`, `camcorder`, or `unprocessed`.
 
 
 ### 🔇 Silence Detection Example
@@ -179,4 +195,5 @@ autoGain.targetRms.value = newValue;
 // Get a new parameter value:
 final value = autoGain.targetRms.value;
 ```
-Available parameters: `targetRMS`, `attackTime`, `releaseTime`, `gainSmoothing`, `maxGain`, `minGain`.
+Writable parameters: `targetRMS`, `attackTime`, `releaseTime`, `gainSmoothing`, `maxGain`, `minGain`, `noiseFloorDb`, `headroomDb`.
+Read-only metrics: `currentGain`, `inputRms`, `outputPeak`, `limiterClipCount`, `totalLimiterClipCount`, `lastFrameCount`.

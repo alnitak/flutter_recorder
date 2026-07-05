@@ -140,21 +140,23 @@ class FlutterRecorderBindings {
     int pcmFormat,
     int sampleRate,
     int channels,
+    int androidInputPreset,
   ) {
     return CaptureErrors.fromValue(_flutter_recorder_init(
       deviceID,
       pcmFormat,
       sampleRate,
       channels,
+      androidInputPreset,
     ));
   }
 
   late final _flutter_recorder_initPtr = _lookup<
       ffi.NativeFunction<
           ffi.UnsignedInt Function(ffi.Int, ffi.Int, ffi.UnsignedInt,
-              ffi.UnsignedInt)>>('flutter_recorder_init');
-  late final _flutter_recorder_init =
-      _flutter_recorder_initPtr.asFunction<int Function(int, int, int, int)>();
+              ffi.UnsignedInt, ffi.Int)>>('flutter_recorder_init');
+  late final _flutter_recorder_init = _flutter_recorder_initPtr
+      .asFunction<int Function(int, int, int, int, int)>();
 
   void flutter_recorder_deinit() {
     return _flutter_recorder_deinit();

@@ -1,31 +1,69 @@
 #include "autogain.h"
 
-#include <cmath>
-#include <cstdint>
-#include <vector>
 #include <algorithm>
+#include <cmath>
+#include <limits>
 
-AutoGain::AutoGain(unsigned int sampleRate)
-    : mSampleRate(sampleRate), mCurrentGain(1.0f),
-      mParams{ // def min max
-          {TargetRMS,       {0.1f,   0.01f,   1.f}},
-          {AttackTime,      {0.1f,   0.01f,  0.5f}},
-          {ReleaseTime,     {0.2f,   0.01f,   0.5f}},
-          {GainSmoothing,   {0.05f,  0.001f,  1.f}},
-          {MaxGain,         {6.0f,   1.0f,    6.0f}},
-          {MinGain,         {0.2f,   0.1f,    1.f}}
-      }
+namespace
 {
-    mValues.resize(ParamCount);
-    // Initialize values with defaults
-    for (const auto &[param, range] : mParams)
-    {
-        mValues[param] = range.defaultVal;
-    }
-    mSmoothedRMS = mValues[TargetRMS]; // Initialize with Target RMS
+constexpr float kDefaultSampleRate = 48000.0f;
+constexpr float kMinTimeSeconds = 0.001f;
+constexpr float kFloatEpsilon = 1.0e-6f;
+
+float clampFinite(float value, float minValue, float maxValue)
+{
+    if (!std::isfinite(value))
+        return minValue;
+    return std::clamp(value, minValue, maxValue);
 }
 
-// Override parameter management methods
+float dbToLinear(float db)
+{
+    return std::pow(10.0f, db / 20.0f);
+}
+
+float safeAbs(float value)
+{
+    return std::fabs(std::isfinite(value) ? value : 0.0f);
+}
+
+int32_t signExtend24(uint32_t value)
+{
+    if ((value & 0x00800000u) != 0)
+        value |= 0xFF000000u;
+    return static_cast<int32_t>(value);
+}
+} // namespace
+
+const std::array<AutoGain::ParamInfo, AutoGain::ParamCount> AutoGain::kParamInfo = {{
+    {"Target RMS", 0.1f, 0.001f, 0.95f, true},
+    {"Attack Time", 0.1f, 0.001f, 2.0f, true},
+    {"Release Time", 0.2f, 0.001f, 5.0f, true},
+    {"Gain Smoothing", 0.05f, 0.001f, 1.0f, true},
+    {"Max Gain", 6.0f, 1.0f, 12.0f, true},
+    {"Min Gain", 0.2f, 0.0f, 1.0f, true},
+    {"Noise Floor dB", -55.0f, -100.0f, -10.0f, true},
+    {"Headroom dB", 1.0f, 0.0f, 24.0f, true},
+    {"Current Gain", 1.0f, 0.0f, 12.0f, false},
+    {"Input RMS", 0.0f, 0.0f, 1.0f, false},
+    {"Output Peak", 0.0f, 0.0f, 1.0f, false},
+    {"Limiter Clip Count", 0.0f, 0.0f, std::numeric_limits<float>::max(), false},
+    {"Total Limiter Clip Count", 0.0f, 0.0f, std::numeric_limits<float>::max(), false},
+    {"Last Frame Count", 0.0f, 0.0f, std::numeric_limits<float>::max(), false},
+}};
+
+AutoGain::AutoGain() : AutoGain(0) {}
+
+AutoGain::AutoGain(unsigned int sampleRate)
+    : mSampleRate(sampleRate > 0 ? static_cast<float>(sampleRate) : kDefaultSampleRate),
+      mCurrentGain(kParamInfo[CurrentGain].defaultVal),
+      mSmoothedRMS(kParamInfo[TargetRMS].defaultVal),
+      mTotalLimiterClipCount(0)
+{
+    for (int i = 0; i < ParamCount; ++i)
+        mValues[i].store(kParamInfo[i].defaultVal, std::memory_order_relaxed);
+}
+
 int AutoGain::getParamCount() const
 {
     return ParamCount;
@@ -33,230 +71,287 @@ int AutoGain::getParamCount() const
 
 float AutoGain::getParamMax(int param) const
 {
-    validateParam(param);
-    return mParams.at(static_cast<Params>(param)).maxVal;
+    if (!isValidParam(param))
+        return 0.0f;
+    return kParamInfo[param].maxVal;
 }
 
 float AutoGain::getParamMin(int param) const
 {
-    validateParam(param);
-    return mParams.at(static_cast<Params>(param)).minVal;
+    if (!isValidParam(param))
+        return 0.0f;
+    return kParamInfo[param].minVal;
 }
 
 float AutoGain::getParamDef(int param) const
 {
-    validateParam(param);
-    return mParams.at(static_cast<Params>(param)).defaultVal;
+    if (!isValidParam(param))
+        return 0.0f;
+    return kParamInfo[param].defaultVal;
 }
 
 std::string AutoGain::getParamName(int param) const
 {
-    validateParam(param);
-    switch (static_cast<Params>(param))
-    {
-    case TargetRMS:
-        return "Target RMS";
-    case AttackTime:
-        return "Attack Time";
-    case ReleaseTime:
-        return "Release Time";
-    case GainSmoothing:
-        return "Gain Smoothing";
-    case MaxGain:
-        return "Max Gain";
-    case MinGain:
-        return "Min Gain";
-    default:
+    if (!isValidParam(param))
         return "Unknown";
-    }
+    return kParamInfo[param].name;
 }
 
 void AutoGain::setParamValue(int param, float value)
 {
-    validateParam(param);
-    const auto &range = mParams.at(static_cast<Params>(param));
-    if (value < range.minVal || value > range.maxVal)
-    {
-        // Parameter value out of range
+    if (!isWritableParam(param))
         return;
-    }
-    mValues[param] = value;
+
+    const ParamInfo &info = kParamInfo[param];
+    if (value < info.minVal || value > info.maxVal || !std::isfinite(value))
+        return;
+
+    mValues[param].store(value, std::memory_order_relaxed);
 }
 
 float AutoGain::getParamValue(int param) const
 {
-    validateParam(param);
-    return mValues[param];
+    if (!isValidParam(param))
+        return 0.0f;
+    return mValues[param].load(std::memory_order_relaxed);
 }
 
 void AutoGain::process(void *pInput, ma_uint32 frameCount, unsigned int channels, ma_format format)
 {
-    // Calculate the current frame's RMS
-    float currentRMS = calculateRMS(pInput, frameCount, channels, format);
+    if (pInput == nullptr || frameCount == 0 || channels == 0)
+        return;
 
-    // Smooth RMS over time using exponential smoothing
-    mSmoothedRMS += (currentRMS - mSmoothedRMS) * rmsSmoothingFactor();
+    const ma_uint64 sampleCount64 = static_cast<ma_uint64>(frameCount) * channels;
+    if (sampleCount64 > std::numeric_limits<ma_uint32>::max())
+        return;
 
-    // Calculate the target gain based on smoothed RMS
-    float targetGain = getParamValue(TargetRMS) / (mSmoothedRMS + 1e-6f);
-    targetGain = std::min(targetGain, getParamValue(MaxGain));
-    targetGain = std::clamp(targetGain, getParamValue(MinGain), getParamValue(MaxGain));
-    // if (mSmoothedRMS < 0.01f) {
-    //     targetGain = getParamValue(MaxGain);  // Boost gain to reach MinRMS.
-    // } else if (mSmoothedRMS > .1f) {
-    //     targetGain = getParamValue(MinGain);  // Lower gain to stay below MaxRMS.
-    // } else {
-    //     targetGain = getParamValue(TargetRMS) / mSmoothedRMS;
-    // }
+    const ma_uint32 sampleCount = static_cast<ma_uint32>(sampleCount64);
+    const LevelStats input = analyzeInput(pInput, sampleCount, format);
 
-    // Smoothly adjust gain
-    float smoothing = targetGain > mCurrentGain ? getParamValue(AttackTime) : getParamValue(ReleaseTime);
-    mCurrentGain += (targetGain - mCurrentGain) * (1.0f - std::exp(-smoothing * getParamValue(GainSmoothing)));
-    mCurrentGain += (targetGain - mCurrentGain) * getParamValue(GainSmoothing);
-    // float delta = targetGain - mCurrentGain;
-    // if (std::abs(delta) > 0.001f) { // Adjust threshold as needed
-    //     mCurrentGain += delta * getParamValue(GainSmoothing);
-    // }
+    const float levelAlpha = smoothingFactor(readParam(GainSmoothing), frameCount);
+    mSmoothedRMS += (input.rms - mSmoothedRMS) * levelAlpha;
+    mSmoothedRMS = std::max(mSmoothedRMS, 0.0f);
 
-    // printf("currentRMS: %f smoothedRMS: %f targetGain: %f currentGain: %f\n",
-    //    currentRMS, mSmoothedRMS, targetGain, mCurrentGain);
-    
-    // Apply the gain to the input buffer
-    applyGain((void *)pInput, frameCount, channels, format);
+    float targetGain = calculateTargetGain(input.rms, input.peak);
+    const float gainTime = targetGain > mCurrentGain
+                               ? readParam(AttackTime)
+                               : readParam(ReleaseTime);
+    const float gainAlpha = smoothingFactor(gainTime, frameCount);
+
+    float startGain = mCurrentGain;
+    float endGain = mCurrentGain + (targetGain - mCurrentGain) * gainAlpha;
+
+    const float noiseFloor = dbToLinear(readParam(NoiseFloorDb));
+    if (input.rms < noiseFloor)
+    {
+        startGain = std::min(startGain, 1.0f);
+        endGain = std::min(endGain, 1.0f);
+    }
+
+    const float maxGain = readParam(MaxGain);
+    endGain = clampFinite(endGain, 0.0f, maxGain);
+
+    const ProcessStats output = applyGain(
+        pInput,
+        frameCount,
+        channels,
+        format,
+        startGain,
+        endGain);
+
+    mCurrentGain = endGain;
+    mTotalLimiterClipCount += output.limiterClipCount;
+
+    writeMetric(CurrentGain, mCurrentGain);
+    writeMetric(InputRMS, input.rms);
+    writeMetric(OutputPeak, output.outputPeak);
+    writeMetric(LimiterClipCount, static_cast<float>(output.limiterClipCount));
+    writeMetric(TotalLimiterClipCount, static_cast<float>(mTotalLimiterClipCount));
+    writeMetric(LastFrameCount, static_cast<float>(frameCount));
 }
 
-// Calculate RMS for the current frame
-float AutoGain::calculateRMS(const void *pInput, ma_uint32 frameCount, unsigned int channels, ma_format format)
+AutoGain::LevelStats AutoGain::analyzeInput(const void *pInput, ma_uint32 sampleCount, ma_format format) const
 {
-    double rmsSum = 0.0;
-    ma_uint32 sampleCount = frameCount * channels;
+    if (sampleCount == 0)
+        return {0.0f, 0.0f};
 
+    double squareSum = 0.0;
+    float peak = 0.0f;
+
+    for (ma_uint32 i = 0; i < sampleCount; ++i)
+    {
+        const float sample = readSample(pInput, i, format);
+        squareSum += static_cast<double>(sample) * sample;
+        peak = std::max(peak, safeAbs(sample));
+    }
+
+    return {
+        static_cast<float>(std::sqrt(squareSum / sampleCount)),
+        peak,
+    };
+}
+
+float AutoGain::readSample(const void *pInput, ma_uint32 sampleIndex, ma_format format) const
+{
     switch (format)
     {
     case ma_format_u8:
-        for (ma_uint32 i = 0; i < sampleCount; ++i)
-        {
-            float sample = (static_cast<const uint8_t *>(pInput)[i] - 128) / 128.0f;
-            rmsSum += sample * sample;
-        }
-        break;
+        return (static_cast<const uint8_t *>(pInput)[sampleIndex] - 128) / 128.0f;
     case ma_format_s16:
-        for (ma_uint32 i = 0; i < sampleCount; ++i)
-        {
-            float sample = static_cast<const int16_t *>(pInput)[i] / 32768.0f;
-            rmsSum += sample * sample;
-        }
-        break;
+        return static_cast<const int16_t *>(pInput)[sampleIndex] / 32768.0f;
     case ma_format_s24:
-        for (ma_uint32 i = 0; i < sampleCount; ++i)
-        {
-            int32_t sample = (static_cast<const uint8_t *>(pInput)[i * 3] << 16) |
-                             (static_cast<const uint8_t *>(pInput)[i * 3 + 1] << 8) |
-                             static_cast<const uint8_t *>(pInput)[i * 3 + 2];
-            sample = sample << 8 >> 8; // Sign extend
-            rmsSum += (sample / 8388608.0f) * (sample / 8388608.0f);
-        }
-        break;
-    case ma_format_s32:
-        for (ma_uint32 i = 0; i < sampleCount; ++i)
-        {
-            float sample = static_cast<const int32_t *>(pInput)[i] / 2147483648.0f;
-            rmsSum += sample * sample;
-        }
-        break;
-    case ma_format_f32:
-        for (ma_uint32 i = 0; i < sampleCount; ++i)
-        {
-            float sample = static_cast<const float *>(pInput)[i];
-            rmsSum += sample * sample;
-        }
-        break;
-    default:
-        return 0.0f; // Unknown format
+    {
+        const uint8_t *sample = static_cast<const uint8_t *>(pInput) + sampleIndex * 3;
+        const uint32_t packed = static_cast<uint32_t>(sample[0]) |
+                                (static_cast<uint32_t>(sample[1]) << 8) |
+                                (static_cast<uint32_t>(sample[2]) << 16);
+        return signExtend24(packed) / 8388608.0f;
     }
-
-    return std::sqrt(rmsSum / sampleCount);
+    case ma_format_s32:
+        return static_cast<const int32_t *>(pInput)[sampleIndex] / 2147483648.0f;
+    case ma_format_f32:
+        return std::isfinite(static_cast<const float *>(pInput)[sampleIndex])
+                   ? static_cast<const float *>(pInput)[sampleIndex]
+                   : 0.0f;
+    default:
+        return 0.0f;
+    }
 }
 
-// Exponential smoothing factor for RMS calculation
-float AutoGain::rmsSmoothingFactor() const
+void AutoGain::writeSample(void *pInput, ma_uint32 sampleIndex, ma_format format, float sample) const
 {
-    float windowSizeSeconds = 0.5f; // Adjust smoothing window as needed
-    return 1.0f - std::exp(-1.0f / (windowSizeSeconds * mSampleRate));
-}
-
-// Apply gain to the audio data
-void AutoGain::applyGain(void *pInput, ma_uint32 frameCount, unsigned int channels, ma_format format)
-{
-    ma_uint32 sampleCount = frameCount * channels;
-
     switch (format)
     {
-        case ma_format_u8:
-            for (ma_uint32 i = 0; i < sampleCount; ++i)
-            {
-                float sample = (static_cast<uint8_t *>(pInput)[i] - 128) / 128.0f * mCurrentGain;
-                sample = std::clamp(sample, -1.0f, 1.0f);
-                static_cast<uint8_t *>(pInput)[i] = static_cast<uint8_t>((sample * 128.0f) + 128);
-            }
-            break;
-        case ma_format_s16:
-            for (ma_uint32 i = 0; i < sampleCount; ++i)
-            {
-                float sample = static_cast<int16_t *>(pInput)[i] / 32768.0f * mCurrentGain;
-                sample = std::clamp(sample, -1.0f, 1.0f);
-                static_cast<int16_t *>(pInput)[i] = static_cast<int16_t>(sample * 32768.0f);
-            }
-            break;
-        case ma_format_s24:
-            for (ma_uint32 i = 0; i < sampleCount; ++i)
-            {
-                // Read the 24-bit signed sample (3 bytes per sample)
-                uint8_t *samplePtr = static_cast<uint8_t *>(pInput) + i * 3;
-                int32_t sample = (samplePtr[0] << 8) | (samplePtr[1] << 16) | (samplePtr[2] << 24); // Reassemble to 32-bit signed
-                sample >>= 8;                                                                       // Shift to make it a signed 24-bit value
-
-                // Scale and apply gain
-                float normalizedSample = sample / 8388608.0f; // Scale to -1.0 to +1.0 range
-                normalizedSample *= mCurrentGain;
-                normalizedSample = std::clamp(normalizedSample, -1.0f, 1.0f);
-
-                // Convert back to signed 24-bit
-                int32_t processedSample = static_cast<int32_t>(normalizedSample * 8388608.0f);
-                processedSample = std::clamp(processedSample, -8388608, 8388607);
-
-                // Write back the processed sample into 3 bytes
-                samplePtr[0] = (processedSample & 0xFF0000) >> 16;
-                samplePtr[1] = (processedSample & 0x00FF00) >> 8;
-                samplePtr[2] = (processedSample & 0x0000FF);
-            }
-            break;
-        case ma_format_s32:
-            for (ma_uint32 i = 0; i < sampleCount; ++i)
-            {
-                float sample = static_cast<int32_t *>(pInput)[i] / 2147483648.0f * mCurrentGain;
-                sample = std::clamp(sample, -1.0f, 1.0f);
-                static_cast<int32_t *>(pInput)[i] = static_cast<int32_t>(sample * 2147483648.0f);
-            }
-            break;
-        case ma_format_f32:
-            for (ma_uint32 i = 0; i < sampleCount; ++i)
-            {
-                static_cast<float *>(pInput)[i] *= mCurrentGain;
-            }
-            break;
-        case ma_format_unknown:
-            break;
-        case ma_format_count:
-            break;
+    case ma_format_u8:
+    {
+        const float clamped = clampFinite(sample, -1.0f, 1.0f);
+        const int32_t converted = static_cast<int32_t>(std::lrint(clamped * 128.0f + 128.0f));
+        static_cast<uint8_t *>(pInput)[sampleIndex] = static_cast<uint8_t>(std::clamp(converted, 0, 255));
+        break;
+    }
+    case ma_format_s16:
+    {
+        const float maxSample = 32767.0f / 32768.0f;
+        const float clamped = clampFinite(sample, -1.0f, maxSample);
+        const int32_t converted = static_cast<int32_t>(std::lrint(clamped * 32768.0f));
+        static_cast<int16_t *>(pInput)[sampleIndex] = static_cast<int16_t>(std::clamp(converted, -32768, 32767));
+        break;
+    }
+    case ma_format_s24:
+    {
+        const float maxSample = 8388607.0f / 8388608.0f;
+        const float clamped = clampFinite(sample, -1.0f, maxSample);
+        const int32_t converted = std::clamp(
+            static_cast<int32_t>(std::lrint(clamped * 8388608.0f)),
+            -8388608,
+            8388607);
+        uint8_t *destination = static_cast<uint8_t *>(pInput) + sampleIndex * 3;
+        destination[0] = static_cast<uint8_t>(converted & 0xFF);
+        destination[1] = static_cast<uint8_t>((converted >> 8) & 0xFF);
+        destination[2] = static_cast<uint8_t>((converted >> 16) & 0xFF);
+        break;
+    }
+    case ma_format_s32:
+    {
+        const double maxSample = 2147483647.0 / 2147483648.0;
+        const double clamped = static_cast<double>(clampFinite(sample, -1.0f, static_cast<float>(maxSample)));
+        const int64_t converted = static_cast<int64_t>(std::llrint(clamped * 2147483648.0));
+        static_cast<int32_t *>(pInput)[sampleIndex] = static_cast<int32_t>(
+            std::clamp<int64_t>(converted, std::numeric_limits<int32_t>::min(), std::numeric_limits<int32_t>::max()));
+        break;
+    }
+    case ma_format_f32:
+        static_cast<float *>(pInput)[sampleIndex] = clampFinite(sample, -1.0f, 1.0f);
+        break;
+    default:
+        break;
     }
 }
 
-void AutoGain::validateParam(int param) const
+float AutoGain::calculateTargetGain(float inputRMS, float inputPeak) const
 {
-    if (param < 0 || param >= ParamCount)
+    const float noiseFloor = dbToLinear(readParam(NoiseFloorDb));
+    if (inputRMS < noiseFloor || mSmoothedRMS < noiseFloor)
+        return std::min(mCurrentGain, 1.0f);
+
+    const float minGain = readParam(MinGain);
+    const float maxGain = readParam(MaxGain);
+    const float targetRMS = readParam(TargetRMS);
+    float targetGain = targetRMS / std::max(mSmoothedRMS, kFloatEpsilon);
+    targetGain = std::clamp(targetGain, minGain, maxGain);
+
+    const float ceiling = dbToLinear(-readParam(HeadroomDb));
+    if (inputPeak > kFloatEpsilon)
+        targetGain = std::min(targetGain, ceiling / inputPeak);
+
+    return clampFinite(targetGain, 0.0f, maxGain);
+}
+
+float AutoGain::smoothingFactor(float timeSeconds, ma_uint32 frameCount) const
+{
+    const float safeTime = std::max(timeSeconds, kMinTimeSeconds);
+    const float safeSampleRate = std::max(mSampleRate, 1.0f);
+    return 1.0f - std::exp(-static_cast<float>(frameCount) / (safeTime * safeSampleRate));
+}
+
+AutoGain::ProcessStats AutoGain::applyGain(
+    void *pInput,
+    ma_uint32 frameCount,
+    unsigned int channels,
+    ma_format format,
+    float startGain,
+    float endGain) const
+{
+    const float ceiling = dbToLinear(-readParam(HeadroomDb));
+    const float gainDelta = endGain - startGain;
+    float outputPeak = 0.0f;
+    uint64_t limiterClipCount = 0;
+
+    for (ma_uint32 frame = 0; frame < frameCount; ++frame)
     {
-        // Invalid parameter index
-        return;
+        const float progress = static_cast<float>(frame + 1) / frameCount;
+        const float frameGain = startGain + gainDelta * progress;
+
+        for (unsigned int channel = 0; channel < channels; ++channel)
+        {
+            const ma_uint32 sampleIndex = frame * channels + channel;
+            float sample = readSample(pInput, sampleIndex, format) * frameGain;
+
+            if (!std::isfinite(sample))
+                sample = 0.0f;
+
+            if (safeAbs(sample) > ceiling)
+            {
+                sample = std::copysign(ceiling, sample);
+                ++limiterClipCount;
+            }
+
+            outputPeak = std::max(outputPeak, safeAbs(sample));
+            writeSample(pInput, sampleIndex, format, sample);
+        }
     }
-} 
+
+    return {outputPeak, limiterClipCount};
+}
+
+float AutoGain::readParam(Params param) const
+{
+    return mValues[param].load(std::memory_order_relaxed);
+}
+
+void AutoGain::writeMetric(Params param, float value)
+{
+    if (!isValidParam(param))
+        return;
+    mValues[param].store(value, std::memory_order_relaxed);
+}
+
+bool AutoGain::isValidParam(int param) const
+{
+    return param >= 0 && param < ParamCount;
+}
+
+bool AutoGain::isWritableParam(int param) const
+{
+    return isValidParam(param) && kParamInfo[param].writable;
+}
