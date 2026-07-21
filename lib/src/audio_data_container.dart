@@ -14,6 +14,9 @@ import 'package:meta/meta.dart';
 /// use [toS8List] method. Be aware that the conversion is compute expensive and
 /// should be avoided if possible initializing the recorder with the format
 /// desired.
+///
+/// When streaming with [StreamingFormat.opus], [rawData] contains a
+/// length-prefixed Opus packet instead of PCM samples.
 class AudioDataContainer {
   /// The class which is used by the Stream to listen to the audio data.
   AudioDataContainer(this.u8Data);

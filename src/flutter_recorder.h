@@ -48,7 +48,7 @@ extern "C"
 
     FFI_PLUGIN_EXPORT void flutter_recorder_stop();
 
-    FFI_PLUGIN_EXPORT void flutter_recorder_startStreamingData();
+    FFI_PLUGIN_EXPORT void flutter_recorder_startStreamingData(int streamingFormat);
 
     FFI_PLUGIN_EXPORT void flutter_recorder_stopStreamingData();
 
@@ -60,7 +60,7 @@ extern "C"
 
     FFI_PLUGIN_EXPORT void flutter_recorder_setSecondsOfAudioToWriteBefore(float secondsOfAudioToWriteBefore);
 
-    FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_startRecording(const char *path);
+    FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_startRecording(const char *path, int recordingFormat);
 
     FFI_PLUGIN_EXPORT void flutter_recorder_setPauseRecording(bool pause);
 

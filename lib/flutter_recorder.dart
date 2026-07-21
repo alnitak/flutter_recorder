@@ -8,7 +8,9 @@ export 'src/enums.dart'
         CaptureDevice,
         CaptureErrors,
         PCMFormat,
-        RecorderChannels;
+        RecorderChannels,
+        RecordingFormat,
+        StreamingFormat;
 export 'src/filters/autogain.dart';
 export 'src/filters/echo_cancellation.dart';
 export 'src/filters/filters.dart'

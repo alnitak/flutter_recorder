@@ -4,6 +4,8 @@
 
 #include "../../src/analyzer.cpp"
 #include "../../src/capture.cpp"
+#include "../../src/opus_encoder_pipeline.cpp"
+#include "../../src/opus_ogg_writer.cpp"
 #include "../../src/fft/soloud_fft.cpp"
 #include "../../src/filters/filters.cpp"
 #include "../../src/filters/autogain.cpp"

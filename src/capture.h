@@ -5,6 +5,8 @@
 #include "enums.h"
 #include "miniaudio.h"
 #include "wav.h"
+#include "opus_ogg_writer.h"
+#include "opus_encoder_pipeline.h"
 
 #include "filters/filters.h"
 #include <string>
@@ -51,7 +53,7 @@ public:
 
   void stop();
 
-  void startStreamingData();
+  void startStreamingData(StreamingFormat streamingFormat);
   void stopStreamingData();
 
   void setSilenceDetection(bool enable);
@@ -60,7 +62,7 @@ public:
   void setSilenceDuration(float silenceDuration);
   void setSecondsOfAudioToWriteBefore(float secondsOfAudioToWriteBefore);
 
-  CaptureErrors startRecording(const char *path);
+  CaptureErrors startRecording(const char *path, RecordingFormat recordingFormat);
 
   void setPauseRecording(bool pause);
 
@@ -97,6 +99,18 @@ public:
 
   /// true when the capture device is streaming data.
   bool isStreamingData;
+
+  /// The selected format for recording.
+  RecordingFormat recordingFormat;
+
+  /// The selected format for streaming.
+  StreamingFormat streamingFormat;
+
+  /// Opus encoder pipeline used while streaming.
+  std::unique_ptr<OpusEncoderPipeline> streamOpusPipeline;
+
+  /// Opus Ogg writer used while recording.
+  WriteAudio::OpusOggWriter opusWriter;
 
   /// the number of bytes per sample
   int bytesPerSample;

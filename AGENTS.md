@@ -225,7 +225,14 @@ dart run ffigen --config ffigen.yaml
 
 ## Testing
 
-**Note**: This project currently has **no automated tests**. Testing is done manually via the example application in `example/`.
+The project has both automated and manual tests.
+
+### Automated Tests
+
+- **Dart tests**: Run with `flutter test` in the repository root.
+  - `test/android_input_preset_test.dart` — verifies stable native values for `AndroidInputPreset`.
+  - `test/autogain_metadata_test.dart` — verifies `AutoGainEnum` indices, writable/metric separation, and filter parameter count.
+- **C++ test**: `test/cpp/autogain_test.cpp` is a standalone harness for the AutoGain filter. Compile it with the AutoGain filter sources and miniaudio headers, then run the resulting binary.
 
 ### Manual Testing Checklist
 1. Device enumeration (`listCaptureDevices`)
@@ -237,6 +244,16 @@ dart run ffigen --config ffigen.yaml
 7. Audio streaming
 8. Filter activation/deactivation (Auto Gain, Echo Cancellation)
 9. Cross-platform verification
+
+## CI/CD
+
+Continuous integration is configured in [`.github/workflows/analyze.yaml`](.github/workflows/analyze.yaml). The workflow runs on pushes and pull requests to `main` and performs:
+
+- `flutter doctor` — verify Flutter installation.
+- `flutter pub get` — install dependencies.
+- Dart analyze with fatal warnings and infos (working directory: `lib/`).
+- `dart format -o none --set-exit-if-changed .` — enforce formatting.
+- `flutter pub publish --dry-run` — validate pub.dev requirements.
 
 ## Platform-Specific Notes
 
@@ -334,6 +351,12 @@ Recorder.instance.filters.autoGainFilter.deactivate();
 - **Pub Package**: https://pub.dev/packages/flutter_recorder
 - **miniaudio**: https://github.com/mackron/miniaudio
 - **Web Example**: https://marcobavagnoli.com/flutter_recorder/
+
+## Related Agent Customizations
+
+- **Regenerate FFI Bindings** (`/regenerate-ffi-bindings`): Step-by-step workflow for re-running `ffigen` after C header changes.
+- **Add Audio Filter** (`/add-audio-filter`): Workflow for adding a new C++ audio filter and exposing it to Dart.
+- **C Header Changes** instruction: Auto-attaches when editing `.h` files in `src/` and reminds the agent to regenerate bindings and run tests.
 
 ## Maintainer
 
