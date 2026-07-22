@@ -8,9 +8,6 @@
 // ignore_for_file: type=lint
 import 'dart:ffi' as ffi;
 
-import 'package:flutter_recorder/src/enums.dart';
-import 'package:flutter_recorder/src/filters/filters.dart';
-
 /// Bindings for `src/flutter_recorder.h`.
 ///
 /// Regenerate bindings with
@@ -135,20 +132,20 @@ class FlutterRecorderBindings {
               ffi.Pointer<ffi.Pointer<ffi.Int>>,
               int)>();
 
-  CaptureErrors flutter_recorder_init(
+  int flutter_recorder_init(
     int deviceID,
     int pcmFormat,
     int sampleRate,
     int channels,
     int androidInputPreset,
   ) {
-    return CaptureErrors.fromValue(_flutter_recorder_init(
+    return _flutter_recorder_init(
       deviceID,
       pcmFormat,
       sampleRate,
       channels,
       androidInputPreset,
-    ));
+    );
   }
 
   late final _flutter_recorder_initPtr = _lookup<
@@ -188,8 +185,8 @@ class FlutterRecorderBindings {
   late final _flutter_recorder_isDeviceStarted =
       _flutter_recorder_isDeviceStartedPtr.asFunction<int Function()>();
 
-  CaptureErrors flutter_recorder_start() {
-    return CaptureErrors.fromValue(_flutter_recorder_start());
+  int flutter_recorder_start() {
+    return _flutter_recorder_start();
   }
 
   late final _flutter_recorder_startPtr =
@@ -207,15 +204,19 @@ class FlutterRecorderBindings {
   late final _flutter_recorder_stop =
       _flutter_recorder_stopPtr.asFunction<void Function()>();
 
-  void flutter_recorder_startStreamingData() {
-    return _flutter_recorder_startStreamingData();
+  void flutter_recorder_startStreamingData(
+    int streamingFormat,
+  ) {
+    return _flutter_recorder_startStreamingData(
+      streamingFormat,
+    );
   }
 
   late final _flutter_recorder_startStreamingDataPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function()>>(
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int)>>(
           'flutter_recorder_startStreamingData');
   late final _flutter_recorder_startStreamingData =
-      _flutter_recorder_startStreamingDataPtr.asFunction<void Function()>();
+      _flutter_recorder_startStreamingDataPtr.asFunction<void Function(int)>();
 
   void flutter_recorder_stopStreamingData() {
     return _flutter_recorder_stopStreamingData();
@@ -287,20 +288,23 @@ class FlutterRecorderBindings {
       _flutter_recorder_setSecondsOfAudioToWriteBeforePtr
           .asFunction<void Function(double)>();
 
-  CaptureErrors flutter_recorder_startRecording(
+  int flutter_recorder_startRecording(
     ffi.Pointer<ffi.Char> path,
+    int recordingFormat,
   ) {
-    return CaptureErrors.fromValue(_flutter_recorder_startRecording(
+    return _flutter_recorder_startRecording(
       path,
-    ));
+      recordingFormat,
+    );
   }
 
   late final _flutter_recorder_startRecordingPtr = _lookup<
-          ffi.NativeFunction<ffi.UnsignedInt Function(ffi.Pointer<ffi.Char>)>>(
-      'flutter_recorder_startRecording');
+      ffi.NativeFunction<
+          ffi.UnsignedInt Function(ffi.Pointer<ffi.Char>,
+              ffi.Int)>>('flutter_recorder_startRecording');
   late final _flutter_recorder_startRecording =
       _flutter_recorder_startRecordingPtr
-          .asFunction<int Function(ffi.Pointer<ffi.Char>)>();
+          .asFunction<int Function(ffi.Pointer<ffi.Char>, int)>();
 
   void flutter_recorder_setPauseRecording(
     bool pause,
@@ -450,10 +454,10 @@ class FlutterRecorderBindings {
   /// FILTERS
   /// //////////////////////
   int flutter_recorder_isFilterActive(
-    RecorderFilterType filterType,
+    int filterType,
   ) {
     return _flutter_recorder_isFilterActive(
-      filterType.value,
+      filterType,
     );
   }
 
@@ -463,12 +467,12 @@ class FlutterRecorderBindings {
   late final _flutter_recorder_isFilterActive =
       _flutter_recorder_isFilterActivePtr.asFunction<int Function(int)>();
 
-  CaptureErrors flutter_recorder_addFilter(
-    RecorderFilterType filterType,
+  int flutter_recorder_addFilter(
+    int filterType,
   ) {
-    return CaptureErrors.fromValue(_flutter_recorder_addFilter(
-      filterType.value,
-    ));
+    return _flutter_recorder_addFilter(
+      filterType,
+    );
   }
 
   late final _flutter_recorder_addFilterPtr =
@@ -477,12 +481,12 @@ class FlutterRecorderBindings {
   late final _flutter_recorder_addFilter =
       _flutter_recorder_addFilterPtr.asFunction<int Function(int)>();
 
-  CaptureErrors flutter_recorder_removeFilter(
-    RecorderFilterType filterType,
+  int flutter_recorder_removeFilter(
+    int filterType,
   ) {
-    return CaptureErrors.fromValue(_flutter_recorder_removeFilter(
-      filterType.value,
-    ));
+    return _flutter_recorder_removeFilter(
+      filterType,
+    );
   }
 
   late final _flutter_recorder_removeFilterPtr =
@@ -492,12 +496,12 @@ class FlutterRecorderBindings {
       _flutter_recorder_removeFilterPtr.asFunction<int Function(int)>();
 
   void flutter_recorder_getFilterParamNames(
-    RecorderFilterType filterType,
+    int filterType,
     ffi.Pointer<ffi.Pointer<ffi.Char>> names,
     ffi.Pointer<ffi.Int> paramsCount,
   ) {
     return _flutter_recorder_getFilterParamNames(
-      filterType.value,
+      filterType,
       names,
       paramsCount,
     );
@@ -513,12 +517,12 @@ class FlutterRecorderBindings {
               int, ffi.Pointer<ffi.Pointer<ffi.Char>>, ffi.Pointer<ffi.Int>)>();
 
   void flutter_recorder_setFilterParams(
-    RecorderFilterType filterType,
+    int filterType,
     int attributeId,
     double value,
   ) {
     return _flutter_recorder_setFilterParams(
-      filterType.value,
+      filterType,
       attributeId,
       value,
     );
@@ -533,11 +537,11 @@ class FlutterRecorderBindings {
           .asFunction<void Function(int, int, double)>();
 
   double flutter_recorder_getFilterParams(
-    RecorderFilterType filterType,
+    int filterType,
     int attributeId,
   ) {
     return _flutter_recorder_getFilterParams(
-      filterType.value,
+      filterType,
       attributeId,
     );
   }
@@ -562,3 +566,41 @@ typedef dartStreamDataCallback_tFunction = ffi.Void Function(
     ffi.Pointer<ffi.UnsignedChar> data, ffi.Int dataLength);
 typedef DartdartStreamDataCallback_tFunction = void Function(
     ffi.Pointer<ffi.UnsignedChar> data, int dataLength);
+
+/// Possible capture errors
+abstract class CaptureErrors {
+  /// No error
+  static const captureNoError = 0;
+
+  /// The capture device has failed to initialize.
+  static const captureInitFailed = 1;
+
+  /// The capture device has not yet been initialized.
+  static const captureNotInited = 2;
+
+  /// Failed to start the device.
+  static const failedToStartDevice = 3;
+
+  /// Failed to initialize wav recording.
+  static const failedToInitializeRecording = 4;
+
+  /// Invalid arguments while initializing wav recording.
+  static const invalidArgs = 5;
+
+  /// Failed to write wav file.
+  static const failedToWriteWav = 6;
+
+  /// Filter not found
+  static const filterNotFound = 7;
+
+  /// The filter has already been added.
+  static const filterAlreadyAdded = 8;
+
+  /// Error getting filter parameter.
+  static const filterParameterGetError = 9;
+}
+
+abstract class RecorderFilterType {
+  static const autogain = 0;
+  static const echoCancellation = 1;
+}

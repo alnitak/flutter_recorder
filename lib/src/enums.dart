@@ -139,3 +139,44 @@ enum AndroidInputPreset {
   /// Internal value passed to the native recorder.
   final int value;
 }
+
+/// The format used when recording to a file.
+enum RecordingFormat {
+  /// WAV PCM file.
+  wav(0),
+
+  /// Ogg Opus file.
+  opusOgg(1);
+
+  const RecordingFormat(this.value);
+
+  /// Internal value passed to the native recorder.
+  final int value;
+
+  static RecordingFormat fromValue(int value) => switch (value) {
+        0 => wav,
+        1 => opusOgg,
+        _ => throw ArgumentError('Unknown value for RecordingFormat: $value'),
+      };
+}
+
+/// The format used when streaming audio data.
+enum StreamingFormat {
+  /// Raw PCM data.
+  pcm(0),
+
+  /// Opus packets. Each packet is length-prefixed with a 4-byte
+  /// little-endian integer.
+  opus(1);
+
+  const StreamingFormat(this.value);
+
+  /// Internal value passed to the native recorder.
+  final int value;
+
+  static StreamingFormat fromValue(int value) => switch (value) {
+        0 => pcm,
+        1 => opus,
+        _ => throw ArgumentError('Unknown value for StreamingFormat: $value'),
+      };
+}

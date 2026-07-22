@@ -226,11 +226,11 @@ FFI_PLUGIN_EXPORT void flutter_recorder_stop()
     capture.stop();
 }
 
-FFI_PLUGIN_EXPORT void flutter_recorder_startStreamingData()
+FFI_PLUGIN_EXPORT void flutter_recorder_startStreamingData(int streamingFormat)
 {
     if (!capture.isInited())
         return;
-    capture.startStreamingData();
+    capture.startStreamingData((StreamingFormat)streamingFormat);
 }
 
 FFI_PLUGIN_EXPORT void flutter_recorder_stopStreamingData()
@@ -266,11 +266,11 @@ FFI_PLUGIN_EXPORT void flutter_recorder_setSecondsOfAudioToWriteBefore(float sec
     capture.setSecondsOfAudioToWriteBefore(secondsOfAudioToWriteBefore);
 }
 
-FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_startRecording(const char *path)
+FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_startRecording(const char *path, int recordingFormat)
 {
     if (!capture.isInited())
         return captureNotInited;
-    return capture.startRecording(path);
+    return capture.startRecording(path, (RecordingFormat)recordingFormat);
 }
 
 FFI_PLUGIN_EXPORT void flutter_recorder_setPauseRecording(bool pause)

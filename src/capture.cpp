@@ -8,6 +8,7 @@
 #include <memory.h>
 #include <memory>
 #include <mutex>
+#include <cstring>
 #include <time.h>
 
 #ifdef _IS_ANDROID_
@@ -243,34 +244,40 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput,
 
   // Stream the audio data?
   if (userData->isStreamingData && nativeStreamDataCallback != nullptr) {
-    const unsigned char *data = (const unsigned char *)captured;
-    // Calculate total size in bytes considering frame size
-    int frameSize =
-        userData->bytesPerSample * userData->deviceConfig.capture.channels;
-    int dataSize = frameCount * frameSize;
+    if (userData->streamingFormat == streamingFormatOpus) {
+      if (userData->streamOpusPipeline) {
+        userData->streamOpusPipeline->push(pInput, frameCount);
+      }
+    } else {
+      const unsigned char *data = (const unsigned char *)pInput;
+      // Calculate total size in bytes considering frame size
+      int frameSize =
+          userData->bytesPerSample * userData->deviceConfig.capture.channels;
+      int dataSize = frameCount * frameSize;
 
-    // Add new data to the stream buffer
-    streamBuffer->insert(streamBuffer->end(), data, data + dataSize);
+      // Add new data to the stream buffer
+      streamBuffer->insert(streamBuffer->end(), data, data + dataSize);
 
-    // Calculate target buffer size in bytes
-    int targetBufferSize = STREAM_BUFFER_SIZE * frameSize;
+      // Calculate target buffer size in bytes
+      int targetBufferSize = STREAM_BUFFER_SIZE * frameSize;
 
-    // If we've reached the target buffer size, send the data
-    if (streamBuffer->size() >= targetBufferSize) {
-      // Create a copy of the data to send
-      auto *dataCopy = new unsigned char[targetBufferSize];
-      memcpy(dataCopy, streamBuffer->data(), targetBufferSize);
+      // If we've reached the target buffer size, send the data
+      if (streamBuffer->size() >= targetBufferSize) {
+        // Create a copy of the data to send
+        auto *dataCopy = new unsigned char[targetBufferSize];
+        memcpy(dataCopy, streamBuffer->data(), targetBufferSize);
 
-      // Send copy to Dart - it will be responsible for freeing the memory
-      nativeStreamDataCallback(dataCopy, targetBufferSize);
+        // Send copy to Dart - it will be responsible for freeing the memory
+        nativeStreamDataCallback(dataCopy, targetBufferSize);
 
-      // Remove sent data and keep remaining data
-      if (streamBuffer->size() > targetBufferSize) {
-        std::vector<unsigned char> remaining(
-            streamBuffer->begin() + targetBufferSize, streamBuffer->end());
-        *streamBuffer = std::move(remaining);
-      } else {
-        streamBuffer->clear();
+        // Remove sent data and keep remaining data
+        if (streamBuffer->size() > targetBufferSize) {
+          std::vector<unsigned char> remaining(
+              streamBuffer->begin() + targetBufferSize, streamBuffer->end());
+          *streamBuffer = std::move(remaining);
+        } else {
+          streamBuffer->clear();
+        }
       }
     }
   }
@@ -289,11 +296,19 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput,
 
     if (!delayed_silence_started && userData->isRecording &&
         !userData->isRecordingPaused) {
-      userData->wav.write(captured, frameCount);
+      if (userData->recordingFormat == recordingFormatOpusOgg) {
+        userData->opusWriter.write(pInput, frameCount);
+      } else {
+        userData->wav.write(captured, frameCount);
+      }
     }
   } else {
     if (userData->isRecording && !userData->isRecordingPaused) {
-      userData->wav.write(captured, frameCount);
+      if (userData->recordingFormat == recordingFormatOpusOgg) {
+        userData->opusWriter.write(pInput, frameCount);
+      } else {
+        userData->wav.write(captured, frameCount);
+      }
     }
   }
 }
@@ -306,6 +321,7 @@ Capture::Capture()
     : isDetectingSilence(false), silenceThresholdDb(-40.0f),
       silenceDuration(2.0f), secondsOfAudioToWriteBefore(0.0f),
       isRecording(false), isRecordingPaused(false), isStreamingData(false),
+      recordingFormat(recordingFormatWav), streamingFormat(streamingFormatPcm),
       mInited(false), mUsesContext(false) {
   memset(waveData, 0, sizeof(float) * 256);
 }
@@ -471,10 +487,13 @@ CaptureErrors Capture::init(Filters *filters, int deviceID, PCMFormat pcmFormat,
 void Capture::dispose() {
   mInited = false;
   wav.close();
+  opusWriter.close();
   if (circularBuffer)
     circularBuffer.reset();
   if (streamBuffer)
     streamBuffer.reset();
+  if (streamOpusPipeline)
+    streamOpusPipeline.reset();
   isRecording = false;
 
   ma_device_uninit(&device);
@@ -512,9 +531,34 @@ CaptureErrors Capture::start() {
 
 void Capture::stop() { ma_device_stop(&device); }
 
-void Capture::startStreamingData() {
+void Capture::startStreamingData(StreamingFormat streamingFormat) {
+  this->streamingFormat = streamingFormat;
   if (streamBuffer)
     streamBuffer.reset();
+  if (streamOpusPipeline)
+    streamOpusPipeline.reset();
+  if (streamingFormat == streamingFormatOpus) {
+    streamOpusPipeline = std::make_unique<OpusEncoderPipeline>();
+    CaptureErrors err = streamOpusPipeline->init(
+        deviceConfig.capture.format, deviceConfig.capture.channels,
+        deviceConfig.sampleRate);
+    if (err != captureNoError) {
+      streamOpusPipeline.reset();
+      return;
+    }
+    streamOpusPipeline->onPacket =
+        [](const unsigned char *packet, int packetSize) {
+          if (nativeStreamDataCallback == nullptr)
+            return;
+          auto *data = new unsigned char[packetSize + 4];
+          data[0] = static_cast<unsigned char>(packetSize & 0xFF);
+          data[1] = static_cast<unsigned char>((packetSize >> 8) & 0xFF);
+          data[2] = static_cast<unsigned char>((packetSize >> 16) & 0xFF);
+          data[3] = static_cast<unsigned char>((packetSize >> 24) & 0xFF);
+          std::memcpy(data + 4, packet, packetSize);
+          nativeStreamDataCallback(data, packetSize + 4);
+        };
+  }
   streamBuffer = std::make_unique<std::vector<unsigned char>>();
   streamBuffer->reserve(STREAM_BUFFER_SIZE * 6);
   isStreamingData = true;
@@ -524,6 +568,8 @@ void Capture::stopStreamingData() {
   isStreamingData = false;
   if (streamBuffer)
     streamBuffer.reset();
+  if (streamOpusPipeline)
+    streamOpusPipeline.reset();
 }
 
 void Capture::setSilenceDetection(bool enable) {
@@ -550,10 +596,17 @@ void Capture::setSecondsOfAudioToWriteBefore(
   circularBuffer = std::make_unique<CircularBuffer<float>>(frameCount);
 }
 
-CaptureErrors Capture::startRecording(const char *path) {
+CaptureErrors Capture::startRecording(const char *path,
+                                       RecordingFormat recordingFormat) {
   if (!mInited)
     return captureNotInited;
-  CaptureErrors result = wav.init(path, deviceConfig);
+  this->recordingFormat = recordingFormat;
+  CaptureErrors result = captureNoError;
+  if (recordingFormat == recordingFormatOpusOgg) {
+    result = opusWriter.init(path, deviceConfig);
+  } else {
+    result = wav.init(path, deviceConfig);
+  }
   if (result != captureNoError)
     return result;
   setSecondsOfAudioToWriteBefore(secondsOfAudioToWriteBefore);
@@ -572,6 +625,7 @@ void Capture::stopRecording() {
   if (!mInited || !isRecording)
     return;
   wav.close();
+  opusWriter.close();
   circularBuffer.reset();
   isRecording = false;
 }

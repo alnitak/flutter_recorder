@@ -9,10 +9,10 @@ A low-level audio recorder plugin that uses miniaudio as the backend and support
 ## 🌟 Key Features:
 - 🖥️ **Cross-platform**: Supports Linux, Windows, Android, MacOS, iOS, and web.
 - ⚡ **High performance**: Built using the fast and efficient miniaudio C library with FFI.
-- 🎙️ **WAV Recording with Pause**: Record in WAV format with pause functionality.
+- 🎙️ **WAV or Ogg Opus Recording**: Record in WAV or Ogg Opus format with pause functionality.
 - ⚙️ **Choose Data Type**: samplerate, mono or stereo, audio format (u8, s8, s16le, s24le, s32le or f32le).
 - 🎛️ **Device Flexibility**: Choose your recording device.
-- 📢 **Stream audio data**: Listen to PCM audio data stream.
+- 📢 **Stream audio data**: Listen to PCM or Opus audio data stream.
 - 🔇 **Silence Detection**: Automatically detects silence via callback or Stream.
 - 📊 **Customizable Silence Threshold**: Define what’s considered “silence” for your recordings.
 - ⏱️ **Adjustable Pause Timing**: Set how long silence lasts before pausing, and how soon to resume recording.
@@ -101,8 +101,14 @@ try {
 /// On Web platform it is better to initialize and wait the user to give
 /// mic permission. Then use `start()` when it's needed.
 
-//Start recording:
-Recorder.instance.startRecording(completeFilePath: 'audioCompleteFilenameWithPath.wav`);
+// Start recording (WAV is the default):
+Recorder.instance.startRecording(completeFilePath: 'audioCompleteFilenameWithPath.wav');
+
+// Or record to Ogg Opus:
+Recorder.instance.startRecording(
+  completeFilePath: 'audioCompleteFilenameWithPath.opus',
+  format: RecordingFormat.opusOgg,
+);
 
 /// Stop recording:
 Recorder.instance.stopRecording();
@@ -167,8 +173,12 @@ Recorder.instance.uint8ListStream.listen((data) {
     /// desired.
 });
 
-/// Start streaming:
+/// Start streaming (PCM is the default):
 Recorder.instance.startStreamingData();
+
+/// Or stream encoded Opus packets:
+Recorder.instance.startStreamingData(format: StreamingFormat.opus);
+
 /// Stop streaming:
 Recorder.instance.stopStreamingData();
 ```

@@ -1,3 +1,9 @@
+## 1.2.0
+- add Opus encoding for `startRecording` (Ogg Opus) and `startStreamingData` (Opus packets) through the new `RecordingFormat` and `StreamingFormat` enums.
+- build: vendored Ogg/Opus libraries renamed to `libfr_ogg`/`libfr_opus` on Android to avoid conflicts with other plugins such as `flutter_soloud`.
+- build: macOS now uses project-specific vendored static libraries; iOS uses vendored XCFrameworks to avoid CocoaPods symbol collisions.
+- build: updated WASM compile script to support Ogg/Opus sources and avoid picking up host macOS/iOS SDK headers.
+
 ## 1.1.6
 - improve native Auto Gain with stateful RMS tracking, noise-floor gating, headroom limiting, PCM-safe clipping, and runtime telemetry #46. Thanks to @Avejack.
 - add Auto Gain `noiseFloorDb` and `headroomDb` parameters plus read-only metrics for current gain, input RMS, output peak, limiter counts, and last callback frame count #46. Thanks to @Avejack.
@@ -36,7 +42,7 @@
 - resolved conflicts with flutter_soloud #25
 
 ## 1.0.1
-- detailed exception when passing an invalind file name to `startRecording` #23
+- detailed exception when passing an invalid file name to `startRecording` #23
 - removed deprecated `dart:js_util`
 
 ## 1.0.0

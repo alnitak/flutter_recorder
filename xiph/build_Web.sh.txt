@@ -1,0 +1,1 @@
+The Ogg and Opus libraries for the web target are not built by the current `web/compile_wasm.sh` script. To enable web Opus encoding, update that script to compile the xiph sources and link them into `libflutter_recorder_plugin.[wasm|js]`.
