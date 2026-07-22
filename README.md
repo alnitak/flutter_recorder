@@ -7,20 +7,18 @@ A low-level audio recorder plugin that uses miniaudio as the backend and support
 |💙|💙|💙|💙|💙|💙|
 
 ## 🌟 Key Features:
-- 🖥️ **Cross-platform**: Supports Linux, Windows, Android, MacOS, iOS, and web.
-- ⚡ **High performance**: Built using the fast and efficient miniaudio C library with FFI.
-- 🎙️ **WAV or Ogg Opus Recording**: Record in WAV or Ogg Opus format with pause functionality.
-- ⚙️ **Choose Data Type**: samplerate, mono or stereo, audio format (u8, s8, s16le, s24le, s32le or f32le).
-- 🎛️ **Device Flexibility**: Choose your recording device.
-- 📢 **Stream audio data**: Listen to PCM or Opus audio data stream.
-- 🔇 **Silence Detection**: Automatically detects silence via callback or Stream.
-- 📊 **Customizable Silence Threshold**: Define what’s considered “silence” for your recordings.
-- ⏱️ **Adjustable Pause Timing**: Set how long silence lasts before pausing, and how soon to resume recording.
-- 🔊 **Real-time Audio Metrics**: Access volume, audio wave, and FFT data in real-time.
-- 🎚️ **Auto Gain**: Experimental Auto Gain filter.
-- 🌐 **Cross Platform**: Supports all platforms with WASM support for the web.
-
-[A web example compiled in WASM.](https://marcobavagnoli.com/flutter_recorder/)
+- **Cross-platform**: Supports Linux, Windows, Android, MacOS, iOS, and web.
+- **High performance**: Built using the fast and efficient miniaudio C library with FFI.
+- **WAV or Ogg Opus Recording**: Record in WAV or Ogg Opus format with pause functionality.
+- **Choose Data Type**: samplerate, mono or stereo, audio format (u8, s8, s16le, s24le, s32le or f32le).
+- **Device Flexibility**: Choose your recording device.
+- **Stream audio data**: Listen to PCM or Opus audio data stream.
+- **Silence Detection**: Automatically detects silence via callback or Stream.
+- **Customizable Silence Threshold**: Define what’s considered “silence” for your recordings.
+- *Adjustable Pause Timing**: Set how long silence lasts before pausing, and how soon to resume recording.
+- **Real-time Audio Metrics**: Access volume, audio wave, and FFT data in real-time.
+- **Auto Gain**: Experimental Auto Gain filter.
+- **Cross Platform**: Supports all platforms with WASM support for the web.
 
 ## 🚀 Setup
 After setting up permission for you Android, MacOS or iOS, in your app, you will need to ask for permission to use the microphone maybe using [permission_handler](https://pub.dev/packages/permission_handler) plugin.
