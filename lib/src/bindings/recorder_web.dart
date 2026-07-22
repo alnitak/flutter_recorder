@@ -199,8 +199,8 @@ class RecorderWeb extends RecorderImpl {
   }
 
   @override
-  void startStreamingData() {
-    wasmStartStreamingData();
+  void startStreamingData({required StreamingFormat format}) {
+    wasmStartStreamingData(format.value);
   }
 
   @override
@@ -209,12 +209,12 @@ class RecorderWeb extends RecorderImpl {
   }
 
   @override
-  void startRecording(String path) {
+  void startRecording(String path, {required RecordingFormat format}) {
     final pathPtr = wasmMalloc(path.length);
     for (var i = 0; i < path.length; i++) {
       wasmSetValue(pathPtr + i, path.codeUnits[i], 'i8');
     }
-    final error = wasmStartRecording(pathPtr);
+    final error = wasmStartRecording(pathPtr, format.value);
     if (CaptureErrors.fromValue(error) != CaptureErrors.captureNoError) {
       throw RecorderCppException.fromRecorderError(
         CaptureErrors.fromValue(error),

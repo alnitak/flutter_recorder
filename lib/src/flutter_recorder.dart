@@ -296,13 +296,19 @@ interface class Recorder {
 
   /// Start streaming data.
   ///
+  /// [format] selects whether the stream should contain raw PCM samples or
+  /// Opus packets. Opus packets are length-prefixed with a 4-byte
+  /// little-endian integer.
+  ///
   /// Throws [RecorderNotInitializedException].
-  void startStreamingData() {
+  void startStreamingData({
+    StreamingFormat format = StreamingFormat.pcm,
+  }) {
     if (!_isInitialized) {
       _log.warning(() => 'startStreamingData(): recorder is not initialized.');
       throw const RecorderNotInitializedException();
     }
-    _recorder.impl.startStreamingData();
+    _recorder.impl.startStreamingData(format: format);
   }
 
   /// Stop streaming data.
@@ -318,6 +324,8 @@ interface class Recorder {
   ///
   /// [completeFilePath] complete file path to save the recording.
   /// This is mandatory on all platforms but on the Web.
+  /// [format] selects the output format. The default is WAV. When Opus is
+  /// selected the file is written as Ogg Opus.
   /// NOTE: when running on the  Web, [completeFilePath] is ignored:
   /// when stopping the recording the browser will ask to save the file.
   ///
@@ -325,7 +333,10 @@ interface class Recorder {
   /// Throws [RecorderCaptureNotStartededException].
   /// Throws [RecorderInvalidFileNameException] if the given file name is
   /// invalid.
-  void startRecording({String completeFilePath = ''}) {
+  void startRecording({
+    String completeFilePath = '',
+    RecordingFormat format = RecordingFormat.wav,
+  }) {
     assert(
       () {
         if (!kIsWeb && completeFilePath.isEmpty) {
@@ -343,7 +354,7 @@ interface class Recorder {
       _log.warning(() => 'startRecording(): recorder is not started.');
       throw const RecorderCaptureNotStartededException();
     }
-    _recorder.impl.startRecording(completeFilePath);
+    _recorder.impl.startRecording(completeFilePath, format: format);
   }
 
   /// Pause recording.

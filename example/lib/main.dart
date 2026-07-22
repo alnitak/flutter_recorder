@@ -222,8 +222,11 @@ class _MyAppState extends State<MyApp> {
                         if (!saveDir.existsSync()) {
                           saveDir.createSync(recursive: true);
                         }
-                        filePath = '${saveDir.path}/flutter_recorder.wav';
-                        recorder.startRecording(completeFilePath: filePath!);
+                        filePath = '${saveDir.path}/flutter_recorder.ogg';
+                        recorder.startRecording(
+                          completeFilePath: filePath!,
+                          format: RecordingFormat.opusOgg,
+                        );
                       } else {
                         recorder.startRecording();
                       }
@@ -267,7 +270,7 @@ class _MyAppState extends State<MyApp> {
                 CircularProgressIndicator(),
                 OutlinedButton(
                   onPressed: () async {
-                    recorder.startStreamingData();
+                    recorder.startStreamingData(format: StreamingFormat.opus);
 
                     if (!kIsWeb) {
                       final Directory baseDir;

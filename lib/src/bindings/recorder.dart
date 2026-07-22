@@ -153,7 +153,7 @@ abstract class RecorderImpl {
 
   /// Start streaming data.
   @mustBeOverridden
-  void startStreamingData();
+  void startStreamingData({required StreamingFormat format});
 
   /// Stop streaming data.
   @mustBeOverridden
@@ -164,7 +164,7 @@ abstract class RecorderImpl {
   /// Throws [RecorderNotInitializedException].
   /// Throws [RecorderFailedToInitializeRecordingException].
   @mustBeOverridden
-  void startRecording(String path);
+  void startRecording(String path, {required RecordingFormat format});
 
   /// Pause recording.
   @mustBeOverridden

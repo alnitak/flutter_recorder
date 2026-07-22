@@ -27,3 +27,7 @@ migrate_working_dir/
 **/doc/api/
 .dart_tool/
 build/
+AGENTS.md
+.github/
+xiph/ogg/
+xiph/opus/

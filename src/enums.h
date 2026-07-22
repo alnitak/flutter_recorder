@@ -41,4 +41,16 @@ typedef enum RecorderFilterType
     echoCancellation
 } FilterType_t;
 
+typedef enum RecordingFormat
+{
+    recordingFormatWav,
+    recordingFormatOpusOgg
+} RecordingFormat;
+
+typedef enum StreamingFormat
+{
+    streamingFormatPcm,
+    streamingFormatOpus
+} StreamingFormat;
+
 #endif // ENUMS_H

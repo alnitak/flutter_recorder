@@ -9,7 +9,11 @@ import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter_recorder/src/audio_data_container.dart';
-import 'package:flutter_recorder/src/bindings/flutter_recorder_bindings_generated.dart';
+import 'package:flutter_recorder/src/bindings/flutter_recorder_bindings_generated.dart'
+    show
+        FlutterRecorderBindings,
+        dartSilenceChangedCallback_tFunction,
+        dartStreamDataCallback_tFunction;
 import 'package:flutter_recorder/src/bindings/recorder.dart';
 import 'package:flutter_recorder/src/enums.dart';
 import 'package:flutter_recorder/src/exceptions/exceptions.dart';
@@ -205,8 +209,10 @@ class RecorderFfi extends RecorderImpl {
       channels.count,
       androidInputPreset?.value ?? 0,
     );
-    if (error != CaptureErrors.captureNoError) {
-      throw RecorderCppException.fromRecorderError(error);
+    if (CaptureErrors.fromValue(error) != CaptureErrors.captureNoError) {
+      throw RecorderCppException.fromRecorderError(
+        CaptureErrors.fromValue(error),
+      );
     }
     super.init(
       deviceID: deviceID,
@@ -237,8 +243,10 @@ class RecorderFfi extends RecorderImpl {
   @override
   void start() {
     final error = _bindings.flutter_recorder_start();
-    if (error != CaptureErrors.captureNoError) {
-      throw RecorderCppException.fromRecorderError(error);
+    if (CaptureErrors.fromValue(error) != CaptureErrors.captureNoError) {
+      throw RecorderCppException.fromRecorderError(
+        CaptureErrors.fromValue(error),
+      );
     }
   }
 
@@ -248,8 +256,8 @@ class RecorderFfi extends RecorderImpl {
   }
 
   @override
-  void startStreamingData() {
-    _bindings.flutter_recorder_startStreamingData();
+  void startStreamingData({required StreamingFormat format}) {
+    _bindings.flutter_recorder_startStreamingData(format.value);
   }
 
   @override
@@ -258,7 +266,7 @@ class RecorderFfi extends RecorderImpl {
   }
 
   @override
-  void startRecording(String path) {
+  void startRecording(String path, {required RecordingFormat format}) {
     var errorDescription = '';
     // Check the file name is valid for the different platforms.
     bool isValidPathName() {
@@ -354,10 +362,14 @@ class RecorderFfi extends RecorderImpl {
       throw RecorderInvalidFileNameException(errorDescription);
     }
 
-    final error =
-        _bindings.flutter_recorder_startRecording(path.toNativeUtf8().cast());
-    if (error != CaptureErrors.captureNoError) {
-      throw RecorderCppException.fromRecorderError(error);
+    final error = _bindings.flutter_recorder_startRecording(
+      path.toNativeUtf8().cast(),
+      format.value,
+    );
+    if (CaptureErrors.fromValue(error) != CaptureErrors.captureNoError) {
+      throw RecorderCppException.fromRecorderError(
+        CaptureErrors.fromValue(error),
+      );
     }
   }
 
@@ -477,24 +489,28 @@ class RecorderFfi extends RecorderImpl {
 
   @override
   int isFilterActive(RecorderFilterType filterType) {
-    return _bindings.flutter_recorder_isFilterActive(filterType);
+    return _bindings.flutter_recorder_isFilterActive(filterType.value);
   }
 
   @override
   void addFilter(RecorderFilterType filterType) {
-    final error = _bindings.flutter_recorder_addFilter(filterType);
-    if (error != CaptureErrors.captureNoError) {
-      throw RecorderCppException.fromRecorderError(error);
+    final error = _bindings.flutter_recorder_addFilter(filterType.value);
+    if (CaptureErrors.fromValue(error) != CaptureErrors.captureNoError) {
+      throw RecorderCppException.fromRecorderError(
+        CaptureErrors.fromValue(error),
+      );
     }
   }
 
   @override
   CaptureErrors removeFilter(RecorderFilterType filterType) {
-    final error = _bindings.flutter_recorder_removeFilter(filterType);
-    if (error != CaptureErrors.captureNoError) {
-      throw RecorderCppException.fromRecorderError(error);
+    final error = _bindings.flutter_recorder_removeFilter(filterType.value);
+    if (CaptureErrors.fromValue(error) != CaptureErrors.captureNoError) {
+      throw RecorderCppException.fromRecorderError(
+        CaptureErrors.fromValue(error),
+      );
     }
-    return error;
+    return CaptureErrors.fromValue(error);
   }
 
   @override
@@ -503,7 +519,7 @@ class RecorderFfi extends RecorderImpl {
         calloc(ffi.sizeOf<ffi.Pointer<ffi.Pointer<ffi.Char>>>() * 30);
     final ffi.Pointer<ffi.Int> paramsCount = calloc(ffi.sizeOf<ffi.Int>());
     _bindings.flutter_recorder_getFilterParamNames(
-      filterType,
+      filterType.value,
       names,
       paramsCount,
     );
@@ -526,11 +542,18 @@ class RecorderFfi extends RecorderImpl {
     int attributeId,
     double value,
   ) {
-    _bindings.flutter_recorder_setFilterParams(filterType, attributeId, value);
+    _bindings.flutter_recorder_setFilterParams(
+      filterType.value,
+      attributeId,
+      value,
+    );
   }
 
   @override
   double getFilterParamValue(RecorderFilterType filterType, int attributeId) {
-    return _bindings.flutter_recorder_getFilterParams(filterType, attributeId);
+    return _bindings.flutter_recorder_getFilterParams(
+      filterType.value,
+      attributeId,
+    );
   }
 }

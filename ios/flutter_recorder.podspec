@@ -19,6 +19,8 @@ A new Flutter FFI plugin project.
   # `../src/*` so that the C sources can be shared among all target platforms.
   s.source           = { :path => '.' }
   s.source_files = 'Classes/**/*'
+  s.vendored_frameworks = 'Frameworks/*.xcframework'
+  s.preserve_paths = 'Frameworks/*.xcframework'
   s.dependency 'Flutter'
   s.platform = :ios, '12.0'
 
@@ -31,7 +33,7 @@ A new Flutter FFI plugin project.
     'GCC_OPTIMIZATION_LEVEL' => '3',
     # Add audio and threading optimization flags
     'GCC_PREPROCESSOR_DEFINITIONS' => '$(inherited) MA_NO_RUNTIME_LINKING=1 NDEBUG=1 _REENTRANT=1 ma_ios_notification_handler=fr_ma_ios_notification_handler',
-    'HEADER_SEARCH_PATHS' => '$(inherited) $(PODS_TARGET_SRCROOT)/src'
+    'HEADER_SEARCH_PATHS' => '$(inherited) $(PODS_TARGET_SRCROOT)/src $(PODS_TARGET_SRCROOT)/include'
   }
   s.swift_version = '5.0'
   s.ios.framework  = ['CoreAudio', 'AudioToolbox', 'AVFoundation']

@@ -101,13 +101,13 @@ external int wasmStart();
 external void wasmStop();
 
 @JS('RecorderModule._flutter_recorder_startStreamingData')
-external void wasmStartStreamingData();
+external void wasmStartStreamingData(int format);
 
 @JS('RecorderModule._flutter_recorder_stopStreamingData')
 external void wasmStopStreamingData();
 
 @JS('RecorderModule._flutter_recorder_startRecording')
-external int wasmStartRecording(int pathPtr);
+external int wasmStartRecording(int pathPtr, int format);
 
 @JS('RecorderModule._flutter_recorder_setPauseRecording')
 external void wasmSetPauseRecording(bool pause);
