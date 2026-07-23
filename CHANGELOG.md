@@ -1,3 +1,6 @@
+## 1.2.1
+- android fix: opus lib not found #49
+
 ## 1.2.0
 - add Opus encoding for `startRecording` (Ogg Opus) and `startStreamingData` (Opus packets) through the new `RecordingFormat` and `StreamingFormat` enums.
 - build: vendored Ogg/Opus libraries renamed to `libfr_ogg`/`libfr_opus` on Android to avoid conflicts with other plugins such as `flutter_soloud`.
