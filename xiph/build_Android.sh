@@ -19,8 +19,9 @@ fi
 # Detect host OS for the NDK toolchain path
 HOST_OS=$(uname -s)
 case "$HOST_OS" in
-    Linux*)     NDK_HOST="linux-x86_64" ;;
-    Darwin*)    NDK_HOST="darwin-x86_64" ;;
+    Linux*)                 NDK_HOST="linux-x86_64" ;;
+    Darwin*)                NDK_HOST="darwin-x86_64" ;;
+    MINGW*|MSYS*|CYGWIN*)   NDK_HOST="windows-x86_64" ;;
     *)          echo "Unsupported host OS: $HOST_OS"; exit 1 ;;
 esac
 
@@ -89,7 +90,9 @@ build_lib() {
             -DOPUS_BUILD_SHARED_LIBRARY=ON \
             -DOPUS_BUILD_TESTING=OFF \
             -DOPUS_BUILD_PROGRAMS=OFF \
-            -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+            -DCMAKE_POLICY_DEFAULT_CMP0057=NEW \
+            -DCMAKE_PROJECT_INCLUDE="$BASE_DIR/fr_rename.cmake"
     else
         cmake "$BASE_DIR/$lib" \
             -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
@@ -102,14 +105,18 @@ build_lib() {
             -DCMAKE_EXE_LINKER_FLAGS="-Wl,-z,max-page-size=16384,--gc-sections -flto" \
             -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-z,max-page-size=16384,--gc-sections -flto" \
             -DCMAKE_C_FLAGS_RELEASE="-O2 -DNDEBUG" \
-            -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+            -DCMAKE_POLICY_DEFAULT_CMP0057=NEW \
+            -DCMAKE_PROJECT_INCLUDE="$BASE_DIR/fr_rename.cmake"
     fi
 
     cmake --build . --config Release --target install
     
-    # Copy the library to the final location with a project-specific name to
-    # avoid conflicts with other plugins that also ship libogg/libopus.
-    cp "$temp_install_path/lib/lib$lib.so" "$install_path/libfr_$lib.so"
+    # Copy the library to the final location. The file is already named
+    # libfr_<lib>.so (and carries a matching SONAME) thanks to
+    # fr_rename.cmake, avoiding conflicts with other plugins that also ship
+    # libogg/libopus.
+    cp "$temp_install_path/lib/libfr_$lib.so" "$install_path/libfr_$lib.so"
     
     # Strip debug symbols after copying
     $ANDROID_NDK_HOME/toolchains/llvm/prebuilt/$NDK_HOST/bin/llvm-strip "$install_path/libfr_$lib.so"
