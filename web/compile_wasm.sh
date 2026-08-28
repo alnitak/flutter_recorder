@@ -53,6 +53,7 @@ emcc -O3 \
 -I ../../xiph/opus/silk \
 -I ../../xiph/opus/silk/float \
 -I ../../xiph/opus/src \
+../../src/miniaudio.cpp \
 ../../src/flutter_recorder.cpp \
 ../../src/capture.cpp \
 ../../src/analyzer.cpp \

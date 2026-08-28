@@ -10,7 +10,8 @@ class RecorderInitializeFailedException extends RecorderCppException {
   const RecorderInitializeFailedException([super.message]);
 
   @override
-  String get description => 'An error occurred while initializing recorder. '
+  String get description =>
+      'An error occurred while initializing recorder. '
       'Maybe it is already inited? (on the C++ side).';
 }
 
@@ -21,7 +22,8 @@ class RecorderNotInitializedException extends RecorderCppException {
   const RecorderNotInitializedException([super.message]);
 
   @override
-  String get description => 'The recorder has not been initialized yet '
+  String get description =>
+      'The recorder has not been initialized yet '
       '(on the C++ side).';
 }
 
@@ -32,7 +34,8 @@ class RecorderCaptureNotStartededException extends RecorderCppException {
   const RecorderCaptureNotStartededException([super.message]);
 
   @override
-  String get description => 'The recorder has not been started yet '
+  String get description =>
+      'The recorder has not been started yet '
       '(on the C++ side).';
 }
 
@@ -43,7 +46,8 @@ class RecorderFailedToInitializeRecordingException
   const RecorderFailedToInitializeRecordingException([super.message]);
 
   @override
-  String get description => 'The recording failed to start '
+  String get description =>
+      'The recording failed to start '
       '(on the C++ side).';
 }
 
@@ -53,7 +57,8 @@ class RecorderFailedToStartDeviceException extends RecorderCppException {
   const RecorderFailedToStartDeviceException([super.message]);
 
   @override
-  String get description => 'The device failed to start '
+  String get description =>
+      'The device failed to start '
       '(on the C++ side).';
 }
 
@@ -63,7 +68,8 @@ class RecorderInvalidArgumentsException extends RecorderCppException {
   const RecorderInvalidArgumentsException([super.message]);
 
   @override
-  String get description => 'Some invalid arguments were passed in '
+  String get description =>
+      'Some invalid arguments were passed in '
       '(on the C++ side).';
 }
 
@@ -73,7 +79,8 @@ class RecorderFailedToWriteWavException extends RecorderCppException {
   const RecorderFailedToWriteWavException([super.message]);
 
   @override
-  String get description => 'The recording failed to write wav file '
+  String get description =>
+      'The recording failed to write wav file '
       '(on the C++ side).';
 }
 
@@ -83,7 +90,8 @@ class RecorderFilterNotFoundException extends RecorderCppException {
   const RecorderFilterNotFoundException([super.message]);
 
   @override
-  String get description => 'The filter could not be found '
+  String get description =>
+      'The filter could not be found '
       '(on the C++ side).';
 }
 
@@ -93,7 +101,8 @@ class RecorderFilterAlreadyAddedException extends RecorderCppException {
   const RecorderFilterAlreadyAddedException([super.message]);
 
   @override
-  String get description => 'The filter has already been added '
+  String get description =>
+      'The filter has already been added '
       '(on the C++ side).';
 }
 
@@ -104,6 +113,7 @@ class RecorderFilterParameterGetException extends RecorderCppException {
   const RecorderFilterParameterGetException([super.message]);
 
   @override
-  String get description => 'An error occurred while getting a filter '
+  String get description =>
+      'An error occurred while getting a filter '
       'parameter (on the C++ side).';
 }

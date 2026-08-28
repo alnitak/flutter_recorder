@@ -35,9 +35,7 @@ void main() async {
   runApp(
     MaterialApp(
       home: Scaffold(
-        appBar: AppBar(
-          title: Text('Flutter Recorder'),
-        ),
+        appBar: AppBar(title: Text('Flutter Recorder')),
         body: MyApp(),
       ),
     ),
@@ -76,13 +74,13 @@ class _MyAppState extends State<MyApp> {
       };
 
   String androidInputPresetLabel(int value) => switch (value) {
-        1 => 'Generic',
-        2 => 'Camcorder',
-        3 => 'Voice recognition',
-        4 => 'Voice communication',
-        5 => 'Unprocessed',
-        _ => 'System default',
-      };
+    1 => 'Generic',
+    2 => 'Camcorder',
+    3 => 'Voice recognition',
+    4 => 'Voice communication',
+    5 => 'Unprocessed',
+    _ => 'System default',
+  };
 
   @override
   void initState() {
@@ -212,8 +210,10 @@ class _MyAppState extends State<MyApp> {
                           // On desktop, use downloads directory
                           final downloadsDir = await getDownloadsDirectory();
                           if (downloadsDir == null) {
-                            debugPrint('-------------- startRecording() '
-                                'Could not get downloads directory\n');
+                            debugPrint(
+                              '-------------- startRecording() '
+                              'Could not get downloads directory\n',
+                            );
                             return;
                           }
                           saveDir = downloadsDir;
@@ -291,8 +291,9 @@ class _MyAppState extends State<MyApp> {
                       savingDir!.createSync();
 
                       file = File(
-                          '${savingDir?.path}/fr_${sampleRate}_${format.name}_'
-                          '${channels.count}.pcm');
+                        '${savingDir?.path}/fr_${sampleRate}_${format.name}_'
+                        '${channels.count}.pcm',
+                      );
                       try {
                         if (file?.existsSync() ?? false) {
                           file?.deleteSync();
@@ -333,7 +334,8 @@ class _MyAppState extends State<MyApp> {
                               height: 50,
                               child: Center(
                                 child: Text(
-                                    recorder.getVolumeDb().toStringAsFixed(1)),
+                                  recorder.getVolumeDb().toStringAsFixed(1),
+                                ),
                               ),
                             ),
                           );
@@ -365,7 +367,8 @@ class _MyAppState extends State<MyApp> {
                               });
                             },
                             child: const Text(
-                                'setSilenceDetection ON -27, 0.5, 0.0'),
+                              'setSilenceDetection ON -27, 0.5, 0.0',
+                            ),
                           ),
                           OutlinedButton(
                             onPressed: () {
@@ -381,7 +384,8 @@ class _MyAppState extends State<MyApp> {
                         mainAxisSize: MainAxisSize.max,
                         children: [
                           Text(
-                              'Threshold: ${thresholdDb.toStringAsFixed(1)}dB'),
+                            'Threshold: ${thresholdDb.toStringAsFixed(1)}dB',
+                          ),
                           Expanded(
                             child: Slider(
                               value: thresholdDb,
@@ -403,8 +407,10 @@ class _MyAppState extends State<MyApp> {
                       Row(
                         mainAxisSize: MainAxisSize.max,
                         children: [
-                          Text('Silence duration: '
-                              '${silenceDuration.toStringAsFixed(1)}'),
+                          Text(
+                            'Silence duration: '
+                            '${silenceDuration.toStringAsFixed(1)}',
+                          ),
                           Expanded(
                             child: Slider(
                               value: silenceDuration,
@@ -426,8 +432,10 @@ class _MyAppState extends State<MyApp> {
                       Row(
                         mainAxisSize: MainAxisSize.max,
                         children: [
-                          Text('Write before: '
-                              '${secondsOfAudioToWriteBefore.toStringAsFixed(1)}'),
+                          Text(
+                            'Write before: '
+                            '${secondsOfAudioToWriteBefore.toStringAsFixed(1)}',
+                          ),
                           Expanded(
                             child: Slider(
                               value: secondsOfAudioToWriteBefore,
@@ -469,10 +477,7 @@ class _MyAppState extends State<MyApp> {
             TextButton(
               child: const Text('open'),
               onPressed: () async {
-                OpenFilex.open(
-                  filePath,
-                  type: 'audio/wav',
-                );
+                OpenFilex.open(filePath, type: 'audio/wav');
               },
             ),
             TextButton(
@@ -489,10 +494,14 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> showDeviceListDialog() async {
     final devices = recorder.listCaptureDevices();
-    String devicesString = devices.asMap().entries.map((entry) {
-      return '${entry.value.id} ${entry.value.isDefault ? 'DEFAULT' : ''} - '
-          ' ${entry.value.name}';
-    }).join('\n\n');
+    String devicesString = devices
+        .asMap()
+        .entries
+        .map((entry) {
+          return '${entry.value.id} ${entry.value.isDefault ? 'DEFAULT' : ''} - '
+              ' ${entry.value.name}';
+        })
+        .join('\n\n');
 
     return showDialog<void>(
       context: context,

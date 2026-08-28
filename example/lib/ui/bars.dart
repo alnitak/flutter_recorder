@@ -51,12 +51,7 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
         mainAxisSize: MainAxisSize.max,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          VuMeter(
-            width: 40,
-            height: 256,
-            vuMeter: vuMeter,
-            db: db,
-          ),
+          VuMeter(width: 40, height: 256, vuMeter: vuMeter, db: db),
           const SizedBox(width: 8),
 
           /// FFT and wave audio data.

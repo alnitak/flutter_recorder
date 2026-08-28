@@ -46,27 +46,23 @@ class RecorderWeb extends RecorderImpl {
     // From native the events can be sent from the main thread and even from
     // other threads like the audio thread.
     final workerController = WorkerController()..setWasmWorker(wasmWorker);
-    workerController.onReceive().listen(
-      (event) {
-        /// The [event] coming from `web/worker.dart.js` is of Map type.
-        switch (event) {
-          case Map():
-            if (event['message'] == 'silenceChangedCallback') {
-              final silence = (event['isSilent'] as int) == 1;
-              final db = event['energyDb'] as double;
-              _silenceCallback?.call(silence, db);
-              silenceChangedEventController.add(
-                (isSilent: silence, decibel: db),
-              );
-            }
+    workerController.onReceive().listen((event) {
+      /// The [event] coming from `web/worker.dart.js` is of Map type.
+      switch (event) {
+        case Map():
+          if (event['message'] == 'silenceChangedCallback') {
+            final silence = (event['isSilent'] as int) == 1;
+            final db = event['energyDb'] as double;
+            _silenceCallback?.call(silence, db);
+            silenceChangedEventController.add((isSilent: silence, decibel: db));
+          }
 
-            if (event['message'] == 'streamDataCallback') {
-              final audioData = Uint8List.fromList(event['data'] as Uint8List);
-              uint8ListController.add(AudioDataContainer(audioData));
-            }
-        }
-      },
-    );
+          if (event['message'] == 'streamDataCallback') {
+            final audioData = Uint8List.fromList(event['data'] as Uint8List);
+            uint8ListController.add(AudioDataContainer(audioData));
+          }
+      }
+    });
   }
 
   @override
@@ -113,22 +109,21 @@ class RecorderWeb extends RecorderImpl {
     final isDefaultPtr = wasmMalloc(50 * 4);
     final nDevicesPtr = wasmMalloc(4); // 4 bytes for an int
 
-    wasmListCaptureDevices(
-      namesPtr,
-      deviceIdPtr,
-      isDefaultPtr,
-      nDevicesPtr,
-    );
+    wasmListCaptureDevices(namesPtr, deviceIdPtr, isDefaultPtr, nDevicesPtr);
 
     final nDevices = wasmGetI32Value(nDevicesPtr, '*');
     final devices = <CaptureDevice>[];
     for (var i = 0; i < nDevices; i++) {
       final namePtr = wasmGetI32Value(namesPtr + i * 4, '*');
       final name = wasmUtf8ToString(namePtr);
-      final deviceId =
-          wasmGetI32Value(wasmGetI32Value(deviceIdPtr + i * 4, '*'), '*');
-      final isDefault =
-          wasmGetI32Value(wasmGetI32Value(isDefaultPtr + i * 4, '*'), '*');
+      final deviceId = wasmGetI32Value(
+        wasmGetI32Value(deviceIdPtr + i * 4, '*'),
+        '*',
+      );
+      final isDefault = wasmGetI32Value(
+        wasmGetI32Value(isDefaultPtr + i * 4, '*'),
+        '*',
+      );
 
       devices.add(CaptureDevice(name, isDefault == 1, deviceId));
     }

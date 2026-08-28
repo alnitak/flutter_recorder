@@ -15,14 +15,14 @@ enum EchoCancellationEnum {
 
   @override
   String toString() => switch (this) {
-        EchoCancellationEnum.echoDelayMs => 'Echo Delay (ms)',
-        EchoCancellationEnum.echoAttenuation => 'Echo Attenuation',
-      };
+    EchoCancellationEnum.echoDelayMs => 'Echo Delay (ms)',
+    EchoCancellationEnum.echoAttenuation => 'Echo Attenuation',
+  };
 }
 
 abstract class _EchoCancellationInternal extends FilterBase {
   const _EchoCancellationInternal()
-      : super(RecorderFilterType.echoCancellation);
+    : super(RecorderFilterType.echoCancellation);
 
   EchoCancellationEnum get queryEchoDelayMs => EchoCancellationEnum.echoDelayMs;
   EchoCancellationEnum get queryEchoAttenuation =>
@@ -33,16 +33,16 @@ class EchoCancellation extends _EchoCancellationInternal {
   const EchoCancellation() : super();
 
   FilterParam get echoDelayMs => FilterParam(
-        filterType,
-        EchoCancellationEnum.echoDelayMs.index,
-        EchoCancellationEnum.echoDelayMs.min,
-        EchoCancellationEnum.echoDelayMs.max,
-      );
+    filterType,
+    EchoCancellationEnum.echoDelayMs.index,
+    EchoCancellationEnum.echoDelayMs.min,
+    EchoCancellationEnum.echoDelayMs.max,
+  );
 
   FilterParam get echoAttenuation => FilterParam(
-        filterType,
-        EchoCancellationEnum.echoAttenuation.index,
-        EchoCancellationEnum.echoAttenuation.min,
-        EchoCancellationEnum.echoAttenuation.max,
-      );
+    filterType,
+    EchoCancellationEnum.echoAttenuation.index,
+    EchoCancellationEnum.echoAttenuation.min,
+    EchoCancellationEnum.echoAttenuation.max,
+  );
 }

@@ -119,12 +119,7 @@ final class Filters {
 /// Common class for single and global filters.
 class FilterParam {
   /// Every filter parameter values can be set or get.
-  FilterParam(
-    this._type,
-    this._attributeId,
-    this._min,
-    this._max,
-  );
+  FilterParam(this._type, this._attributeId, this._min, this._max);
 
   final RecorderFilterType _type;
   final int _attributeId;
@@ -132,21 +127,15 @@ class FilterParam {
   final double _max;
 
   /// Get the parameter value.
-  double get value => Recorder.instance.getFilterParamValue(
-        _type,
-        _attributeId,
-      );
+  double get value =>
+      Recorder.instance.getFilterParamValue(_type, _attributeId);
 
   /// Set the parameter value.
   set value(double val) {
     if (val < _min || val > _max) {
       return;
     }
-    Recorder.instance.setFilterParamValue(
-      _type,
-      _attributeId,
-      val,
-    );
+    Recorder.instance.setFilterParamValue(_type, _attributeId, val);
   }
 }
 
@@ -159,10 +148,8 @@ class FilterMetric {
   final int _attributeId;
 
   /// Get the metric value.
-  double get value => Recorder.instance.getFilterParamValue(
-        _type,
-        _attributeId,
-      );
+  double get value =>
+      Recorder.instance.getFilterParamValue(_type, _attributeId);
 }
 
 /// The different types of audio filters.
@@ -181,22 +168,22 @@ enum RecorderFilterType {
 
   /// Get the filter type from its value.
   static RecorderFilterType fromValue(int value) => switch (value) {
-        0 => autogain,
-        1 => echoCancellation,
-        _ => throw ArgumentError('Unknown value for FilterType: $value'),
-      };
+    0 => autogain,
+    1 => echoCancellation,
+    _ => throw ArgumentError('Unknown value for FilterType: $value'),
+  };
 
   @override
   String toString() => switch (this) {
-        RecorderFilterType.autogain => 'Auto Gain',
-        RecorderFilterType.echoCancellation => 'Echo Cancellation',
-      };
+    RecorderFilterType.autogain => 'Auto Gain',
+    RecorderFilterType.echoCancellation => 'Echo Cancellation',
+  };
 
   /// The number of parameter this filter owns.
   int get numParameters => switch (this) {
-        RecorderFilterType.autogain => 14,
-        RecorderFilterType.echoCancellation => 2,
-      };
+    RecorderFilterType.autogain => 14,
+    RecorderFilterType.echoCancellation => 2,
+  };
 
   /// Activate this filter.
   @internal
