@@ -17,6 +17,9 @@ extern "C"
         dartSilenceChangedCallback_t silence_changed_callback,
         dartStreamDataCallback_t stream_data_callback);
 
+    FFI_PLUGIN_EXPORT void flutter_recorder_setDartVisualizationCallback(
+        dartVisualizationCallback_t callback);
+
     FFI_PLUGIN_EXPORT void flutter_recorder_nativeFree(void *pointer);
 
     FFI_PLUGIN_EXPORT void flutter_recorder_listCaptureDevices(
@@ -68,15 +71,13 @@ extern "C"
 
     FFI_PLUGIN_EXPORT void flutter_recorder_getVolumeDb(float *volumeDb);
 
-    FFI_PLUGIN_EXPORT void flutter_recorder_getFft(float **fft, bool *isTheSameAsBefore);
+    FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_setVisualizationEnabled(
+        bool enabled,
+        int windowSize,
+        int kind,
+        int channel);
 
-    FFI_PLUGIN_EXPORT void flutter_recorder_getWave(float **wave, bool *isTheSameAsBefore);
-
-    FFI_PLUGIN_EXPORT void flutter_recorder_getTexture(float **samples, bool *isTheSameAsBefore);
-
-    FFI_PLUGIN_EXPORT void flutter_recorder_getTexture2D(float **samples, bool *isTheSameAsBefore);
-
-    FFI_PLUGIN_EXPORT float flutter_recorder_getTextureValue(int row, int column);
+    FFI_PLUGIN_EXPORT int flutter_recorder_isVisualizationEnabled();
 
     FFI_PLUGIN_EXPORT void flutter_recorder_setFftSmoothing(float smooth);
 

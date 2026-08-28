@@ -15,7 +15,6 @@
 #endif
 
 Capture capture;
-std::unique_ptr<Analyzer> analyzerCapture = std::make_unique<Analyzer>(256);
 std::unique_ptr<Filters> mFilters = std::make_unique<Filters>(0);
 
 dartSilenceChangedCallback_t dartSilenceChangedCallback;
@@ -89,8 +88,6 @@ void silenceChangedCallback(bool *isSilent, float *energyDb)
 {
 #ifdef __EMSCRIPTEN__
     // Calling JavaScript from C/C++
-    // https://emscripten.org/docs/porting/connecting_cpp_and_javascript/Interacting-with-code.html#interacting-with-code-call-javascript-from-native
-    // emscripten_run_script("voiceEndedCallbackJS('1234')");
     flutter_recorder_sendSilenceEventToWorker("silenceChangedCallback", *isSilent, *energyDb);
 #endif
     if (dartSilenceChangedCallback != nullptr)
@@ -100,13 +97,13 @@ void silenceChangedCallback(bool *isSilent, float *energyDb)
 void streamDataCallback(const unsigned char *samples, const int numSamples)
 {
 #ifdef __EMSCRIPTEN__
-flutter_recorder_sendStreamToWorker("streamDataCallback", samples, numSamples);
+    flutter_recorder_sendStreamToWorker("streamDataCallback", samples, numSamples);
 #endif
     if (dartStreamDataCallback != nullptr)
         dartStreamDataCallback(samples, numSamples);
 }
 
-/// Set a Dart functions to call when an event occurs.
+/// Set Dart functions to call when an event occurs.
 FFI_PLUGIN_EXPORT void flutter_recorder_setDartEventCallback(
     dartSilenceChangedCallback_t silence_changed_callback,
     dartStreamDataCallback_t stream_data_callback)
@@ -116,6 +113,12 @@ FFI_PLUGIN_EXPORT void flutter_recorder_setDartEventCallback(
 
     dartStreamDataCallback = stream_data_callback;
     nativeStreamDataCallback = streamDataCallback;
+}
+
+FFI_PLUGIN_EXPORT void flutter_recorder_setDartVisualizationCallback(
+    dartVisualizationCallback_t callback)
+{
+    Analyzer::instance().setDataCallback(callback);
 }
 
 FFI_PLUGIN_EXPORT void flutter_recorder_nativeFree(void *pointer)
@@ -191,6 +194,7 @@ FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_init(
 
 FFI_PLUGIN_EXPORT void flutter_recorder_deinit()
 {
+    Analyzer::instance().setVisualizationEnabled(false);
     if (capture.isRecording)
         capture.stopRecording();
     capture.dispose();
@@ -220,6 +224,7 @@ FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_start()
 
 FFI_PLUGIN_EXPORT void flutter_recorder_stop()
 {
+    Analyzer::instance().setVisualizationEnabled(false);
     if (capture.isRecording)
         capture.stopRecording();
     capture.stop();
@@ -296,89 +301,25 @@ FFI_PLUGIN_EXPORT void flutter_recorder_getVolumeDb(float *volumeDb)
     *volumeDb = capture.getVolumeDb();
 }
 
+FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_setVisualizationEnabled(
+    bool enabled,
+    int windowSize,
+    int kind,
+    int channel)
+{
+    int channels = capture.isInited() ? capture.deviceConfig.capture.channels : 1;
+    return Analyzer::instance().setVisualizationEnabled(
+        enabled, windowSize, (VisualizationKind)kind, channel, channels);
+}
+
+FFI_PLUGIN_EXPORT int flutter_recorder_isVisualizationEnabled()
+{
+    return Analyzer::instance().isVisualizationEnabled() ? 1 : 0;
+}
+
 FFI_PLUGIN_EXPORT void flutter_recorder_setFftSmoothing(float smooth)
 {
-    if (!capture.isInited())
-        return;
-    analyzerCapture.get()->setSmoothing(smooth);
-}
-
-/// Return a 256 float array containing FFT data.
-FFI_PLUGIN_EXPORT void flutter_recorder_getFft(float **fft, bool *isTheSameAsBefore)
-{
-    if (!capture.isInited())
-        return;
-    float *wave = capture.getWave(isTheSameAsBefore);
-    *fft = analyzerCapture.get()->calcFFT(wave);
-}
-
-/// Return a 256 float array containing wave data.
-FFI_PLUGIN_EXPORT void flutter_recorder_getWave(float **wave, bool *isTheSameAsBefore)
-{
-    if (!capture.isInited())
-        return;
-    *wave = capture.getWave(isTheSameAsBefore);
-}
-
-float capturedTexture[512];
-FFI_PLUGIN_EXPORT void flutter_recorder_getTexture(float **samples, bool *isTheSameAsBefore)
-{
-    if (!capture.isInited())
-        return;
-    if (analyzerCapture.get() == nullptr || !capture.isInited())
-    {
-        *samples = capturedTexture;
-        memset(*samples, 0, sizeof(float) * 512);
-        *isTheSameAsBefore = true;
-        return;
-    }
-
-    float *wave = capture.getWave(isTheSameAsBefore);
-    float *fft = analyzerCapture.get()->calcFFT(wave);
-    
-    memcpy(capturedTexture, fft, sizeof(float) * 256);
-    memcpy(capturedTexture + 256, wave, sizeof(float) * 256);
-    *samples = capturedTexture;
-}
-
-float capturedTexture2D[256][512];
-FFI_PLUGIN_EXPORT void flutter_recorder_getTexture2D(float **samples, bool *isTheSameAsBefore)
-{
-    if (!capture.isInited())
-        return;
-    if (analyzerCapture.get() == nullptr)
-    {
-        *samples = *capturedTexture2D;
-        memset(*samples, 0, sizeof(float) * 512 * 256);
-        *isTheSameAsBefore = true;
-        return;
-    }
-    
-    float *wave = capture.getWave(isTheSameAsBefore);
-    float *fft = analyzerCapture.get()->calcFFT(wave);
-    if (*isTheSameAsBefore)
-    {
-        *samples = *capturedTexture2D;
-        return;
-    }
-
-    /// shift up 1 row
-    memmove(capturedTexture2D[1], capturedTexture2D[0], sizeof(float) * 512 * 255);
-    /// store the new 1st row
-    memcpy(capturedTexture2D[0], fft, sizeof(float) * 256);
-    memcpy(capturedTexture2D[0]+256, wave, sizeof(float) * 256);
-    
-    *samples = *capturedTexture2D;
-    *isTheSameAsBefore = false;
-}
-
-FFI_PLUGIN_EXPORT float flutter_recorder_getTextureValue(int row, int column)
-{
-    if (!capture.isInited())
-        return .0f;
-    if (row < 0 || row >= 256 || column < 0 || column >= 512)
-        return .0f;
-    return capturedTexture2D[row][column];
+    Analyzer::instance().setSmoothing(smooth);
 }
 
 /////////////////////////

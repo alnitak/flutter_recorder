@@ -45,7 +45,7 @@ emcc -O3 \
 -DENABLE_ASSERTIONS=1 \
 -DUSE_ALLOCA=1 \
 -DOPUS_BUILD=1 \
--I ../../src/fft \
+-I ../../src/pffft \
 -I ../../src \
 -I include \
 -I include/opus \
@@ -57,9 +57,9 @@ emcc -O3 \
 ../../src/flutter_recorder.cpp \
 ../../src/capture.cpp \
 ../../src/analyzer.cpp \
+../../src/pffft/pffft.c \
 ../../src/opus_encoder_pipeline.cpp \
 ../../src/opus_ogg_writer.cpp \
-../../src/fft/soloud_fft.cpp \
 ../../src/filters/filters.cpp \
 ../../src/filters/autogain.cpp \
 ../../src/filters/echo_cancellation.cpp \

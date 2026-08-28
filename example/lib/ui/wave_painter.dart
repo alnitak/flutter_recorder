@@ -3,37 +3,50 @@ import 'package:flutter_recorder/flutter_recorder.dart';
 
 /// Custom painter to draw the wave data.
 class WavePainter extends CustomPainter {
-  const WavePainter();
+  const WavePainter({this.data});
+
+  final AudioVisualizationData? data;
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (!Recorder.instance.isDeviceStarted()) return;
+    if (!Recorder.instance.isDeviceStarted() ||
+        data == null ||
+        data!.wave.isEmpty) {
+      return;
+    }
 
-    final waveData = Recorder.instance.getWave(alwaysReturnData: true);
-    // Using `alwaysReturnData: true` this will always return a non-empty list
-    // even if the audio data is the same as the previous one.
-    if (waveData.isEmpty) return;
+    final channels = data!.wave;
+    final channelCount = channels.length;
+    final channelWidth = size.width / channelCount;
 
-    final barWidth = size.width / 256;
-    final paint = Paint()..color = Colors.yellow;
+    for (var c = 0; c < channelCount; c++) {
+      final waveData = channels[c];
+      if (waveData.isEmpty) continue;
 
-    for (var i = 0; i < 256; i++) {
-      late final double barHeight;
-      barHeight = size.height * waveData[i];
-      canvas.drawRect(
-        Rect.fromLTWH(
-          barWidth * i,
-          (size.height - barHeight) / 2,
-          barWidth,
-          barHeight,
-        ),
-        paint,
-      );
+      final barWidth = channelWidth / waveData.length;
+      final paint = Paint()
+        ..color = channelCount == 1
+            ? Colors.yellow
+            : (c == 0 ? Colors.yellow : Colors.cyan);
+
+      final leftOffset = c * channelWidth;
+      for (var i = 0; i < waveData.length; i++) {
+        final barHeight = size.height * waveData[i].abs();
+        canvas.drawRect(
+          Rect.fromLTWH(
+            leftOffset + barWidth * i,
+            (size.height - barHeight) / 2,
+            barWidth,
+            barHeight,
+          ),
+          paint,
+        );
+      }
     }
   }
 
   @override
   bool shouldRepaint(WavePainter oldDelegate) {
-    return true;
+    return oldDelegate.data != data;
   }
 }

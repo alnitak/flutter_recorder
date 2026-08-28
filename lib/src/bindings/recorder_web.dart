@@ -1,9 +1,9 @@
-// ignore_for_file: omit_local_variable_types
-// ignore_for_file: avoid_positional_boolean_parameters, public_member_api_docs
-
+import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
 import 'dart:typed_data' show Float32List, Uint8List;
 
 import 'package:flutter_recorder/src/audio_data_container.dart';
+import 'package:flutter_recorder/src/audio_visualization_data.dart';
 import 'package:flutter_recorder/src/bindings/js_extension.dart';
 import 'package:flutter_recorder/src/bindings/recorder.dart';
 import 'package:flutter_recorder/src/enums.dart';
@@ -29,6 +29,75 @@ class RecorderController {
 @internal
 class RecorderWeb extends RecorderImpl {
   SilenceCallback? _silenceCallback;
+  void Function(AudioVisualizationData data)? _visualizationCallback;
+  bool _wasmVisualizationCallbackSetUp = false;
+
+  void _setupWasmVisualizationCallback() {
+    if (_wasmVisualizationCallbackSetUp) return;
+    _wasmVisualizationCallbackSetUp = true;
+
+    void webVisualizationCallback(
+      JSNumber channelCount,
+      JSNumber waveDataPerChannelPtr,
+      JSNumber waveSamples,
+      JSNumber fftDataPerChannelPtr,
+      JSNumber fftSamples,
+    ) {
+      final cCount = channelCount.toDartInt;
+      final wavePtr = waveDataPerChannelPtr.toDartInt;
+      final wSamples = waveSamples.toDartInt;
+      final fftPtr = fftDataPerChannelPtr.toDartInt;
+      final fSamples = fftSamples.toDartInt;
+
+      final waveList = <Float32List>[];
+      if (wSamples > 0 && wavePtr != 0) {
+        for (var c = 0; c < cCount; c++) {
+          final channelPtr = wasmGetI32Value(wavePtr + (c * 4), 'i32');
+          if (channelPtr != 0) {
+            final startIndex = channelPtr >> 2;
+            final endIndex = startIndex + wSamples;
+            waveList.add(
+              Float32List.fromList(
+                wasmHeapF32.toDart.sublist(startIndex, endIndex),
+              ),
+            );
+          }
+        }
+      }
+
+      final fftList = <Float32List>[];
+      if (fSamples > 0 && fftPtr != 0) {
+        for (var c = 0; c < cCount; c++) {
+          final channelPtr = wasmGetI32Value(fftPtr + (c * 4), 'i32');
+          if (channelPtr != 0) {
+            final startIndex = channelPtr >> 2;
+            final endIndex = startIndex + fSamples;
+            fftList.add(
+              Float32List.fromList(
+                wasmHeapF32.toDart.sublist(startIndex, endIndex),
+              ),
+            );
+          }
+        }
+      }
+
+      final packet = AudioVisualizationData(
+        channelCount: cCount,
+        wave: waveList,
+        fft: fftList,
+      );
+
+      _visualizationCallback?.call(packet);
+      if (audioVisualizationEventsController.hasListener) {
+        audioVisualizationEventsController.add(packet);
+      }
+    }
+
+    globalContext.setProperty(
+      '_wasmVisualizationCallback'.toJS,
+      webVisualizationCallback.toJS,
+    );
+  }
 
   /// Create the worker in the WASM Module and listen for events coming
   /// from `web/worker.dart.js`
@@ -233,87 +302,41 @@ class RecorderWeb extends RecorderImpl {
   }
 
   @override
-  Float32List getFft({bool alwaysReturnData = true}) {
-    final samplesPtr = wasmMalloc(4);
-    final isTheSameAsBeforePtr = wasmMalloc(4);
-    wasmGetFft(samplesPtr, isTheSameAsBeforePtr);
-    final isSameData = wasmGetI32Value(isTheSameAsBeforePtr, 'i32');
-    wasmFree(isTheSameAsBeforePtr);
-    if (!alwaysReturnData && isSameData == 1) {
-      wasmFree(samplesPtr);
-      return Float32List(0);
+  void setVisualizationEnabled(
+    bool enabled, {
+    int windowSize = 256,
+    VisualizationKind kind = VisualizationKind.waveAndFft,
+    int channel = VisualizationChannel.merged,
+  }) {
+    if (enabled) {
+      _setupWasmVisualizationCallback();
     }
-
-    final samplesPtr2 = wasmGetI32Value(samplesPtr, '*');
-    final samples = Float32List(256);
-    for (var i = 0; i < 256; i++) {
-      samples[i] = wasmGetF32Value(samplesPtr2 + i * 4, 'float');
+    final error = wasmSetVisualizationEnabled(
+      enabled ? 1 : 0,
+      windowSize,
+      kind.value,
+      channel,
+    );
+    if (CaptureErrors.fromValue(error) != CaptureErrors.captureNoError) {
+      throw RecorderCppException.fromRecorderError(
+        CaptureErrors.fromValue(error),
+      );
     }
-    wasmFree(samplesPtr);
-    return samples;
   }
 
   @override
-  Float32List getWave({bool alwaysReturnData = true}) {
-    final samplesPtr = wasmMalloc(4);
-    final isTheSameAsBeforePtr = wasmMalloc(4);
-    wasmGetWave(samplesPtr, isTheSameAsBeforePtr);
-    final isSameData = wasmGetI32Value(isTheSameAsBeforePtr, 'i32');
-    wasmFree(isTheSameAsBeforePtr);
-    if (!alwaysReturnData && isSameData == 1) {
-      wasmFree(samplesPtr);
-      return Float32List(0);
-    }
-
-    final samplesPtr2 = wasmGetI32Value(samplesPtr, '*');
-    final samples = Float32List(256);
-    for (var i = 0; i < 256; i++) {
-      samples[i] = wasmGetF32Value(samplesPtr2 + i * 4, 'float');
-    }
-    wasmFree(samplesPtr);
-    return samples;
+  bool getVisualizationEnabled() {
+    return wasmIsVisualizationEnabled() == 1;
   }
 
   @override
-  Float32List getTexture({bool alwaysReturnData = true}) {
-    final samplesPtr = wasmMalloc(4);
-    final isTheSameAsBeforePtr = wasmMalloc(4);
-    wasmGetTexture(samplesPtr, isTheSameAsBeforePtr);
-    final isSameData = wasmGetI32Value(isTheSameAsBeforePtr, 'i32');
-    wasmFree(isTheSameAsBeforePtr);
-    if (!alwaysReturnData && isSameData == 1) {
-      wasmFree(samplesPtr);
-      return Float32List(0);
+  void setVisualizationCallback(
+    void Function(AudioVisualizationData data)? callback,
+  ) {
+    _visualizationCallback = callback;
+    if (callback != null) {
+      _setupWasmVisualizationCallback();
     }
-
-    final samplesPtr2 = wasmGetI32Value(samplesPtr, '*');
-    final samples = Float32List(512);
-    for (var i = 0; i < 512; i++) {
-      samples[i] = wasmGetF32Value(samplesPtr2 + i * 4, 'float');
-    }
-    wasmFree(samplesPtr);
-    return samples;
-  }
-
-  @override
-  Float32List getTexture2D({bool alwaysReturnData = true}) {
-    final samplesPtr = wasmMalloc(4);
-    final isTheSameAsBeforePtr = wasmMalloc(4);
-    wasmGetTexture2D(samplesPtr, isTheSameAsBeforePtr);
-    final isSameData = wasmGetI32Value(isTheSameAsBeforePtr, 'i32');
-    wasmFree(isTheSameAsBeforePtr);
-    if (!alwaysReturnData && isSameData == 1) {
-      wasmFree(samplesPtr);
-      return Float32List(0);
-    }
-
-    final samplesPtr2 = wasmGetI32Value(samplesPtr, '*');
-    final samples = Float32List(512 * 256);
-    for (var i = 0; i < 512 * 256; i++) {
-      samples[i] = wasmGetF32Value(samplesPtr2 + i * 4, 'float');
-    }
-    wasmFree(samplesPtr);
-    return samples;
   }
 
   @override

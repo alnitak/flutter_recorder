@@ -22,6 +22,11 @@ external void flutter_recorder_setDartEventCallback(
   dartStreamDataCallback_t stream_data_callback,
 );
 
+@ffi.Native<ffi.Void Function(dartVisualizationCallback_t)>()
+external void flutter_recorder_setDartVisualizationCallback(
+  dartVisualizationCallback_t callback,
+);
+
 @ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
 external void flutter_recorder_nativeFree(ffi.Pointer<ffi.Void> pointer);
 
@@ -122,40 +127,16 @@ external void flutter_recorder_stopRecording();
 @ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Float>)>()
 external void flutter_recorder_getVolumeDb(ffi.Pointer<ffi.Float> volumeDb);
 
-@ffi.Native<
-  ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Float>>, ffi.Pointer<ffi.Bool>)
->()
-external void flutter_recorder_getFft(
-  ffi.Pointer<ffi.Pointer<ffi.Float>> fft,
-  ffi.Pointer<ffi.Bool> isTheSameAsBefore,
+@ffi.Native<ffi.UnsignedInt Function(ffi.Bool, ffi.Int, ffi.Int, ffi.Int)>()
+external int flutter_recorder_setVisualizationEnabled(
+  bool enabled,
+  int windowSize,
+  int kind,
+  int channel,
 );
 
-@ffi.Native<
-  ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Float>>, ffi.Pointer<ffi.Bool>)
->()
-external void flutter_recorder_getWave(
-  ffi.Pointer<ffi.Pointer<ffi.Float>> wave,
-  ffi.Pointer<ffi.Bool> isTheSameAsBefore,
-);
-
-@ffi.Native<
-  ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Float>>, ffi.Pointer<ffi.Bool>)
->()
-external void flutter_recorder_getTexture(
-  ffi.Pointer<ffi.Pointer<ffi.Float>> samples,
-  ffi.Pointer<ffi.Bool> isTheSameAsBefore,
-);
-
-@ffi.Native<
-  ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Float>>, ffi.Pointer<ffi.Bool>)
->()
-external void flutter_recorder_getTexture2D(
-  ffi.Pointer<ffi.Pointer<ffi.Float>> samples,
-  ffi.Pointer<ffi.Bool> isTheSameAsBefore,
-);
-
-@ffi.Native<ffi.Float Function(ffi.Int, ffi.Int)>()
-external double flutter_recorder_getTextureValue(int row, int column);
+@ffi.Native<ffi.Int Function()>()
+external int flutter_recorder_isVisualizationEnabled();
 
 @ffi.Native<ffi.Void Function(ffi.Float)>()
 external void flutter_recorder_setFftSmoothing(double smooth);
@@ -210,6 +191,24 @@ typedef DartdartStreamDataCallback_tFunction =
     void Function(ffi.Pointer<ffi.UnsignedChar> data, int dataLength);
 typedef dartStreamDataCallback_t =
     ffi.Pointer<ffi.NativeFunction<dartStreamDataCallback_tFunction>>;
+typedef dartVisualizationCallback_tFunction =
+    ffi.Void Function(
+      ffi.Int channelCount,
+      ffi.Pointer<ffi.Pointer<ffi.Float>> waveDataPerChannel,
+      ffi.Int waveSamples,
+      ffi.Pointer<ffi.Pointer<ffi.Float>> fftDataPerChannel,
+      ffi.Int fftSamples,
+    );
+typedef DartdartVisualizationCallback_tFunction =
+    void Function(
+      int channelCount,
+      ffi.Pointer<ffi.Pointer<ffi.Float>> waveDataPerChannel,
+      int waveSamples,
+      ffi.Pointer<ffi.Pointer<ffi.Float>> fftDataPerChannel,
+      int fftSamples,
+    );
+typedef dartVisualizationCallback_t =
+    ffi.Pointer<ffi.NativeFunction<dartVisualizationCallback_tFunction>>;
 
 /// Possible capture errors
 sealed class CaptureErrors {

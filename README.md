@@ -140,21 +140,41 @@ Recorder.instance.setSecondsOfAudioToWriteBefore(0.0);
 
 ***NOTE: this is only available when initializing the recorder with `PCMFormat.f32le` format.***
 
-### 📊 Audio, FFT, and Volume Data
-You can also access raw audio data and volume information like this:
+### 📊 Real-time Audio Visualization (Waveform & FFT)
+
+The recorder provides a high-performance, SIMD-accelerated (via PFFFT) audio analysis pipeline with Blackman windowing and smoothing.
 
 ```dart
-/// Get the current volume in dB in the [-100, 0] range.
+// 1. Listen to real-time audio visualization events:
+Recorder.instance.audioVisualizationEvents.listen((AudioVisualizationData data) {
+  // Number of channels in this packet (1 for mono/merged, 2+ for multi-channel)
+  final channelCount = data.channelCount;
+
+  // Waveform samples in range [-1.0, 1.0]
+  final waveData = data.waveData; // or data.wave for all channels
+
+  // FFT frequency bins in range [0.0, 1.0]
+  final fftData = data.fftData; // or data.fft for all channels
+});
+
+// 2. Enable visualization:
+Recorder.instance.setVisualizationEnabled(
+  true,
+  windowSize: 256, // Power of 2 between 128 and 8192
+  kind: VisualizationKind.waveAndFft, // wave, fft, or waveAndFft
+  channel: VisualizationChannel.merged, // merged (mono downmix), all, or channel index
+);
+
+// Optional: Configure FFT smoothing (0.0 to 1.0)
+Recorder.instance.setFftSmoothing(0.6);
+
+// Get current volume level in dB [-100, 0]:
 double volume = Recorder.instance.getVolumeDb();
-/// Return a 256 float array containing wave data in the range [-1.0, 1.0] not clamped.
-Float32List waveAudio = Recorder.instance.getWave();
-/// Return a 256 float array containing FFT data in the range [-1.0, 1.0] not clamped.
-Float32List fftAudio = Recorder.instance.getFft();
 ```
 
 ![Image](https://github.com/alnitak/flutter_recorder/raw/main/images/audio_data.png)
 
-***NOTE: this is only available when initializing the recorder with `PCMFormat.f32le` format.***
+***NOTE: Audio visualization is available when initializing the recorder with `PCMFormat.f32le` format.***
 
 ### 📢 Audio data stream 
 

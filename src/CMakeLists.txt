@@ -3,12 +3,12 @@
 # the plugin to fail to compile for some customers of the plugin.
 cmake_minimum_required(VERSION 3.10)
 
-project(flutter_recorder_library VERSION 0.0.1 LANGUAGES CXX)
+project(flutter_recorder_library VERSION 0.0.1 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/fft)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/pffft)
 
 # Ogg/Opus include and library paths for non-Apple platforms.
 # On iOS/macOS the podspec provides the XCFrameworks and headers.
@@ -41,7 +41,7 @@ add_library(flutter_recorder SHARED
   "capture.cpp"
   "opus_encoder_pipeline.cpp"
   "opus_ogg_writer.cpp"
-  "fft/soloud_fft.cpp"
+  "pffft/pffft.c"
   "filters/filters.cpp"
   "filters/autogain.cpp"
   "filters/echo_cancellation.cpp"

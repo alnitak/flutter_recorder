@@ -68,8 +68,6 @@ public:
 
   void stopRecording();
 
-  float *getWave(bool *isTheSameAsBefore);
-
   float getVolumeDb();
 
   ma_device_config deviceConfig;
