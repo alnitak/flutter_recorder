@@ -1,3 +1,7 @@
+## Unreleased
+- fix Android OpenSL capture shutdown blocking indefinitely when a stalled input queue cannot drain #51.
+- fix native capture callbacks reading non-float PCM input with float sample width, which could overrun guarded Android AAudio buffers.
+
 ## 1.2.1
 - android fix: opus lib not found #49
 

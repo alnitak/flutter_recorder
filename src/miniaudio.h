@@ -41274,8 +41274,13 @@ static ma_result ma_device_stop__opensl(ma_device* pDevice)
     }
 
     if (pDevice->type == ma_device_type_capture || pDevice->type == ma_device_type_duplex) {
-        ma_device_drain__opensl(pDevice, ma_device_type_capture);
-
+        /*
+        A capture queue contains input buffers rather than playback data that
+        must be rendered before shutdown. Some Android USB audio HALs can leave
+        a capture buffer queued after delivery stalls, which makes the
+        unbounded drain above wait forever. Stop capture first, then discard
+        its queued buffers. Playback retains its drain semantics below.
+        */
         resultSL = MA_OPENSL_RECORD(pDevice->opensl.pAudioRecorder)->SetRecordState((SLRecordItf)pDevice->opensl.pAudioRecorder, SL_RECORDSTATE_STOPPED);
         if (resultSL != SL_RESULT_SUCCESS) {
             ma_log_post(ma_device_get_log(pDevice), MA_LOG_LEVEL_ERROR, "[OpenSL] Failed to stop internal capture device.");

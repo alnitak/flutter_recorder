@@ -1,4 +1,5 @@
 #include "capture.h"
+#include "capture_waveform_buffer.h"
 #include "circular_buffer.h"
 
 #include "fft/soloud_fft.h"
@@ -217,9 +218,17 @@ void detectSilence(Capture *userData) {
 // one frame is 2 samples: one for the left, one for the right.
 void data_callback(ma_device *pDevice, void *pOutput, const void *pInput,
                    ma_uint32 frameCount) {
-  // Process the captured audio data as needed.
-  float *captured = (float *)(pInput); // Assuming float format
+  if (pDevice == nullptr || pInput == nullptr || frameCount == 0)
+    return;
+
   Capture *userData = (Capture *)pDevice->pUserData;
+  if (userData == nullptr)
+    return;
+
+  // Filters operate on the configured PCM format in place. Do not reinterpret
+  // non-float input as float samples: doing so reads past AAudio's callback
+  // buffer for u8, s16 and s24 capture.
+  void *captured = const_cast<void *>(pInput);
 
   // Apply filters
   if (userData->mFilters->filters.size() > 0) {
@@ -230,17 +239,21 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput,
     }
   }
 
-  // Do something with the captured audio data...
-  // Protect the write to capturedBuffer
-  {
+  // Waveform, FFT and volume APIs are defined only for f32 capture. Keep their
+  // buffer format-specific and bounded even when a backend delivers a larger
+  // callback than the requested period size.
+  float *capturedFloat = nullptr;
+  if (userData->deviceConfig.capture.format == ma_format_f32) {
+    capturedFloat = static_cast<float *>(captured);
     std::lock_guard<std::mutex> lock(capturedBufferMutex);
-    memcpy(capturedBuffer, captured,
-           sizeof(float) * frameCount *
-               userData->deviceConfig.capture.channels);
+    copyCaptureWaveformBuffer(
+        capturedBuffer, sizeof(capturedBuffer) / sizeof(capturedBuffer[0]),
+        capturedFloat, userData->deviceConfig.capture.format, frameCount,
+        userData->deviceConfig.capture.channels);
   }
 
-  if (userData->deviceConfig.capture.format == ma_format_f32)
-    calculateEnergy(captured, frameCount);
+  if (capturedFloat != nullptr)
+    calculateEnergy(capturedFloat, frameCount);
 
   // Stream the audio data?
   if (userData->isStreamingData && nativeStreamDataCallback != nullptr) {
@@ -290,7 +303,7 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput,
     // Copy current buffer to circularBuffer
     if (delayed_silence_started && userData->isRecording &&
         userData->secondsOfAudioToWriteBefore > 0) {
-      std::vector<float> values(captured, captured + frameCount);
+      std::vector<float> values(capturedFloat, capturedFloat + frameCount);
       circularBuffer.get()->push(values);
     }
 
