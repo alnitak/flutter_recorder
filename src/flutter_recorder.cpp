@@ -194,6 +194,9 @@ FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_init(
 
 FFI_PLUGIN_EXPORT void flutter_recorder_deinit()
 {
+    dartSilenceChangedCallback = nullptr;
+    dartStreamDataCallback = nullptr;
+    Analyzer::instance().setDataCallback(nullptr);
     Analyzer::instance().setVisualizationEnabled(false);
     if (capture.isRecording)
         capture.stopRecording();

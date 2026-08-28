@@ -51,9 +51,9 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
       if (!Recorder.instance.getVisualizationEnabled()) {
         Recorder.instance.setVisualizationEnabled(
           true,
-          windowSize: 256,
+          windowSize: 512,
           kind: VisualizationKind.waveAndFft,
-          channel: VisualizationChannel.merged,
+          channel: VisualizationChannel.all,
         );
       }
       setState(() {

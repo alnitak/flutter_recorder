@@ -98,6 +98,8 @@ class RecorderFfi extends RecorderImpl {
     }
   }
 
+  ffi.NativeCallable<bindings.dartSilenceChangedCallback_tFunction>?
+  nativeSilenceChangedCallable;
   ffi.NativeCallable<bindings.dartStreamDataCallback_tFunction>?
   nativeStreamDataCallable;
   ffi.NativeCallable<bindings.dartVisualizationCallback_tFunction>?
@@ -105,28 +107,32 @@ class RecorderFfi extends RecorderImpl {
 
   @override
   Future<void> setDartEventCallbacks() async {
-    // Create a NativeCallable for the Dart functions
-    final nativeSilenceChangedCallable =
+    // Close existing NativeCallables if any before recreating
+    nativeSilenceChangedCallable?.close();
+    nativeStreamDataCallable?.close();
+    nativeVisualizationCallable?.close();
+
+    nativeSilenceChangedCallable =
         ffi.NativeCallable<
           bindings.dartSilenceChangedCallback_tFunction
         >.listener(_silenceChangedCallback);
 
-    final nativeStreamDataCallable =
+    nativeStreamDataCallable =
         ffi.NativeCallable<bindings.dartStreamDataCallback_tFunction>.listener(
           _streamDataCallback,
         );
 
-    final nativeVisualizationCallable =
+    nativeVisualizationCallable =
         ffi.NativeCallable<
           bindings.dartVisualizationCallback_tFunction
         >.listener(_visualizationDataCallback);
 
     bindings.flutter_recorder_setDartEventCallback(
-      nativeSilenceChangedCallable.nativeFunction,
-      nativeStreamDataCallable.nativeFunction,
+      nativeSilenceChangedCallable!.nativeFunction,
+      nativeStreamDataCallable!.nativeFunction,
     );
     bindings.flutter_recorder_setDartVisualizationCallback(
-      nativeVisualizationCallable.nativeFunction,
+      nativeVisualizationCallable!.nativeFunction,
     );
   }
 
@@ -255,6 +261,15 @@ class RecorderFfi extends RecorderImpl {
   @override
   void deinit() {
     _silenceCallback = null;
+    _visualizationCallback = null;
+    bindings.flutter_recorder_setDartVisualizationCallback(ffi.nullptr);
+    bindings.flutter_recorder_setDartEventCallback(ffi.nullptr, ffi.nullptr);
+    nativeSilenceChangedCallable?.close();
+    nativeSilenceChangedCallable = null;
+    nativeStreamDataCallable?.close();
+    nativeStreamDataCallable = null;
+    nativeVisualizationCallable?.close();
+    nativeVisualizationCallable = null;
     bindings.flutter_recorder_deinit();
     super.deinit();
   }

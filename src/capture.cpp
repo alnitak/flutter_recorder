@@ -392,6 +392,10 @@ std::vector<CaptureDevice> Capture::listCaptureDevices() {
 CaptureErrors Capture::init(Filters *filters, int deviceID, PCMFormat pcmFormat,
                             unsigned int sampleRate, unsigned int channels,
                             int androidInputPreset) {
+  if (mInited) {
+    dispose();
+  }
+
   deviceConfig = ma_device_config_init(ma_device_type_capture);
   mUsesContext = false;
   deviceConfig.periodSizeInFrames = BUFFER_SIZE;
