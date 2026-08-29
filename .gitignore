@@ -28,5 +28,9 @@ migrate_working_dir/
 .dart_tool/
 build/
 AGENTS.md
-xiph/ogg/
-xiph/opus/
+
+# Ignore all dirs of xiph folder
+xiph/*
+!xiph/build_*
+!xiph/fr_rename.cmake
+!xiph/speexdsp_CMakeLists.txt
