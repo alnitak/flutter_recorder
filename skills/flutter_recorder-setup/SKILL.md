@@ -1,7 +1,7 @@
 ---
 name: flutter_recorder-setup
 version: 1
-description: Teaches how to add flutter_recorder to a Flutter app, configure permissions on Android, iOS, macOS, and Linux, configure the web platform (script tags and WASM module), initialize and deinitialize the capture engine, enumerate input devices, configure AndroidInputPreset, and set up logging. Use when a user asks to install flutter_recorder, initialize the recorder, configure microphone permissions, troubleshoot web setup, or choose audio input devices.
+description: Teaches how to add flutter_recorder to a Flutter app, configure permissions on Android, iOS, macOS, and Linux, configure the web platform (script tags and WASM module), initialize and deinitialize the capture engine, configure hardware and browser presets (AndroidInputPreset, IosInputPreset, WebInputPreset), coordinate audio sessions with package:audio_session, and integrate with flutter_soloud. Use when a user asks to install flutter_recorder, initialize the recorder, configure microphone permissions, troubleshoot web setup, or choose audio input presets.
 ---
 
 # flutter_recorder setup
@@ -32,6 +32,12 @@ Future<void> main() async {
     format: PCMFormat.f32le, // f32le required for visualization & silence detection
     sampleRate: 22050,
     channels: RecorderChannels.mono,
+    // Android hardware DSP preset
+    androidInputPreset: AndroidInputPreset.voiceCommunication,
+    // iOS AVAudioSession preset (Apple hardware VoiceProcessingIO / Measurement)
+    iosInputPreset: IosInputPreset.voiceCommunication,
+    // Web Audio preprocessing constraints (echoCancellation, AGC, noiseSuppression)
+    webInputPreset: WebInputPreset.unprocessed,
     // deviceID: devices.firstWhere((d) => d.isDefault).id,
   );
 
@@ -51,7 +57,7 @@ flutter pub add flutter_recorder
 
 Native C++ sources are built automatically using Dart build hooks and native toolchains. No manual CMake or CocoaPods configuration is required.
 
-## Platform setup & permissions
+## Platform setup & presets
 
 ### Android
 Add the audio recording permission to `android/app/src/main/AndroidManifest.xml`:
@@ -60,7 +66,7 @@ Add the audio recording permission to `android/app/src/main/AndroidManifest.xml`
 <uses-permission android:name="android.permission.RECORD_AUDIO" />
 ```
 
-Android also supports hardware capture presets via `AndroidInputPreset`:
+Android supports hardware capture presets via `AndroidInputPreset`:
 
 ```dart
 await Recorder.instance.init(
@@ -72,8 +78,8 @@ Available presets:
 - `AndroidInputPreset.generic`: Standard Android capture preset.
 - `AndroidInputPreset.camcorder`: Tuned for video recording directionality.
 - `AndroidInputPreset.voiceRecognition`: Optimized for ASR/speech-to-text with minimal AGC/filtering.
-- `AndroidInputPreset.voiceCommunication`: Optimized for VoIP/calls with system AEC/NS.
-- `AndroidInputPreset.unprocessed`: Clean, raw audio without OEM DSP.
+- `AndroidInputPreset.voiceCommunication`: Optimized for VoIP/calls with hardware AEC/NS.
+- `AndroidInputPreset.unprocessed`: Clean, raw audio bypassing OEM DSP.
 
 *Note: Android 15 16k page sizes are supported out of the box.*
 
@@ -85,7 +91,27 @@ Add the microphone usage description to `ios/Runner/Info.plist` and `macos/Runne
 <string>We need access to your microphone to record audio.</string>
 ```
 
-On **macOS**, you must also enable the "Audio input" capability in Xcode or add the entitlement to `macos/Runner/*.entitlements`:
+#### iOS (`IosInputPreset`)
+Configures the system `AVAudioSession` directly from native code without needing external packages:
+
+```dart
+await Recorder.instance.init(
+  iosInputPreset: IosInputPreset.voiceCommunication,
+);
+```
+
+Available presets:
+- `IosInputPreset.generic`: Standard `AVAudioSessionCategoryPlayAndRecord` with default system routing.
+- `IosInputPreset.voiceCommunication`: Enables `AVAudioSessionModeVoiceChat` + Apple hardware `VoiceProcessingIO` (hardware AEC and AGC).
+- `IosInputPreset.videoChat`: Enables `AVAudioSessionModeVideoChat` optimized for video calls and speakerphone.
+- `IosInputPreset.speechRecognition`: Enables `AVAudioSessionModeMeasurement` with minimal gain distortion for speech-to-text.
+- `IosInputPreset.unprocessed`: Enables `AVAudioSessionModeMeasurement` with flat frequency response and zero gain coloring for raw DSP analysis.
+- If omitted (`null`), the active `AVAudioSession` is left untouched, preserving external session management (e.g. `package:audio_session`).
+
+#### macOS
+On macOS, CoreAudio HAL captures raw, unprocessed audio from the selected input device by default. System-wide "Voice Isolation" and "Wide Spectrum" Mic Modes in macOS Sonoma/Sequoia can be selected by the user in the macOS menu bar / Control Center.
+
+Enable the "Audio input" capability in Xcode or add the entitlement to `macos/Runner/*.entitlements`:
 
 ```xml
 <key>com.apple.security.device.audio-input</key>
@@ -100,6 +126,22 @@ Add the following script tags inside the `<head>` of `web/index.html`:
 <script src="assets/packages/flutter_recorder/web/init_recorder_module.dart.js" defer></script>
 ```
 
+#### Web (`WebInputPreset`)
+Configures browser `getUserMedia` preprocessing constraints at stream creation time:
+
+```dart
+await Recorder.instance.init(
+  webInputPreset: WebInputPreset.unprocessed, // default
+);
+```
+
+Available presets:
+- `WebInputPreset.unprocessed` *(Default)*: `{echoCancellation: false, autoGainControl: false, noiseSuppression: false}`. Prevents browser "volume pumping" (rapid gain oscillations) so clean audio reaches your app.
+- `WebInputPreset.voiceCommunication`: `{echoCancellation: true, autoGainControl: true, noiseSuppression: true}`.
+- `WebInputPreset.voiceRecognition`: `{echoCancellation: false, autoGainControl: true, noiseSuppression: true}`.
+- `WebInputPreset.noiseSuppression`: `{noiseSuppression: true, echoCancellation: false, autoGainControl: false}`.
+- `WebInputPreset.echoCancellation`: `{echoCancellation: true, autoGainControl: false, noiseSuppression: false}`.
+
 To run web apps locally during development:
 ```sh
 flutter run -d chrome --web-renderer canvaskit --web-browser-flag '--disable-web-security' -t lib/main.dart --release
@@ -112,11 +154,54 @@ Linux uses ALSA and GStreamer:
 - Install development libraries: `sudo apt-get install libasound2-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev`
 - *Avoid installing Flutter via Snap*, as Snap sandboxing can prevent native audio plugins from linking to ALSA/GStreamer.
 
+## Audio Session Coordination (`audio_session`) & `flutter_soloud`
+
+When using `flutter_recorder` alongside audio playback engines like `flutter_soloud` or speech synthesis, coordinate the shared audio session using `package:audio_session`:
+
+```dart
+import 'package:audio_session/audio_session.dart';
+import 'package:flutter_recorder/flutter_recorder.dart';
+import 'package:flutter_soloud/flutter_soloud.dart';
+
+Future<void> setupAudioStack() async {
+  // 1. Configure audio_session for simultaneous playback and recording
+  final session = await AudioSession.instance;
+  await session.configure(
+    AudioSessionConfiguration(
+      avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
+      avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth |
+          AVAudioSessionCategoryOptions.defaultToSpeaker,
+      avAudioSessionMode: AVAudioSessionMode.voiceChat,
+      androidAudioAttributes: const AndroidAudioAttributes(
+        usage: AndroidAudioUsage.voiceCommunication,
+        contentType: AndroidAudioContentType.speech,
+        flags: AndroidAudioFlags.none,
+      ),
+      androidWillPauseWhenDucked: false,
+    ),
+  );
+  await session.setActive(true);
+
+  // 2. Initialize SoLoud for playback
+  await SoLoud.instance.init(
+    channels: Channels.mono,
+    sampleRate: 22050,
+  );
+
+  // 3. Initialize Recorder (leave iosInputPreset null so audio_session settings are preserved)
+  await Recorder.instance.init(
+    format: PCMFormat.f32le,
+    sampleRate: 22050,
+    channels: RecorderChannels.mono,
+  );
+}
+```
+
 ## The API Shape
 
 All methods live on `Recorder.instance` (`import 'package:flutter_recorder/flutter_recorder.dart'`):
 
-- `Future<void> init({int deviceID = -1, PCMFormat format = PCMFormat.s16le, int sampleRate = 22050, RecorderChannels channels = RecorderChannels.mono, AndroidInputPreset? androidInputPreset})`: Initializes the audio capture device. Throws `RecorderInitializeFailedException` on failure.
+- `Future<void> init({int deviceID = -1, PCMFormat format = PCMFormat.s16le, int sampleRate = 22050, RecorderChannels channels = RecorderChannels.mono, AndroidInputPreset? androidInputPreset, IosInputPreset? iosInputPreset, WebInputPreset? webInputPreset})`: Initializes the audio capture device. Throws `RecorderInitializeFailedException` on failure.
 - `void start()`: Starts audio capture. Throws `RecorderNotInitializedException` or `RecorderFailedToStartDeviceException`.
 - `void stop()`: Stops audio capture without deinitializing the engine.
 - `void deinit()`: Stops capture and disposes all native device resources.
@@ -124,6 +209,7 @@ All methods live on `Recorder.instance` (`import 'package:flutter_recorder/flutt
 - `bool isDeviceStarted()` / `bool get isStarted`: Checks whether the microphone capture is active.
 - `List<CaptureDevice> listCaptureDevices()`: Enumerates available input devices. Returns `CaptureDevice(name, isDefault, id)`. Safe to call before `init()`.
 - `void setLoopback({required bool enable})` / `bool isLoopbackEnabled()`: Enables low-latency (< 15ms) native duplex loopback (mic routed directly to speakers/headphones).
+- `void feedPlaybackData(Uint8List data, {PCMFormat format = PCMFormat.f32le, RecorderChannels channels = RecorderChannels.mono})`: Feeds far-end reference playback audio (e.g. from `flutter_soloud`) into the recorder for SpeexDSP Acoustic Echo Cancellation.
 - `double getVolumeDb()`: Returns current RMS volume level in dB `[-100, 0]`. Requires `PCMFormat.f32le`.
 
 ## Logging

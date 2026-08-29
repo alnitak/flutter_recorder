@@ -1,7 +1,7 @@
 ---
 name: flutter_recorder-echo-cancellation
 version: 1
-description: Teaches how to use SpeexDSP Acoustic Echo Cancellation (AEC) and native duplex loopback in flutter_recorder, tune filter length and denoise suppression, configure low-latency sidetone/karaoke monitoring, and feed far-end speaker reference audio from flutter_soloud or VoIP streams. Use when the user asks to eliminate speaker echo, cancel acoustic feedback, implement mic loopback/sidetone, build karaoke apps, or implement voice chat/VoIP.
+description: Teaches how to use SpeexDSP Acoustic Echo Cancellation (AEC) and native duplex loopback in flutter_recorder, tune filter length and denoise suppression, configure low-latency sidetone/karaoke monitoring, coordinate system audio sessions with package:audio_session, and feed far-end speaker reference audio from flutter_soloud or VoIP streams. Use when the user asks to eliminate speaker echo, cancel acoustic feedback, implement mic loopback/sidetone, build karaoke apps, or implement voice chat/VoIP.
 ---
 
 # flutter_recorder Acoustic Echo Cancellation (AEC) & loopback
@@ -72,22 +72,63 @@ When external audio (e.g. game music, sound effects, remote caller speech) is pl
    );
    ```
 
-#### Integration Recipe with `flutter_soloud`:
-When your app uses `flutter_soloud` for game audio or music playback, stream its master mixer output directly into `flutter_recorder`:
+#### Full Integration Recipe with `flutter_soloud` & `audio_session`:
+
+When building games with voice chat or karaoke applications using `flutter_soloud` for playback and `flutter_recorder` for voice capture:
 
 ```dart
 import 'dart:typed_data';
+import 'package:audio_session/audio_session.dart';
 import 'package:flutter_recorder/flutter_recorder.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 
-void bridgeSoLoudWithAec() {
-  final soloud = SoLoud.instance;
-  final recorder = Recorder.instance;
+Future<void> initializeDuplexAudio() async {
+  const sampleRate = 22050;
 
-  // Listen to SoLoud master mixer output:
+  // 1. Configure audio_session so iOS/Android route to speaker + allow simultaneous mic/playback
+  final session = await AudioSession.instance;
+  await session.configure(
+    AudioSessionConfiguration(
+      avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
+      avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth |
+          AVAudioSessionCategoryOptions.defaultToSpeaker,
+      avAudioSessionMode: AVAudioSessionMode.voiceChat,
+      androidAudioAttributes: const AndroidAudioAttributes(
+        usage: AndroidAudioUsage.voiceCommunication,
+        contentType: AndroidAudioContentType.speech,
+        flags: AndroidAudioFlags.none,
+      ),
+      androidWillPauseWhenDucked: false,
+    ),
+  );
+  await session.setActive(true);
+
+  // 2. Initialize SoLoud audio engine
+  final soloud = SoLoud.instance;
+  await soloud.init(
+    channels: Channels.mono,
+    sampleRate: sampleRate,
+  );
+
+  // 3. Initialize Recorder (matching sample rate and format)
+  final recorder = Recorder.instance;
+  await recorder.init(
+    format: PCMFormat.f32le,
+    sampleRate: sampleRate,
+    channels: RecorderChannels.mono,
+    // Note: leave iosInputPreset as null when audio_session is managing the session
+  );
+  recorder.start();
+
+  // 4. Activate AEC filter in recorder
+  recorder.filters.echoCancellationFilter.activate();
+  recorder.filters.echoCancellationFilter.filterLengthMs.value = 150;
+  recorder.filters.echoCancellationFilter.denoiseEnabled.value = 1;
+
+  // 5. Pipe SoLoud master output stream into Recorder's AEC playback reference
   soloud.startMixerOutputStream(
     format: MixerOutputFormat.pcmF32le,
-    channels: 1, // mono matching recorder
+    channels: 1, // mono
   ).listen((Uint8List mixerBytes) {
     if (recorder.isInitialized && recorder.filters.echoCancellationFilter.isActive) {
       recorder.feedPlaybackData(
@@ -115,6 +156,11 @@ Access parameters via `recorder.filters.echoCancellationFilter.<param>`:
 | `denoiseEnabled` | 0 or 1 | 1 | Enables SpeexDSP residual echo suppression and stationary noise suppression. |
 | `denoiseLevelDb` | -60 – 0 dB | -30 dB | Maximum attenuation of residual echo in dB. `-30 dB` to `-45 dB` provides strong suppression without distorting voice. |
 
+## Hardware AEC vs Software AEC
+
+- **Hardware AEC**: Configured via `IosInputPreset.voiceCommunication` on iOS or `AndroidInputPreset.voiceCommunication` on Android. This uses device DSP chips directly at the driver level.
+- **Software AEC (`echoCancellationFilter`)**: Uses the SpeexDSP software engine. Ideal when cross-platform consistency is needed, when feeding custom playback references like `flutter_soloud` mixer streams, or on desktop platforms (macOS/Linux/Windows).
+
 ## The API Shape
 
 - `Recorder.instance.filters.echoCancellationFilter`: Singleton accessor for the AEC filter.
@@ -129,7 +175,7 @@ Access parameters via `recorder.filters.echoCancellationFilter.<param>`:
 - **Do not enable loopback AND play back mic audio manually**: If `setLoopback(enable: true)` is active, miniaudio automatically outputs mic audio. Adding manual playback through another audio engine will cause doubled, flanged audio.
 - **Sample Rate & Alignment**: `feedPlaybackData` works best when the playback stream sample rate matches the recorder sample rate (e.g. 22050 Hz or 44100 Hz).
 - **Headsets vs Speakerphones**: When users wear headphones, AEC can be safely deactivated or given a short tail (`filterLengthMs = 20`) to minimize CPU usage.
-- **Audio Session Setup**: When building voice communication on iOS/Android, configure `audio_session` for `AVAudioSessionCategory.playAndRecord` and `AVAudioSessionMode.voiceChat` so the OS hardware routing is optimized.
+- **Audio Session Setup**: When building duplex audio on mobile, always use `package:audio_session` or `IosInputPreset.voiceCommunication` / `AndroidInputPreset.voiceCommunication` so the OS routes audio properly to the loudspeaker instead of the telephone receiver earpiece.
 
 ## Keeping this skill current
 
