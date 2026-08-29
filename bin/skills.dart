@@ -214,7 +214,8 @@ Future<String> installSkills({Directory? projectRoot, Uri? skillsRoot}) async {
     }
   }
   final count = bundled.length;
-  return 'Installed $count flutter_recorder agent skill${count == 1 ? '' : 's'} '
+  final suffix = count == 1 ? '' : 's';
+  return 'Installed $count flutter_recorder agent skill$suffix '
       'into ${homes.join(', ')}.';
 }
 
