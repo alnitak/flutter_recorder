@@ -2,7 +2,7 @@
 #include "capture_waveform_buffer.h"
 #include "circular_buffer.h"
 
-#include "fft/soloud_fft.h"
+#include "analyzer.h"
 #include <atomic>
 #include <cmath>
 #include <cstdarg>
@@ -252,8 +252,10 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput,
         userData->deviceConfig.capture.channels);
   }
 
-  if (capturedFloat != nullptr)
+  if (capturedFloat != nullptr) {
     calculateEnergy(capturedFloat, frameCount);
+    Analyzer::instance().onAudioData(capturedFloat, frameCount, userData->deviceConfig.capture.channels);
+  }
 
   // Stream the audio data?
   if (userData->isStreamingData && nativeStreamDataCallback != nullptr) {
@@ -329,14 +331,12 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput,
 // /////////////////////////////
 // Capture class Implementation
 // /////////////////////////////
-float waveData[256];
 Capture::Capture()
     : isDetectingSilence(false), silenceThresholdDb(-40.0f),
       silenceDuration(2.0f), secondsOfAudioToWriteBefore(0.0f),
       isRecording(false), isRecordingPaused(false), isStreamingData(false),
       recordingFormat(recordingFormatWav), streamingFormat(streamingFormatPcm),
       mInited(false), mUsesContext(false) {
-  memset(waveData, 0, sizeof(float) * 256);
 }
 
 Capture::~Capture() { dispose(); }
@@ -392,6 +392,10 @@ std::vector<CaptureDevice> Capture::listCaptureDevices() {
 CaptureErrors Capture::init(Filters *filters, int deviceID, PCMFormat pcmFormat,
                             unsigned int sampleRate, unsigned int channels,
                             int androidInputPreset) {
+  if (mInited) {
+    dispose();
+  }
+
   deviceConfig = ma_device_config_init(ma_device_type_capture);
   mUsesContext = false;
   deviceConfig.periodSizeInFrames = BUFFER_SIZE;
@@ -499,6 +503,7 @@ CaptureErrors Capture::init(Filters *filters, int deviceID, PCMFormat pcmFormat,
 
 void Capture::dispose() {
   mInited = false;
+  Analyzer::instance().setVisualizationEnabled(false);
   wav.close();
   opusWriter.close();
   if (circularBuffer)
@@ -643,37 +648,5 @@ void Capture::stopRecording() {
   isRecording = false;
 }
 
-/// @brief Shrinks the captured audio buffer to 256 floats.
-/// @param inputBuffer The captured audio buffer.
-/// @param outputBuffer The output buffer.
-/// @param channels The number of channels.
-void shrink_buffer(float *inputBuffer, float *outputBuffer, int channels) {
-  for (int i = 0; i < 256; ++i) {
-    if (channels == 1) {
-      outputBuffer[i] = inputBuffer[i * channels];
-    } else {
-      outputBuffer[i] =
-          (inputBuffer[i * channels] + inputBuffer[i * channels + 1]) * 0.5f;
-    }
-  }
-}
-
-float *Capture::getWave(bool *isTheSameAsBefore) {
-  float currentWave[256];
-
-  // Protect the read from capturedBuffer
-  {
-    std::lock_guard<std::mutex> lock(capturedBufferMutex);
-    shrink_buffer(capturedBuffer, currentWave, deviceConfig.capture.channels);
-  }
-
-  if (memcmp(waveData, currentWave, sizeof(waveData)) != 0) {
-    *isTheSameAsBefore = false;
-  } else {
-    *isTheSameAsBefore = true;
-  }
-  memcpy(waveData, currentWave, sizeof(waveData));
-  return waveData;
-}
-
 float Capture::getVolumeDb() { return energy_db; }
+

@@ -118,17 +118,25 @@ external void wasmStopRecording();
 @JS('RecorderModule._flutter_recorder_setFftSmoothing')
 external void wasmSetFftSmoothing(double smooth);
 
-@JS('RecorderModule._flutter_recorder_getFft')
-external void wasmGetFft(int samplesPtr, int isTheSameAsBeforePtr);
+@JS('RecorderModule.HEAPF32')
+external JSFloat32Array get wasmHeapF32;
 
-@JS('RecorderModule._flutter_recorder_getWave')
-external void wasmGetWave(int samplesPtr, int isTheSameAsBeforePtr);
+@JS('RecorderModule.HEAPU8')
+external JSUint8Array get wasmHeapU8;
 
-@JS('RecorderModule._flutter_recorder_getTexture')
-external void wasmGetTexture(int samplesPtr, int isTheSameAsBeforePtr);
+@JS('RecorderModule._flutter_recorder_setVisualizationEnabled')
+external int wasmSetVisualizationEnabled(
+  int enabled,
+  int windowSize,
+  int kind,
+  int channel,
+);
 
-@JS('RecorderModule._flutter_recorder_getTexture2D')
-external void wasmGetTexture2D(int samplesPtr, int isTheSameAsBeforePtr);
+@JS('RecorderModule._flutter_recorder_isVisualizationEnabled')
+external int wasmIsVisualizationEnabled();
+
+@JS('RecorderModule._flutter_recorder_setDartVisualizationCallback')
+external void wasmSetDartVisualizationCallback(int callbackPtr);
 
 @JS('RecorderModule._flutter_recorder_getVolumeDb')
 external void wasmGetVolumeDb(int volumeDbPtr);

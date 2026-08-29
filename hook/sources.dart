@@ -37,7 +37,7 @@ List<String> collectSources(Uri packageRoot, OS targetOS) {
         (p.endsWith('/miniaudio.cpp') ||
             p.endsWith('/flutter_recorder_miniaudio_objc.mm')),
   );
-  addDir('fft/');
+  addDir('pffft/', extensions: const ['.c', '.cpp']);
   addDir('filters/');
 
   return sources..sort();

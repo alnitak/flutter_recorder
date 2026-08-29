@@ -68,7 +68,7 @@ void main(List<String> args) async {
       if (os == OS.linux && arch == Architecture.x64) ...['-msse2', '-msse3'],
     ];
 
-    final includes = ['src', 'src/fft', ...xiph.includeDirs];
+    final includes = ['src', 'src/pffft', ...xiph.includeDirs];
 
     // Workaround for miniaudio's ma_ios_notification_handler symbol conflict.
     final forcedIncludes = [if (isApple) 'ios/miniaudio_objc_prefix.h'];

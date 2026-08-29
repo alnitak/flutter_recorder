@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_recorder/flutter_recorder.dart';
@@ -17,6 +19,8 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
   late final Ticker ticker;
   late double vuMeter;
   late double db;
+  AudioVisualizationData? _visualizationData;
+  StreamSubscription<AudioVisualizationData>? _visualizationSubscription;
 
   @override
   void initState() {
@@ -25,16 +29,33 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
     db = 0.0;
     ticker = createTicker(_tick);
     ticker.start();
+    _visualizationSubscription = Recorder.instance.audioVisualizationEvents
+        .listen((data) {
+          if (mounted) {
+            setState(() {
+              _visualizationData = data;
+            });
+          }
+        });
   }
 
   @override
   void dispose() {
+    _visualizationSubscription?.cancel();
     ticker.stop();
     super.dispose();
   }
 
   void _tick(Duration elapsed) {
     if (context.mounted && Recorder.instance.isDeviceStarted()) {
+      if (!Recorder.instance.getVisualizationEnabled()) {
+        Recorder.instance.setVisualizationEnabled(
+          true,
+          windowSize: 512,
+          kind: VisualizationKind.waveAndFft,
+          channel: VisualizationChannel.all,
+        );
+      }
       setState(() {
         /// 100 = scale to minimum decibel
         db = Recorder.instance.getVolumeDb();
@@ -66,7 +87,7 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
                     child: CustomPaint(
                       key: UniqueKey(),
                       size: const Size(280, 124),
-                      painter: const FftPainter(),
+                      painter: FftPainter(data: _visualizationData),
                     ),
                   ),
                 ),
@@ -81,7 +102,7 @@ class BarsState extends State<Bars> with SingleTickerProviderStateMixin {
                     child: CustomPaint(
                       key: UniqueKey(),
                       size: const Size(280, 124),
-                      painter: const WavePainter(),
+                      painter: WavePainter(data: _visualizationData),
                     ),
                   ),
                 ),

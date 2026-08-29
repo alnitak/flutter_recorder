@@ -3,6 +3,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_recorder/src/audio_data_container.dart';
+import 'package:flutter_recorder/src/audio_visualization_data.dart';
 import 'package:flutter_recorder/src/bindings/recorder.dart';
 import 'package:flutter_recorder/src/enums.dart';
 import 'package:flutter_recorder/src/exceptions/exceptions.dart';
@@ -113,6 +114,10 @@ interface class Recorder {
   /// Listening to silence state changes.
   Stream<SilenceState> get silenceChangedEvents =>
       _recorder.impl.silenceChangedEvents;
+
+  /// Listening to real-time audio visualization events (waveform & FFT data).
+  Stream<AudioVisualizationData> get audioVisualizationEvents =>
+      _recorder.impl.audioVisualizationEvents;
 
   /// Listen to audio data.
   ///
@@ -387,98 +392,64 @@ interface class Recorder {
     _recorder.impl.setFftSmoothing(smooth);
   }
 
-  /// Conveninet way to get FFT data. Return a 256 float array containing
-  /// FFT data in the range [-1.0, 1.0] not clamped.
+  /// Enable or disable real-time audio visualization.
   ///
-  /// If also wave data is needed consider using [getTexture] or [getTexture2D].
+  /// When enabled, audio data will be analyzed and emitted via
+  /// [audioVisualizationEvents].
   ///
-  /// **NOTE**: this is only available when initializing the recorder
-  /// with [PCMFormat.f32le] format.
-  Float32List getFft({bool alwaysReturnData = true}) {
+  /// [enabled] whether to start or stop visual analysis.
+  /// [windowSize] FFT window size, must be a power of 2 between 128 and 8192
+  /// (default 256).
+  /// [kind] type of visualization data to compute: [VisualizationKind.wave],
+  /// [VisualizationKind.fft], or [VisualizationKind.waveAndFft] (default).
+  /// [channel] channel selection: [VisualizationChannel.merged] (mono downmix),
+  /// [VisualizationChannel.all] (all channels), or an explicit zero-based
+  /// channel index.
+  void setVisualizationEnabled(
+    bool enabled, {
+    int windowSize = 256,
+    VisualizationKind kind = VisualizationKind.waveAndFft,
+    int channel = VisualizationChannel.merged,
+  }) {
     if (!_isInitialized) {
-      _log.warning(() => 'getFft: recorder is not initialized.');
-      return Float32List(256);
-    }
-    if (!_isStarted) {
-      _log.warning(() => 'getFft: recorder is not started.');
-      return Float32List(256);
+      _log.warning(
+        () => 'setVisualizationEnabled: recorder is not initialized.',
+      );
+      return;
     }
     if (_recorderFormat != PCMFormat.f32le) {
       _log.warning(
-        () => 'getFft: FFT data can be get only using f32le format.',
+        () =>
+            'setVisualizationEnabled: visualization requires PCMFormat.f32le '
+            'format.',
       );
-      return Float32List(256);
+      return;
     }
-    return _recorder.impl.getFft(alwaysReturnData: alwaysReturnData);
+    _recorder.impl.setVisualizationEnabled(
+      enabled,
+      windowSize: windowSize,
+      kind: kind,
+      channel: channel,
+    );
   }
 
-  /// Return a 256 float array containing wave data in the range [-1.0, 1.0]
-  /// not clamped.
-  ///
-  /// **NOTE**: this is only available when initializing the recorder
-  /// with [PCMFormat.f32le] format.
-  Float32List getWave({bool alwaysReturnData = true}) {
+  /// Returns `true` if real-time audio visualization is currently enabled.
+  bool getVisualizationEnabled() {
     if (!_isInitialized) {
-      _log.warning(() => 'getWave: recorder is not initialized.');
-      return Float32List(256);
+      return false;
     }
-    if (!_isStarted) {
-      _log.warning(() => 'getWave: recorder is not started.');
-      return Float32List(256);
-    }
-    if (_recorderFormat != PCMFormat.f32le) {
-      _log.warning(
-        () => 'getWave: wave data can be get only using f32le format.',
-      );
-      return Float32List(256);
-    }
-    return _recorder.impl.getWave(alwaysReturnData: alwaysReturnData);
+    return _recorder.impl.getVisualizationEnabled();
   }
 
-  /// Get the audio data representing an array of 256 floats FFT data and
-  /// 256 float of wave data.
+  /// Sets an explicit direct callback handler for incoming audio visualization
+  /// events.
   ///
-  /// **NOTE**: this is only available when initializing the recorder
-  /// with [PCMFormat.f32le] format.
-  Float32List getTexture({bool alwaysReturnData = true}) {
-    if (!_isInitialized) {
-      _log.warning(() => 'getTexture: recorder is not initialized.');
-      return Float32List(256);
-    }
-    if (!_isStarted) {
-      _log.warning(() => 'getTexture: recorder is not started.');
-      return Float32List(256);
-    }
-    if (_recorderFormat != PCMFormat.f32le) {
-      _log.warning(
-        () => 'getTexture: texture can be get only using f32le format.',
-      );
-      return Float32List(256);
-    }
-    return _recorder.impl.getTexture(alwaysReturnData: alwaysReturnData);
-  }
-
-  /// Get the audio data representing an array of 256 floats FFT data and
-  /// 256 float of wave data.
-  ///
-  /// **NOTE**: this is only available when initializing the recorder
-  /// with [PCMFormat.f32le] format.
-  Float32List getTexture2D({bool alwaysReturnData = true}) {
-    if (!_isInitialized) {
-      _log.warning(() => 'getTexture2D: recorder is not initialized.');
-      return Float32List(256);
-    }
-    if (!_isStarted) {
-      _log.warning(() => 'getTexture2D: recorder is not started.');
-      return Float32List(256);
-    }
-    if (_recorderFormat != PCMFormat.f32le) {
-      _log.warning(
-        () => 'getTexture2D: texture can be get only using f32le format.',
-      );
-      return Float32List(256);
-    }
-    return _recorder.impl.getTexture2D(alwaysReturnData: alwaysReturnData);
+  /// Setting this is an alternative or complement to listening to
+  /// [audioVisualizationEvents].
+  void setVisualizationCallback(
+    void Function(AudioVisualizationData data)? callback,
+  ) {
+    _recorder.impl.setVisualizationCallback(callback);
   }
 
   /// Get the current volume in dB. Returns -100 if the capture is not inited.

@@ -180,3 +180,29 @@ enum StreamingFormat {
     _ => throw ArgumentError('Unknown value for StreamingFormat: $value'),
   };
 }
+
+/// The kind of visualization data to compute and emit.
+enum VisualizationKind {
+  /// Time-domain waveform only.
+  wave(0),
+
+  /// Frequency-domain FFT only.
+  fft(1),
+
+  /// Both waveform and FFT data.
+  waveAndFft(2);
+
+  const VisualizationKind(this.value);
+
+  /// The internal integer representation.
+  final int value;
+}
+
+/// Constants for visualization channel selection.
+abstract final class VisualizationChannel {
+  /// Downmix all input channels into a single mono channel.
+  static const int merged = -1;
+
+  /// Output all input channels individually.
+  static const int all = -2;
+}

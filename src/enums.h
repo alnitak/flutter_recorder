@@ -53,4 +53,21 @@ typedef enum StreamingFormat
     streamingFormatOpus
 } StreamingFormat;
 
+typedef enum VisualizationKind
+{
+    VISUALIZATION_WAVE = 0,
+    VISUALIZATION_FFT = 1,
+    VISUALIZATION_WAVE_AND_FFT = 2
+} VisualizationKind;
+
+#define VISUALIZATION_CHANNEL_MERGED -1
+#define VISUALIZATION_CHANNEL_ALL -2
+
+typedef void (*dartVisualizationCallback_t)(
+    int channelCount,
+    const float **waveDataPerChannel,
+    int waveSamples,
+    const float **fftDataPerChannel,
+    int fftSamples);
+
 #endif // ENUMS_H

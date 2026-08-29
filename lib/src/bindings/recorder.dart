@@ -1,9 +1,9 @@
 // ignore_for_file: avoid_positional_boolean_parameters
 
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter_recorder/src/audio_data_container.dart';
+import 'package:flutter_recorder/src/audio_visualization_data.dart';
 import 'package:flutter_recorder/src/enums.dart';
 import 'package:flutter_recorder/src/exceptions/exceptions.dart';
 import 'package:flutter_recorder/src/filters/filters.dart';
@@ -44,6 +44,15 @@ abstract class RecorderImpl {
 
   /// Streams for audio data types.
   Stream<AudioDataContainer> get uint8ListStream => uint8ListController.stream;
+
+  /// Controller for audio visualization data.
+  late final StreamController<AudioVisualizationData>
+  audioVisualizationEventsController =
+      StreamController<AudioVisualizationData>.broadcast();
+
+  /// Stream of audio visualization data.
+  Stream<AudioVisualizationData> get audioVisualizationEvents =>
+      audioVisualizationEventsController.stream;
 
   /// Set Dart functions to call when an event occurs.
   @mustBeOverridden
@@ -187,34 +196,30 @@ abstract class RecorderImpl {
   @mustBeOverridden
   void setFftSmoothing(double smooth);
 
-  /// Conveninet way to get FFT data. Return a 256 float array containing
-  /// FFT data in the range [-1.0, 1.0] not clamped.
+  /// Enable or disable real-time audio visualization.
   ///
-  /// If also wave data is needed consider using [getTexture] or [getTexture2D].
-  ///
-  /// **NOTE**: use this only with format [PCMFormat.f32le].
+  /// [enabled] whether to enable or disable audio visualization.
+  /// [windowSize] power-of-two size between 128 and 8192 (default 256).
+  /// [kind] what visualization data to compute (wave, FFT, or both).
+  /// [channel] [VisualizationChannel.merged], [VisualizationChannel.all],
+  /// or a specific channel index.
   @mustBeOverridden
-  Float32List getFft({bool alwaysReturnData = true});
+  void setVisualizationEnabled(
+    bool enabled, {
+    int windowSize = 256,
+    VisualizationKind kind = VisualizationKind.waveAndFft,
+    int channel = VisualizationChannel.merged,
+  });
 
-  /// Return a 256 float array containing wave data in the range [-1.0, 1.0].
-  ///
-  /// **NOTE**: use this only with format [PCMFormat.f32le].
+  /// True if audio visualization is currently enabled.
   @mustBeOverridden
-  Float32List getWave({bool alwaysReturnData = true});
+  bool getVisualizationEnabled();
 
-  /// Get the audio data representing an array of 256 floats FFT data and
-  /// 256 float of wave data.
-  ///
-  /// **NOTE**: use this only with format [PCMFormat.f32le].
+  /// Set the visualization data callback handler.
   @mustBeOverridden
-  Float32List getTexture({bool alwaysReturnData = true});
-
-  /// Get the audio data representing an array of 256 floats FFT data and
-  /// 256 float of wave data.
-  ///
-  /// **NOTE**: use this only with format [PCMFormat.f32le].
-  @mustBeOverridden
-  Float32List getTexture2D({bool alwaysReturnData = true});
+  void setVisualizationCallback(
+    void Function(AudioVisualizationData data)? callback,
+  );
 
   /// Get the current volume in dB. Returns -100 if the capture is not inited.
   ///

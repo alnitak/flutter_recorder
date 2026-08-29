@@ -8,6 +8,7 @@ import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter_recorder/src/audio_data_container.dart';
+import 'package:flutter_recorder/src/audio_visualization_data.dart';
 import 'package:flutter_recorder/src/bindings/flutter_recorder_bindings_generated.dart'
     as bindings;
 import 'package:flutter_recorder/src/bindings/recorder.dart';
@@ -32,6 +33,7 @@ class RecorderController {
 @internal
 class RecorderFfi extends RecorderImpl {
   SilenceCallback? _silenceCallback;
+  void Function(AudioVisualizationData data)? _visualizationCallback;
 
   void _silenceChangedCallback(
     ffi.Pointer<ffi.Bool> silence,
@@ -57,24 +59,80 @@ class RecorderFfi extends RecorderImpl {
     }
   }
 
+  void _visualizationDataCallback(
+    int channelCount,
+    ffi.Pointer<ffi.Pointer<ffi.Float>> waveDataPerChannel,
+    int waveSamples,
+    ffi.Pointer<ffi.Pointer<ffi.Float>> fftDataPerChannel,
+    int fftSamples,
+  ) {
+    final waveList = <Float32List>[];
+    if (waveSamples > 0 && waveDataPerChannel != ffi.nullptr) {
+      for (var c = 0; c < channelCount; c++) {
+        final ptr = waveDataPerChannel[c];
+        if (ptr != ffi.nullptr) {
+          waveList.add(Float32List.fromList(ptr.asTypedList(waveSamples)));
+        }
+      }
+    }
+
+    final fftList = <Float32List>[];
+    if (fftSamples > 0 && fftDataPerChannel != ffi.nullptr) {
+      for (var c = 0; c < channelCount; c++) {
+        final ptr = fftDataPerChannel[c];
+        if (ptr != ffi.nullptr) {
+          fftList.add(Float32List.fromList(ptr.asTypedList(fftSamples)));
+        }
+      }
+    }
+
+    final packet = AudioVisualizationData(
+      channelCount: channelCount,
+      wave: waveList,
+      fft: fftList,
+    );
+
+    _visualizationCallback?.call(packet);
+    if (audioVisualizationEventsController.hasListener) {
+      audioVisualizationEventsController.add(packet);
+    }
+  }
+
+  ffi.NativeCallable<bindings.dartSilenceChangedCallback_tFunction>?
+  nativeSilenceChangedCallable;
   ffi.NativeCallable<bindings.dartStreamDataCallback_tFunction>?
   nativeStreamDataCallable;
+  ffi.NativeCallable<bindings.dartVisualizationCallback_tFunction>?
+  nativeVisualizationCallable;
+
   @override
   Future<void> setDartEventCallbacks() async {
-    // Create a NativeCallable for the Dart functions
-    final nativeSilenceChangedCallable =
+    // Close existing NativeCallables if any before recreating
+    nativeSilenceChangedCallable?.close();
+    nativeStreamDataCallable?.close();
+    nativeVisualizationCallable?.close();
+
+    nativeSilenceChangedCallable =
         ffi.NativeCallable<
           bindings.dartSilenceChangedCallback_tFunction
         >.listener(_silenceChangedCallback);
 
-    final nativeStreamDataCallable =
+    nativeStreamDataCallable =
         ffi.NativeCallable<bindings.dartStreamDataCallback_tFunction>.listener(
           _streamDataCallback,
         );
 
+    nativeVisualizationCallable =
+        ffi.NativeCallable<
+          bindings.dartVisualizationCallback_tFunction
+        >.listener(_visualizationDataCallback);
+
     bindings.flutter_recorder_setDartEventCallback(
-      nativeSilenceChangedCallable.nativeFunction,
-      nativeStreamDataCallable.nativeFunction,
+      nativeSilenceChangedCallable!.nativeFunction,
+      nativeStreamDataCallable!.nativeFunction,
+    );
+    bindings.flutter_recorder_setDartVisualizationCallback(
+      nativeVisualizationCallable!.nativeFunction,
     );
   }
 
@@ -203,6 +261,15 @@ class RecorderFfi extends RecorderImpl {
   @override
   void deinit() {
     _silenceCallback = null;
+    _visualizationCallback = null;
+    bindings.flutter_recorder_setDartVisualizationCallback(ffi.nullptr);
+    bindings.flutter_recorder_setDartEventCallback(ffi.nullptr, ffi.nullptr);
+    nativeSilenceChangedCallable?.close();
+    nativeSilenceChangedCallable = null;
+    nativeStreamDataCallable?.close();
+    nativeStreamDataCallable = null;
+    nativeVisualizationCallable?.close();
+    nativeVisualizationCallable = null;
     bindings.flutter_recorder_deinit();
     super.deinit();
   }
@@ -369,93 +436,35 @@ class RecorderFfi extends RecorderImpl {
   }
 
   @override
-  Float32List getFft({bool alwaysReturnData = true}) {
-    final ffi.Pointer<ffi.Pointer<ffi.Float>> fft = calloc();
-    final isTheSameAsBefore = calloc<ffi.Bool>();
-    bindings.flutter_recorder_getFft(fft, isTheSameAsBefore);
-    if (!alwaysReturnData && isTheSameAsBefore.value) {
-      calloc
-        ..free(isTheSameAsBefore)
-        ..free(fft);
-      return Float32List(0);
+  void setVisualizationEnabled(
+    bool enabled, {
+    int windowSize = 256,
+    VisualizationKind kind = VisualizationKind.waveAndFft,
+    int channel = VisualizationChannel.merged,
+  }) {
+    final error = bindings.flutter_recorder_setVisualizationEnabled(
+      enabled,
+      windowSize,
+      kind.value,
+      channel,
+    );
+    if (CaptureErrors.fromValue(error) != CaptureErrors.captureNoError) {
+      throw RecorderCppException.fromRecorderError(
+        CaptureErrors.fromValue(error),
+      );
     }
-
-    final val = ffi.Pointer<ffi.Float>.fromAddress(fft.value.address);
-    if (val == ffi.nullptr) {
-      calloc.free(fft);
-      return Float32List(0);
-    }
-
-    final fftList = val.cast<ffi.Float>().asTypedList(256);
-    calloc.free(fft);
-    return fftList;
   }
 
   @override
-  Float32List getWave({bool alwaysReturnData = true}) {
-    final ffi.Pointer<ffi.Pointer<ffi.Float>> wave = calloc();
-    final isTheSameAsBefore = calloc<ffi.Bool>();
-    bindings.flutter_recorder_getWave(wave, isTheSameAsBefore);
-    if (!alwaysReturnData && isTheSameAsBefore.value) {
-      calloc
-        ..free(isTheSameAsBefore)
-        ..free(wave);
-      return Float32List(0);
-    }
-
-    final val = ffi.Pointer<ffi.Float>.fromAddress(wave.value.address);
-    if (val == ffi.nullptr) {
-      calloc.free(wave);
-      return Float32List(0);
-    }
-
-    final waveList = val.cast<ffi.Float>().asTypedList(256);
-    calloc.free(wave);
-    return waveList;
+  bool getVisualizationEnabled() {
+    return bindings.flutter_recorder_isVisualizationEnabled() == 1;
   }
 
   @override
-  Float32List getTexture({bool alwaysReturnData = true}) {
-    final ffi.Pointer<ffi.Pointer<ffi.Float>> data = calloc();
-    final isTheSameAsBefore = calloc<ffi.Bool>();
-    bindings.flutter_recorder_getTexture(data, isTheSameAsBefore);
-    if (!alwaysReturnData && isTheSameAsBefore.value) {
-      calloc
-        ..free(isTheSameAsBefore)
-        ..free(data);
-      return Float32List(0);
-    }
-
-    final val = data.value;
-    if (val == ffi.nullptr) return Float32List(512);
-
-    final textureList = val.cast<ffi.Float>().asTypedList(512);
-    calloc
-      ..free(isTheSameAsBefore)
-      ..free(data);
-
-    return textureList;
-  }
-
-  @override
-  Float32List getTexture2D({bool alwaysReturnData = true}) {
-    final ffi.Pointer<ffi.Pointer<ffi.Float>> data = calloc();
-    final isTheSameAsBefore = calloc<ffi.Bool>();
-    bindings.flutter_recorder_getTexture2D(data, isTheSameAsBefore);
-    if (!alwaysReturnData && isTheSameAsBefore.value) {
-      calloc
-        ..free(isTheSameAsBefore)
-        ..free(data);
-      return Float32List(0);
-    }
-
-    final val = ffi.Pointer<ffi.Float>.fromAddress(data.value.address);
-    if (val == ffi.nullptr) return Float32List(512 * 256);
-
-    calloc.free(data);
-    final textureList = val.cast<ffi.Float>().asTypedList(512 * 256);
-
-    return textureList;
+  void setVisualizationCallback(
+    void Function(AudioVisualizationData data)? callback,
+  ) {
+    _visualizationCallback = callback;
   }
 
   @override

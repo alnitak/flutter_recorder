@@ -1,5 +1,6 @@
-import 'dart:io';
+import 'dart:async';
 import 'dart:developer' as dev;
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -53,7 +54,7 @@ class _MyAppState extends State<MyApp> {
   Directory? savingDir;
   final format = PCMFormat.f32le;
   final sampleRate = 22050;
-  final channels = RecorderChannels.mono;
+  final channels = RecorderChannels.stereo;
   final recorder = Recorder.instance;
   String? filePath;
   var thresholdDb = -20.0;
@@ -82,9 +83,18 @@ class _MyAppState extends State<MyApp> {
     _ => 'System default',
   };
 
+  late final AppLifecycleListener _lifecycleListener;
+  StreamSubscription<AudioDataContainer>? _audioStreamSubscription;
+
   @override
   void initState() {
     super.initState();
+    _lifecycleListener = AppLifecycleListener(
+      onDetach: () {
+        recorder.deinit();
+      },
+    );
+
     if (defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS) {
       Permission.microphone.request().isGranted.then((value) async {
@@ -95,7 +105,7 @@ class _MyAppState extends State<MyApp> {
     }
 
     /// Listen to audio data stream. The data is received as Uint8List.
-    recorder.uint8ListStream.listen((data) {
+    _audioStreamSubscription = recorder.uint8ListStream.listen((data) {
       /// Write the PCM data to file. It can then be imported with the correct
       /// parameters with for example Audacity.
       /// Not testing on Web platform.
@@ -108,6 +118,14 @@ class _MyAppState extends State<MyApp> {
         );
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _lifecycleListener.dispose();
+    _audioStreamSubscription?.cancel();
+    recorder.deinit();
+    super.dispose();
   }
 
   @override

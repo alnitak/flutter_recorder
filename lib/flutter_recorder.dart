@@ -2,6 +2,7 @@
 library flutter_recorder;
 
 export 'src/audio_data_container.dart';
+export 'src/audio_visualization_data.dart';
 export 'src/enums.dart'
     show
         AndroidInputPreset,
@@ -10,7 +11,9 @@ export 'src/enums.dart'
         PCMFormat,
         RecorderChannels,
         RecordingFormat,
-        StreamingFormat;
+        StreamingFormat,
+        VisualizationChannel,
+        VisualizationKind;
 export 'src/filters/autogain.dart';
 export 'src/filters/echo_cancellation.dart';
 export 'src/filters/filters.dart'
