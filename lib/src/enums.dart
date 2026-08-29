@@ -55,18 +55,18 @@ enum CaptureErrors {
   const CaptureErrors(this.value);
 
   static CaptureErrors fromValue(int value) => switch (value) {
-        0 => captureNoError,
-        1 => captureInitFailed,
-        2 => captureNotInited,
-        3 => failedToStartDevice,
-        4 => failedToInitializeRecording,
-        5 => invalidArgs,
-        6 => failedToWriteWav,
-        7 => filterNotFound,
-        8 => filterAlreadyAdded,
-        9 => filterParameterGetError,
-        _ => throw ArgumentError('Unknown value for CaptureErrors: $value'),
-      };
+    0 => captureNoError,
+    1 => captureInitFailed,
+    2 => captureNotInited,
+    3 => failedToStartDevice,
+    4 => failedToInitializeRecording,
+    5 => invalidArgs,
+    6 => failedToWriteWav,
+    7 => filterNotFound,
+    8 => filterAlreadyAdded,
+    9 => filterParameterGetError,
+    _ => throw ArgumentError('Unknown value for CaptureErrors: $value'),
+  };
 }
 
 /// The channels to be used while initializing the player.
@@ -105,13 +105,13 @@ enum PCMFormat {
   const PCMFormat(this.value);
 
   static PCMFormat fromValue(int value) => switch (value) {
-        0 => u8,
-        1 => s16le,
-        2 => s24le,
-        3 => s32le,
-        4 => f32le,
-        _ => throw ArgumentError('Unknown value for PCMFormat: $value'),
-      };
+    0 => u8,
+    1 => s16le,
+    2 => s24le,
+    3 => s32le,
+    4 => f32le,
+    _ => throw ArgumentError('Unknown value for PCMFormat: $value'),
+  };
 }
 
 /// Android capture input presets.
@@ -154,10 +154,10 @@ enum RecordingFormat {
   final int value;
 
   static RecordingFormat fromValue(int value) => switch (value) {
-        0 => wav,
-        1 => opusOgg,
-        _ => throw ArgumentError('Unknown value for RecordingFormat: $value'),
-      };
+    0 => wav,
+    1 => opusOgg,
+    _ => throw ArgumentError('Unknown value for RecordingFormat: $value'),
+  };
 }
 
 /// The format used when streaming audio data.
@@ -175,8 +175,8 @@ enum StreamingFormat {
   final int value;
 
   static StreamingFormat fromValue(int value) => switch (value) {
-        0 => pcm,
-        1 => opus,
-        _ => throw ArgumentError('Unknown value for StreamingFormat: $value'),
-      };
+    0 => pcm,
+    1 => opus,
+    _ => throw ArgumentError('Unknown value for StreamingFormat: $value'),
+  };
 }

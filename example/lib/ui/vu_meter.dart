@@ -24,10 +24,7 @@ class VuMeter extends StatelessWidget {
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  Colors.green,
-                  Colors.red,
-                ],
+                colors: [Colors.green, Colors.red],
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,
               ),
@@ -42,10 +39,7 @@ class VuMeter extends StatelessWidget {
             alignment: Alignment.bottomLeft,
             child: Text(
               db.toStringAsFixed(1),
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
             ),
           ),
         ],

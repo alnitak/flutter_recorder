@@ -13,6 +13,8 @@ headers:
     - 'src/flutter_recorder.h'
   include-directives:
     - 'src/flutter_recorder.h'
+ffi-native:
+  asset-id: 'package:flutter_recorder/src/flutter_recorder.h'
 preamble: |
   // ignore_for_file: always_specify_types
   // ignore_for_file: camel_case_types

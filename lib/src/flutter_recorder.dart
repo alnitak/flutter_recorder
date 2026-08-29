@@ -228,11 +228,13 @@ interface class Recorder {
     isDeviceInitialized();
 
     if (_isInitialized) {
-      _log.warning('init() called when the native device is already '
-          'initialized. This is expected after a hot restart but not '
-          "otherwise. If you see this in production logs, there's probably "
-          'a bug in your code. You may have neglected to deinit() Recorder '
-          'during the current lifetime of the app.');
+      _log.warning(
+        'init() called when the native device is already '
+        'initialized. This is expected after a hot restart but not '
+        "otherwise. If you see this in production logs, there's probably "
+        'a bug in your code. You may have neglected to deinit() Recorder '
+        'during the current lifetime of the app.',
+      );
       deinit();
     }
 
@@ -301,9 +303,7 @@ interface class Recorder {
   /// little-endian integer.
   ///
   /// Throws [RecorderNotInitializedException].
-  void startStreamingData({
-    StreamingFormat format = StreamingFormat.pcm,
-  }) {
+  void startStreamingData({StreamingFormat format = StreamingFormat.pcm}) {
     if (!_isInitialized) {
       _log.warning(() => 'startStreamingData(): recorder is not initialized.');
       throw const RecorderNotInitializedException();

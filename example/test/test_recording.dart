@@ -57,21 +57,25 @@ Future<int> main() async {
     fromFormat = n.$1;
     toFormat = n.$2;
 
-    file = File('${downloadsDir.path}/fr_${sampleRate}_'
-        '${n.$1.name}_'
-        '${channels.count}_'
-        'to_${n.$2.name}'
-        '.pcm');
+    file = File(
+      '${downloadsDir.path}/fr_${sampleRate}_'
+      '${n.$1.name}_'
+      '${channels.count}_'
+      'to_${n.$2.name}'
+      '.pcm',
+    );
     try {
       file?.deleteSync();
     } catch (e) {
       debugPrint('Error deleting file: $e');
     }
 
-    fileRaw = File('${downloadsDir.path}/fr_${sampleRate}_'
-        '${n.$1.name}_'
-        '${channels.count}'
-        '.raw');
+    fileRaw = File(
+      '${downloadsDir.path}/fr_${sampleRate}_'
+      '${n.$1.name}_'
+      '${channels.count}'
+      '.raw',
+    );
     try {
       file?.deleteSync();
     } catch (e) {
@@ -103,19 +107,13 @@ Future<int> main() async {
 
 void write(AudioDataContainer data) {
   if (isFirstFormat) {
-    fileRaw?.writeAsBytesSync(
-      data.rawData,
-      mode: FileMode.writeOnlyAppend,
-    );
+    fileRaw?.writeAsBytesSync(data.rawData, mode: FileMode.writeOnlyAppend);
   }
-  file?.writeAsBytesSync(
-    switch (toFormat) {
-      PCMFormat.u8 => data.toU8List(from: fromFormat).buffer.asUint8List(),
-      PCMFormat.s16le => data.toS16List(from: fromFormat).buffer.asUint8List(),
-      PCMFormat.s24le => data.toS24List(from: fromFormat).buffer.asUint8List(),
-      PCMFormat.s32le => data.toS32List(from: fromFormat).buffer.asUint8List(),
-      PCMFormat.f32le => data.toF32List(from: fromFormat).buffer.asUint8List(),
-    },
-    mode: FileMode.writeOnlyAppend,
-  );
+  file?.writeAsBytesSync(switch (toFormat) {
+    PCMFormat.u8 => data.toU8List(from: fromFormat).buffer.asUint8List(),
+    PCMFormat.s16le => data.toS16List(from: fromFormat).buffer.asUint8List(),
+    PCMFormat.s24le => data.toS24List(from: fromFormat).buffer.asUint8List(),
+    PCMFormat.s32le => data.toS32List(from: fromFormat).buffer.asUint8List(),
+    PCMFormat.f32le => data.toF32List(from: fromFormat).buffer.asUint8List(),
+  }, mode: FileMode.writeOnlyAppend);
 }

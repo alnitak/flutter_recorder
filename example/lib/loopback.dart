@@ -39,13 +39,8 @@ void main() async {
   runApp(
     MaterialApp(
       home: Scaffold(
-        appBar: AppBar(
-          title: Text('loopback and filter example'),
-        ),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: LoopBack(),
-        ),
+        appBar: AppBar(title: Text('loopback and filter example')),
+        body: Padding(padding: const EdgeInsets.all(16.0), child: LoopBack()),
       ),
     ),
   );
@@ -93,10 +88,14 @@ class _LoopBackState extends State<LoopBack> {
     AudioSession.instance.then((session) {
       // Listen to list of audio devices changes
       session.devicesStream.listen((devices) {
-        final input =
-            devices.where((d) => d.isInput).map((d) => d.name).join(', ');
-        final output =
-            devices.where((d) => d.isOutput).map((d) => d.name).join(', ');
+        final input = devices
+            .where((d) => d.isInput)
+            .map((d) => d.name)
+            .join(', ');
+        final output = devices
+            .where((d) => d.isOutput)
+            .map((d) => d.name)
+            .join(', ');
         dev.log(
           'Audio devices changed: input=$input, output=$output',
           name: 'AudioSession',
@@ -104,8 +103,10 @@ class _LoopBackState extends State<LoopBack> {
       });
 
       session.becomingNoisyEventStream.listen((_) {
-        dev.log('Audio route became noisy (e.g. unplugged headphones)',
-            name: 'AudioSession');
+        dev.log(
+          'Audio route became noisy (e.g. unplugged headphones)',
+          name: 'AudioSession',
+        );
       });
 
       session.devicesChangedEventStream.listen((event) {
@@ -183,7 +184,7 @@ class _LoopBackState extends State<LoopBack> {
         avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
         avAudioSessionCategoryOptions:
             AVAudioSessionCategoryOptions.allowBluetooth |
-                AVAudioSessionCategoryOptions.defaultToSpeaker,
+            AVAudioSessionCategoryOptions.defaultToSpeaker,
         avAudioSessionMode: AVAudioSessionMode.voiceChat,
         // Android configuration
         androidAudioAttributes: const AndroidAudioAttributes(
@@ -309,7 +310,6 @@ class _LoopBackState extends State<LoopBack> {
         if (autoGain) AutoGainSliders(),
 
         // if (echoCancellation) EchoCancellationSliders(),
-
         if (recorderFormat == PCMFormat.f32le) const Bars(),
       ],
     );

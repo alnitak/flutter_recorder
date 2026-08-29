@@ -57,7 +57,8 @@ class AudioDataContainer {
       case PCMFormat.s24le:
         final result = Uint8List(u8Data.length ~/ 3);
         for (var i = 0; i < result.length; i++) {
-          result[i] = ((u8Data[i * 3] |
+          result[i] =
+              ((u8Data[i * 3] |
                       (u8Data[i * 3 + 1] << 8) |
                       (u8Data[i * 3 + 2] << 16)) >>
                   16) +
@@ -67,7 +68,8 @@ class AudioDataContainer {
       case PCMFormat.s32le:
         final result = Uint8List(u8Data.length ~/ 4);
         for (var i = 0; i < result.length; i++) {
-          result[i] = ((u8Data[i * 4] |
+          result[i] =
+              ((u8Data[i * 4] |
                       (u8Data[i * 4 + 1] << 8) |
                       (u8Data[i * 4 + 2] << 16) |
                       (u8Data[i * 4 + 3] << 24)) >>
@@ -99,22 +101,24 @@ class AudioDataContainer {
       case PCMFormat.s24le:
         final result = Int8List(u8Data.length ~/ 3);
         for (var i = 0; i < result.length; i++) {
-          result[i] = ((u8Data[i * 3] |
-                      (u8Data[i * 3 + 1] << 8) |
-                      (u8Data[i * 3 + 2] << 16)) >>
-                  16)
-              .clamp(-128, 127);
+          result[i] =
+              ((u8Data[i * 3] |
+                          (u8Data[i * 3 + 1] << 8) |
+                          (u8Data[i * 3 + 2] << 16)) >>
+                      16)
+                  .clamp(-128, 127);
         }
         return result;
       case PCMFormat.s32le:
         final result = Int8List(u8Data.length ~/ 4);
         for (var i = 0; i < result.length; i++) {
-          result[i] = ((u8Data[i * 4] |
-                      (u8Data[i * 4 + 1] << 8) |
-                      (u8Data[i * 4 + 2] << 16) |
-                      (u8Data[i * 4 + 3] << 24)) >>
-                  24)
-              .clamp(-128, 127);
+          result[i] =
+              ((u8Data[i * 4] |
+                          (u8Data[i * 4 + 1] << 8) |
+                          (u8Data[i * 4 + 2] << 16) |
+                          (u8Data[i * 4 + 3] << 24)) >>
+                      24)
+                  .clamp(-128, 127);
         }
         return result;
       case PCMFormat.f32le:
@@ -141,7 +145,8 @@ class AudioDataContainer {
       case PCMFormat.s24le:
         final result = Int16List(u8Data.length ~/ 3);
         for (var i = 0; i < result.length; i++) {
-          var sample = u8Data[i * 3] |
+          var sample =
+              u8Data[i * 3] |
               (u8Data[i * 3 + 1] << 8) |
               (u8Data[i * 3 + 2] << 16) |
               0xFF000000;
@@ -193,7 +198,8 @@ class AudioDataContainer {
       case PCMFormat.s24le:
         final result = Int32List(u8Data.length ~/ 3);
         for (var i = 0; i < result.length; i++) {
-          result[i] = (u8Data[i * 3] |
+          result[i] =
+              (u8Data[i * 3] |
                   (u8Data[i * 3 + 1] << 8) |
                   (u8Data[i * 3 + 2] << 16)) <<
               8 >>
@@ -210,8 +216,9 @@ class AudioDataContainer {
         final result = Int32List(u8Data.length ~/ 4);
         final f32Buffer = Float32List.view(u8Data.buffer);
         for (var i = 0; i < result.length; i++) {
-          result[i] =
-              (f32Buffer[i] * 8388607.0).clamp(-8388608, 8388607).toInt();
+          result[i] = (f32Buffer[i] * 8388607.0)
+              .clamp(-8388608, 8388607)
+              .toInt();
         }
         return result;
     }
@@ -266,8 +273,9 @@ class AudioDataContainer {
         final result = Int8List((u8Data.length ~/ 4) * 3);
         final f32Buffer = Float32List.view(u8Data.buffer);
         for (var i = 0; i < f32Buffer.length; i++) {
-          final sample =
-              (f32Buffer[i] * 8388607.0).clamp(-8388608, 8388607).toInt();
+          final sample = (f32Buffer[i] * 8388607.0)
+              .clamp(-8388608, 8388607)
+              .toInt();
           result[i * 3] = sample & 0xFF;
           result[i * 3 + 1] = (sample >> 8) & 0xFF;
           result[i * 3 + 2] = (sample >> 16) & 0xFF;
@@ -294,7 +302,8 @@ class AudioDataContainer {
       case PCMFormat.s24le:
         final result = Int32List(u8Data.length ~/ 3);
         for (var i = 0; i < result.length; i++) {
-          result[i] = u8Data[i * 3] |
+          result[i] =
+              u8Data[i * 3] |
               (u8Data[i * 3 + 1] << 8) |
               (u8Data[i * 3 + 2] << 16) |
               0xFF000000;
@@ -337,7 +346,8 @@ class AudioDataContainer {
       case PCMFormat.s24le:
         final result = Float32List(u8Data.length ~/ 3);
         for (var i = 0; i < result.length; i++) {
-          var sample = u8Data[i * 3] |
+          var sample =
+              u8Data[i * 3] |
               (u8Data[i * 3 + 1] << 8) |
               (u8Data[i * 3 + 2] << 16);
           if (sample >= 0x800000) {

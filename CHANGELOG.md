@@ -1,3 +1,7 @@
+## 2.0.0
+- Migrated native build system to Dart build hooks (Native Assets) across all platforms.
+- Bumped minimum iOS SDK to 15 and MacOS to 12.
+
 ## 1.2.2
 - fix Android OpenSL capture shutdown blocking indefinitely when a stalled input queue cannot drain #51. Thanks to @Avejack #52
 - fix native capture callbacks reading non-float PCM input with float sample width, which could overrun guarded Android AAudio buffers. Thanks to @Avejack #52
