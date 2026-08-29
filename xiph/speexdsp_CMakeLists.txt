@@ -1,0 +1,81 @@
+cmake_minimum_required(VERSION 3.10)
+project(speexdsp VERSION 1.2.1 LANGUAGES C)
+
+include(CheckIncludeFile)
+check_include_file(stdint.h HAVE_STDINT_H)
+
+set(SPEEXDSP_SOURCES
+    libspeexdsp/buffer.c
+    libspeexdsp/fftwrap.c
+    libspeexdsp/filterbank.c
+    libspeexdsp/jitter.c
+    libspeexdsp/kiss_fft.c
+    libspeexdsp/kiss_fftr.c
+    libspeexdsp/mdf.c
+    libspeexdsp/preprocess.c
+    libspeexdsp/resample.c
+    libspeexdsp/scal.c
+    libspeexdsp/smallft.c
+)
+
+set(SPEEXDSP_HEADERS
+    include/speex/speex_buffer.h
+    include/speex/speex_echo.h
+    include/speex/speex_jitter.h
+    include/speex/speex_preprocess.h
+    include/speex/speex_resampler.h
+    include/speex/speexdsp_types.h
+)
+
+# Generate config.h
+file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/include/config.h
+"#ifndef CONFIG_H
+#define CONFIG_H
+#define FLOATING_POINT 1
+#define USE_KISS_FFT 1
+#define EXPORT
+#define _USE_MATH_DEFINES
+#endif
+"
+)
+
+# Generate speexdsp_config_types.h
+set(INCLUDE_STDINT "#include <stdint.h>")
+set(SIZE16 "int16_t")
+set(USIZE16 "uint16_t")
+set(SIZE32 "int32_t")
+set(USIZE32 "uint32_t")
+configure_file(
+    include/speex/speexdsp_config_types.h.in
+    ${CMAKE_CURRENT_BINARY_DIR}/include/speex/speexdsp_config_types.h
+    @ONLY
+)
+
+add_library(speexdsp ${SPEEXDSP_SOURCES})
+
+target_include_directories(speexdsp PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include/speex>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libspeexdsp>
+    $<INSTALL_INTERFACE:include>
+)
+
+target_compile_definitions(speexdsp PRIVATE
+    HAVE_CONFIG_H=1
+    FLOATING_POINT=1
+    USE_KISS_FFT=1
+)
+
+install(TARGETS speexdsp
+    EXPORT speexdspTargets
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
+)
+
+install(FILES 
+    ${SPEEXDSP_HEADERS} 
+    ${CMAKE_CURRENT_BINARY_DIR}/include/speex/speexdsp_config_types.h
+    DESTINATION include/speex
+)

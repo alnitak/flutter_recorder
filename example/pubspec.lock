@@ -120,11 +120,10 @@ packages:
   flutter_soloud:
     dependency: "direct main"
     description:
-      name: flutter_soloud
-      sha256: cf82758933734b13274584b19e2080e2611c9c20800710033763b95b8672df47
-      url: "https://pub.dev"
-    source: hosted
-    version: "4.0.0"
+      path: "../../flutter_soloud"
+      relative: true
+    source: path
+    version: "5.0.0-pre.2"
   flutter_test:
     dependency: "direct dev"
     description: flutter

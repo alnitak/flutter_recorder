@@ -69,10 +69,14 @@ class _LoopBackState extends State<LoopBack> {
   AudioSource? audioSource;
 
   bool autoGain = false;
-  // bool echoCancellation = false;
+  bool echoCancellation = false;
+  bool nativeLoopback = false;
 
   /// Subscription to recorder stream (need to cancel on dispose)
   StreamSubscription<AudioDataContainer>? _recorderSubscription;
+
+  /// Subscription to SoLoud mixer capture output stream (feeds AEC playback reference)
+  StreamSubscription<Uint8List>? _soloudMixerSubscription;
 
   @override
   void initState() {
@@ -119,21 +123,62 @@ class _LoopBackState extends State<LoopBack> {
 
     /// Listen for microphne data.
     _recorderSubscription = recorder.uint8ListStream.listen((chunks) {
-      if (audioSource != null) {
-        soloud.addAudioDataStream(
-          audioSource!,
-          chunks.toF32List(from: PCMFormat.f32le).buffer.asUint8List(),
-        );
-      } else {
-        initAudioSource();
-        soloud
-          ..addAudioDataStream(
+      // If native loopback is enabled, audio plays natively through duplex output.
+      // If disabled, route audio to SoLoud buffer stream for playback.
+      if (!recorder.isLoopbackEnabled()) {
+        if (audioSource != null) {
+          soloud.addAudioDataStream(
             audioSource!,
             chunks.toF32List(from: PCMFormat.f32le).buffer.asUint8List(),
-          )
-          ..play(audioSource!, volume: 4);
+          );
+        } else {
+          initAudioSource();
+          soloud
+            ..addAudioDataStream(
+              audioSource!,
+              chunks.toF32List(from: PCMFormat.f32le).buffer.asUint8List(),
+            )
+            ..play(audioSource!, volume: 1);
+        }
       }
     });
+  }
+
+  /// Updates loopback routing mode:
+  /// - When enabled: miniaudio duplex loopback routes mic to speaker natively.
+  /// - When disabled: SoLoud handles playback, and its mixer capture output
+  ///   is fed to AEC as the far-end speaker reference.
+  void _updateLoopbackMode(bool enabled) {
+    if (!recorder.isInitialized) return;
+    recorder.setLoopback(enable: enabled);
+
+    if (enabled) {
+      _soloudMixerSubscription?.cancel();
+      _soloudMixerSubscription = null;
+      if (soloud.isMixerOutputStreamRunning) {
+        soloud.stopMixerOutputStream();
+      }
+      disposeAudioSource();
+    } else {
+      if (soloud.isInitialized) {
+        _soloudMixerSubscription?.cancel();
+        _soloudMixerSubscription = soloud
+            .startMixerOutputStream(
+              format: MixerOutputFormat.pcmF32le,
+              channels: recorderChannels.count,
+            )
+            .listen((mixerData) {
+              if (recorder.isInitialized &&
+                  recorder.filters.echoCancellationFilter.isActive) {
+                recorder.feedPlaybackData(
+                  mixerData,
+                  format: PCMFormat.f32le,
+                  channels: recorderChannels,
+                );
+              }
+            });
+      }
+    }
   }
 
   /// Initialize the audio source
@@ -167,6 +212,11 @@ class _LoopBackState extends State<LoopBack> {
   void dispose() {
     if (audioSource != null) {
       soloud.setDataIsEnded(audioSource!);
+    }
+    _soloudMixerSubscription?.cancel();
+    _soloudMixerSubscription = null;
+    if (soloud.isMixerOutputStreamRunning) {
+      soloud.stopMixerOutputStream();
     }
     _recorderSubscription?.cancel();
     recorder.deinit();
@@ -216,9 +266,6 @@ class _LoopBackState extends State<LoopBack> {
       channels: Channels.mono,
       sampleRate: sampleRate,
     );
-    // soloud.filters.echoFilter.activate();
-    // soloud.filters.echoFilter.delay.value = 0.1;
-    // soloud.filters.echoFilter.decay.value = 0.2;
 
     await recorder.init(
       format: recorderFormat,
@@ -229,6 +276,8 @@ class _LoopBackState extends State<LoopBack> {
     recorder
       ..start()
       ..startStreamingData();
+
+    _updateLoopbackMode(nativeLoopback);
 
     /// Debug: Log audio route after init
     final devicesAfter = await session.getDevices();
@@ -262,6 +311,11 @@ class _LoopBackState extends State<LoopBack> {
             ),
             OutlinedButton(
               onPressed: () {
+                _soloudMixerSubscription?.cancel();
+                _soloudMixerSubscription = null;
+                if (soloud.isMixerOutputStreamRunning) {
+                  soloud.stopMixerOutputStream();
+                }
                 // First deinit the recorder and then the player
                 recorder
                   ..stopStreamingData()
@@ -270,6 +324,29 @@ class _LoopBackState extends State<LoopBack> {
                 audioSource = null;
               },
               child: const Text('Stop'),
+            ),
+          ],
+        ),
+
+        // Native Loopback Checkbox
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Checkbox(
+              value: nativeLoopback,
+              onChanged: (v) {
+                if (v == null) return;
+                setState(() {
+                  nativeLoopback = v;
+                });
+                _updateLoopbackMode(v);
+              },
+            ),
+            const Flexible(
+              child: Text(
+                'Native Duplex Loopback: When checked, uses miniaudio duplex loopback directly. '
+                'When unchecked, uses flutter_soloud playback and feeds its mixer output capture to AEC.',
+              ),
             ),
           ],
         ),
@@ -292,101 +369,125 @@ class _LoopBackState extends State<LoopBack> {
                 });
               },
             ),
-            // Text('Echo Cancellation'),
-            // Checkbox(
-            //   value: echoCancellation,
-            //   onChanged: (v) {
-            //     if (v!) {
-            //       recorder.filters.echoCancellationFilter.activate();
-            //     } else {
-            //       recorder.filters.echoCancellationFilter.deactivate();
-            //     }
-            //     setState(() {
-            //       echoCancellation = v;
-            //     });
-            //   },
-            // ),
+            Text('Echo Cancellation'),
+            Checkbox(
+              value: echoCancellation,
+              onChanged: (v) {
+                if (v!) {
+                  recorder.filters.echoCancellationFilter.activate();
+                } else {
+                  recorder.filters.echoCancellationFilter.deactivate();
+                }
+                setState(() {
+                  echoCancellation = v;
+                });
+              },
+            ),
           ],
         ),
 
         if (autoGain) AutoGainSliders(),
 
-        // if (echoCancellation) EchoCancellationSliders(),
+        if (echoCancellation) EchoCancellationSliders(),
         if (recorderFormat == PCMFormat.f32le) const Bars(),
       ],
     );
   }
 }
 
-// class EchoCancellationSliders extends StatefulWidget {
-//   const EchoCancellationSliders({super.key});
+class EchoCancellationSliders extends StatefulWidget {
+  const EchoCancellationSliders({super.key});
 
-//   @override
-//   State<EchoCancellationSliders> createState() =>
-//       _EchoCancellationSlidersState();
-// }
+  @override
+  State<EchoCancellationSliders> createState() =>
+      _EchoCancellationSlidersState();
+}
 
-// class _EchoCancellationSlidersState extends State<EchoCancellationSliders> {
-//   late final Recorder recorder;
-//   late final EchoCancellation echoCancellation;
+class _EchoCancellationSlidersState extends State<EchoCancellationSliders> {
+  late final Recorder recorder;
+  late final EchoCancellation echoCancellation;
 
-//   @override
-//   void initState() {
-//     super.initState();
-//     recorder = Recorder.instance;
-//     echoCancellation = recorder.filters.echoCancellationFilter;
-//   }
+  @override
+  void initState() {
+    super.initState();
+    recorder = Recorder.instance;
+    echoCancellation = recorder.filters.echoCancellationFilter;
+  }
 
-//   @override
-//   Widget build(BuildContext context) {
-//     return Column(
-//       children: [
-//         Row(
-//           mainAxisSize: MainAxisSize.min,
-//           children: [
-//             Text(
-//               '${echoCancellation.queryEchoDelayMs}: '
-//               '${echoCancellation.echoDelayMs.value.toStringAsFixed(2)}',
-//             ),
-//             Expanded(
-//               child: Slider(
-//                 value: echoCancellation.echoDelayMs.value,
-//                 min: echoCancellation.queryEchoDelayMs.min,
-//                 max: echoCancellation.queryEchoDelayMs.max,
-//                 onChanged: (v) {
-//                   setState(() {
-//                     echoCancellation.echoDelayMs.value = v;
-//                   });
-//                 },
-//               ),
-//             ),
-//           ],
-//         ),
-//         Row(
-//           mainAxisSize: MainAxisSize.min,
-//           children: [
-//             Text(
-//               '${echoCancellation.queryEchoAttenuation}: '
-//               '${echoCancellation.echoAttenuation.value.toStringAsFixed(2)}',
-//             ),
-//             Expanded(
-//               child: Slider(
-//                 value: echoCancellation.echoAttenuation.value,
-//                 min: echoCancellation.queryEchoAttenuation.min,
-//                 max: echoCancellation.queryEchoAttenuation.max,
-//                 onChanged: (v) {
-//                   setState(() {
-//                     echoCancellation.echoAttenuation.value = v;
-//                   });
-//                 },
-//               ),
-//             ),
-//           ],
-//         ),
-//       ],
-//     );
-//   }
-// }
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${echoCancellation.queryFilterLengthMs}: '
+              '${echoCancellation.filterLengthMs.value.toStringAsFixed(0)} ms',
+            ),
+            Expanded(
+              child: Slider(
+                value: echoCancellation.filterLengthMs.value,
+                min: echoCancellation.queryFilterLengthMs.min,
+                max: echoCancellation.queryFilterLengthMs.max,
+                onChanged: (v) {
+                  if (v < echoCancellation.queryFilterLengthMs.min ||
+                      v > echoCancellation.queryFilterLengthMs.max) {
+                    return;
+                  }
+                  setState(() {
+                    echoCancellation.filterLengthMs.value = v;
+                  });
+                },
+              ),
+            ),
+          ],
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${echoCancellation.queryDenoiseLevelDb}: '
+              '${echoCancellation.denoiseLevelDb.value.toStringAsFixed(1)} dB',
+            ),
+            Expanded(
+              child: Slider(
+                value: echoCancellation.denoiseLevelDb.value,
+                min: echoCancellation.queryDenoiseLevelDb.min,
+                max: echoCancellation.queryDenoiseLevelDb.max,
+                onChanged: (v) {
+                  if (v < echoCancellation.queryDenoiseLevelDb.min ||
+                      v > echoCancellation.queryDenoiseLevelDb.max) {
+                    return;
+                  }
+                  setState(() {
+                    echoCancellation.denoiseLevelDb.value = v;
+                  });
+                },
+              ),
+            ),
+          ],
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(echoCancellation.queryDenoiseEnabled.toString()),
+            Checkbox(
+              value: echoCancellation.denoiseEnabled.value > 0.5,
+              onChanged: (v) {
+                setState(() {
+                  echoCancellation.denoiseEnabled.value = (v ?? false)
+                      ? 1.0
+                      : 0.0;
+                });
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
 
 class AutoGainSliders extends StatefulWidget {
   const AutoGainSliders({super.key});

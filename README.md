@@ -225,3 +225,55 @@ final value = autoGain.targetRms.value;
 ```
 Writable parameters: `targetRMS`, `attackTime`, `releaseTime`, `gainSmoothing`, `maxGain`, `minGain`, `noiseFloorDb`, `headroomDb`.
 Read-only metrics: `currentGain`, `inputRms`, `outputPeak`, `limiterClipCount`, `totalLimiterClipCount`, `lastFrameCount`.
+
+### 🔇 Acoustic Echo Cancellation (AEC) & Loopback
+
+`flutter_recorder` integrates real-time Acoustic Echo Cancellation powered by [SpeexDSP](https://github.com/xiph/speexdsp) ([Revised BSD License](https://github.com/xiph/speexdsp/blob/master/COPYING)) to remove loudspeaker feedback and room reflections from the microphone signal.
+
+```dart
+final recorder = Recorder.instance;
+
+// 1. Activate the AEC filter
+recorder.filters.echoCancellationFilter.activate();
+
+// 2. Adjust parameters
+recorder.filters.echoCancellationFilter.filterLengthMs.value = 150; // 10 to 500 ms
+recorder.filters.echoCancellationFilter.denoiseEnabled.value = 1;    // 0 or 1
+recorder.filters.echoCancellationFilter.denoiseLevelDb.value = -30;  // -60 to 0 dB
+```
+
+#### Choose Reference Audio Mode:
+
+Depending on your application architecture, AEC can obtain its far-end speaker reference in two ways:
+
+##### Mode A: Native Duplex Loopback (Karaoke / Sidetone)
+```dart
+// Routes mic audio directly to speakers/headphones in native C++ with near-zero latency (< 15ms)
+recorder.setLoopback(enable: true);
+```
+- **Karaoke & In-Ear Monitoring**: Singers hear their own voice with zero delay while AEC prevents acoustic howling.
+- **Microphone Sidetone**: Confidence monitoring for podcasters and streamers.
+
+##### Mode B: External Playback Reference (VoIP / Gaming / Smart Assistants)
+```dart
+// Keep native loopback off so mic audio is not duplicated
+recorder.setLoopback(enable: false);
+
+// Capture loudspeaker audio from flutter_soloud (or your VoIP decoder) and feed it to AEC:
+soloud.startMixerOutputStream(format: MixerOutputFormat.pcmF32le).listen((mixerData) {
+  recorder.feedPlaybackData(mixerData, format: PCMFormat.f32le);
+});
+```
+- **Voice Calls / Video Conferencing**: Eliminates remote caller echo when loudspeaker is active.
+- **Gaming with Voice Chat**: Cancels background game music and SFX played via `flutter_soloud` from the chat mic.
+- **Voice Assistants (Barge-In)**: Allows devices to hear user commands while actively playing music or responses.
+
+---
+
+## 📜 Third-Party Libraries & Licenses
+
+- **[miniaudio](https://github.com/mackron/miniaudio)**: Public Domain / MIT-0 License
+- **[SpeexDSP](https://github.com/xiph/speexdsp)**: [Revised BSD License (3-Clause BSD)](https://github.com/xiph/speexdsp/blob/master/COPYING) (Copyright © 2002–2008 Xiph.org Foundation, Jean-Marc Valin, CSIRO, et al.)
+- **[Opus](https://github.com/xiph/opus)**: [BSD License](https://github.com/xiph/opus/blob/master/COPYING)
+- **[Ogg](https://github.com/xiph/ogg)**: [BSD License](https://github.com/xiph/ogg/blob/master/COPYING)
+

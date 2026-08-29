@@ -182,7 +182,7 @@ enum RecorderFilterType {
   /// The number of parameter this filter owns.
   int get numParameters => switch (this) {
     RecorderFilterType.autogain => 14,
-    RecorderFilterType.echoCancellation => 2,
+    RecorderFilterType.echoCancellation => 3,
   };
 
   /// Activate this filter.

@@ -81,6 +81,10 @@ extern "C"
 
     FFI_PLUGIN_EXPORT void flutter_recorder_setFftSmoothing(float smooth);
 
+    FFI_PLUGIN_EXPORT void flutter_recorder_setLoopback(bool enable);
+
+    FFI_PLUGIN_EXPORT int flutter_recorder_isLoopbackEnabled();
+
     /////////////////////////
     /// FILTERS
     /////////////////////////
@@ -90,6 +94,7 @@ extern "C"
     FFI_PLUGIN_EXPORT void flutter_recorder_getFilterParamNames(enum RecorderFilterType filterType, char **names, int *paramsCount);
     FFI_PLUGIN_EXPORT void flutter_recorder_setFilterParams(enum RecorderFilterType filterType, int attributeId, float value);
     FFI_PLUGIN_EXPORT float flutter_recorder_getFilterParams(enum RecorderFilterType filterType, int attributeId);
+    FFI_PLUGIN_EXPORT void flutter_recorder_feedPlaybackData(const void *data, unsigned int frameCount, unsigned int channels, int pcmFormat);
 
 #ifdef __cplusplus
 }

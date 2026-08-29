@@ -2,9 +2,13 @@
 #define ECHO_CANCELLATION_H
 
 #include "generic_filter.h"
+#include <speex/speex_echo.h>
+#include <speex/speex_preprocess.h>
 
 #include <vector>
 #include <unordered_map>
+#include <mutex>
+#include <string>
 
 class EchoCancellation : public GenericFilter
 {
@@ -12,13 +16,15 @@ public:
     // Enum for filter parameters
     enum Params
     {
-        EchoDelayMs,
-        EchoAttenuation,
+        FilterLengthMs,
+        DenoiseEnabled,
+        DenoiseLevelDb,
         ParamCount // Always keep this last; indicates the number of parameters
     };
 
-    EchoCancellation() {};
+    EchoCancellation();
     EchoCancellation(unsigned int sampleRate);
+    ~EchoCancellation();
 
     int getParamCount() const override;
     float getParamMax(int param) const override;
@@ -29,9 +35,10 @@ public:
     float getParamValue(int param) const override;
 
     void process(void *pInput, ma_uint32 frameCount, unsigned int channels, ma_format format) override;
+    void processDuplex(void *pInput, void *pOutput, ma_uint32 frameCount, unsigned int channels, ma_format format) override;
+    void feedPlaybackData(const void *pData, ma_uint32 frameCount, unsigned int channels, ma_format format);
 
 private:
-    // Struct to hold parameter information
     struct ParamInfo
     {
         float defaultVal;
@@ -39,33 +46,26 @@ private:
         float maxVal;
     };
 
-    unsigned int mDelaySamples;
-    std::vector<float> mBuffer; // Circular buffer for storing past samples
-    unsigned int mWriteIndex;
+    void initSpeex(unsigned int channels);
+    void destroySpeex();
 
-    // Parameter metadata
+    unsigned int mSampleRate;
+    unsigned int mChannels;
+    int mFrameSize;
+    int mFilterLength;
+
+    SpeexEchoState *mEchoState;
+    std::vector<SpeexPreprocessState *> mPreprocessStates;
+
     std::unordered_map<Params, ParamInfo> mParams;
-
-    // Parameter values
     std::vector<float> mValues;
 
-    template <typename T>
-    void processAudio(void *pInput, ma_uint32 frameCount, unsigned int channels);
+    std::mutex mMutex;
 
-    void processAudioS24(void *pInput, ma_uint32 frameCount, unsigned int channels);
+    std::vector<spx_int16_t> mMicFifo;
+    std::vector<spx_int16_t> mRefFifo;
+    std::vector<spx_int16_t> mOutFifo;
 
-    float normalizeSample(unsigned char sample);
-
-    float normalizeSample(int16_t sample);
-
-    float normalizeSample(int32_t sample);
-
-    float normalizeSample(float sample);
-
-    template <typename T>
-    T denormalizeSample(float sample);
-
-    // Validate parameter index
     void validateParam(int param) const;
 };
 

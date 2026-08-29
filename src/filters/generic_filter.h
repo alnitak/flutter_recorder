@@ -21,6 +21,11 @@ public:
 
     // Pure virtual method to apply the filter (to be implemented by derived classes)
     virtual void process(void* pInput, ma_uint32 frameCount, unsigned int channels, ma_format format) = 0;
+
+    // Optional duplex method for filters that utilize playback output (e.g. EchoCancellation)
+    virtual void processDuplex(void* pInput, void* pOutput, ma_uint32 frameCount, unsigned int channels, ma_format format) {
+        process(pInput, frameCount, channels, format);
+    }
 };
 
 #endif // GENERIC_FILTERS_H

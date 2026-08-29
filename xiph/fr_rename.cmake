@@ -6,7 +6,7 @@
 # entries recorded in libflutter_recorder.so match the file names that are
 # actually packaged into the APK.
 function(_fr_rename_targets)
-  foreach(t ogg opus)
+  foreach(t ogg opus speexdsp)
     if(TARGET ${t})
       set_target_properties(${t} PROPERTIES OUTPUT_NAME fr_${t})
     endif()

@@ -10,12 +10,44 @@ Filters::Filters(unsigned int samplerate) : mSamplerate(samplerate) {}
 
 Filters::~Filters() {}
 
+void Filters::setSampleRate(unsigned int samplerate)
+{
+    if (mSamplerate == samplerate)
+        return;
+    mSamplerate = samplerate;
+    for (auto &fo : filters)
+    {
+        switch (fo->type)
+        {
+        case autogain:
+            fo->filter = std::make_unique<AutoGain>(mSamplerate);
+            break;
+        case echoCancellation:
+            fo->filter = std::make_unique<EchoCancellation>(mSamplerate);
+            break;
+        default:
+            break;
+        }
+        if (fo->filter)
+        {
+            auto it = mStoredParams.find(fo->type);
+            if (it != mStoredParams.end())
+            {
+                for (const auto &[attrId, val] : it->second)
+                {
+                    fo->filter->setParamValue(attrId, val);
+                }
+            }
+        }
+    }
+}
+
 int Filters::isFilterActive(RecorderFilterType filter)
 {
-    for (int i = 0; i < filters.size(); i++)
+    for (size_t i = 0; i < filters.size(); i++)
     {
         if (filters[i].get()->type == filter)
-            return i;
+            return static_cast<int>(i);
     }
     return -1;
 }
@@ -68,6 +100,15 @@ CaptureErrors Filters::addFilter(RecorderFilterType filterType)
         return CaptureErrors::filterNotFound;
     }
 
+    auto it = mStoredParams.find(filterType);
+    if (it != mStoredParams.end())
+    {
+        for (const auto &[attrId, val] : it->second)
+        {
+            newFilter->setParamValue(attrId, val);
+        }
+    }
+
     std::unique_ptr<FilterObject> nfo = std::make_unique<FilterObject>(filterType, std::move(newFilter));
     /// In [filters] we add the new filter to the list. All these filters must be processed inside the callback.
     filters.push_back(std::move(nfo));
@@ -91,29 +132,52 @@ CaptureErrors Filters::removeFilter(RecorderFilterType filterType)
 
 void Filters::setFilterParams(RecorderFilterType filterType, int attributeId, float value)
 {
+    mStoredParams[filterType][attributeId] = value;
     int index = isFilterActive(filterType);
-    if (index < 0)
-        return;
-    filters[index].get()->filter.get()->setParamValue(attributeId, value);
+    if (index >= 0)
+    {
+        filters[index].get()->filter.get()->setParamValue(attributeId, value);
+    }
 }
 
 float Filters::getFilterParams(RecorderFilterType filterType, int attributeId)
 {
     int index = isFilterActive(filterType);
-    // If not active return its default value
-    if (index < 0) {
-        switch (filterType)
+    if (index >= 0)
+    {
+        return filters[index].get()->filter.get()->getParamValue(attributeId);
+    }
+
+    auto it = mStoredParams.find(filterType);
+    if (it != mStoredParams.end())
+    {
+        auto itParam = it->second.find(attributeId);
+        if (itParam != it->second.end())
         {
-        case autogain:
-            return AutoGain(0).getParamDef(attributeId);
-        case echoCancellation:
-            return EchoCancellation(0).getParamDef(attributeId);
-        default:
-            return 9999.f;
+            return itParam->second;
         }
     }
 
-    float ret = filters[index].get()->filter.get()->getParamValue(attributeId);
+    switch (filterType)
+    {
+    case autogain:
+        return AutoGain(0).getParamDef(attributeId);
+    case echoCancellation:
+        return EchoCancellation(0).getParamDef(attributeId);
+    default:
+        return 9999.f;
+    }
+}
 
-    return ret;
+void Filters::feedPlaybackData(const void *pData, ma_uint32 frameCount, unsigned int channels, ma_format format)
+{
+    int index = isFilterActive(RecorderFilterType::echoCancellation);
+    if (index >= 0 && filters[index]->filter)
+    {
+        auto *ec = dynamic_cast<EchoCancellation *>(filters[index]->filter.get());
+        if (ec != nullptr)
+        {
+            ec->feedPlaybackData(pData, frameCount, channels, format);
+        }
+    }
 }

@@ -104,6 +104,14 @@ enum PCMFormat {
 
   const PCMFormat(this.value);
 
+  /// Number of bytes per sample for this format.
+  int get sampleSize => switch (this) {
+    u8 => 1,
+    s16le => 2,
+    s24le => 3,
+    s32le || f32le => 4,
+  };
+
   static PCMFormat fromValue(int value) => switch (value) {
     0 => u8,
     1 => s16le,

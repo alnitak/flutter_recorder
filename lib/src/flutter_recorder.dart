@@ -268,12 +268,18 @@ interface class Recorder {
     return _isInitialized;
   }
 
+  /// Whether the device is initialized.
+  bool get isInitialized => isDeviceInitialized();
+
   /// Whether the device is started.
   bool isDeviceStarted() {
     // ignore: join_return_with_assignment
     _isStarted = _recorder.impl.isDeviceStarted();
     return _isStarted;
   }
+
+  /// Whether the device is started.
+  bool get isStarted => isDeviceStarted();
 
   /// Start the device.
   ///
@@ -475,6 +481,41 @@ interface class Recorder {
     return _recorder.impl.getVolumeDb();
   }
 
+  /// Enable or disable native duplex loopback.
+  ///
+  /// When enabled on duplex-capable devices, microphone audio is automatically
+  /// output through the default speaker/headphones with minimal latency, and
+  /// used as the far-end reference signal for acoustic echo cancellation.
+  ///
+  /// ### Use Cases:
+  /// - **Karaoke & Live Mic Monitoring (Sidetone)**: Singers or presenters
+  ///   wearing headphones can hear their own voice in real-time with near-zero
+  ///   latency.
+  /// - **In-Ear Monitoring / Hearing Assist**: Near-zero latency mic-to-ear
+  ///   pass-through where audio buffering delay must remain imperceptible
+  ///   (< 15ms).
+  ///
+  /// > [!NOTE]
+  /// > If your app plays external audio (such as remote participant speech in
+  /// > a VoIP call or game music via `flutter_soloud`) instead of just looping
+  /// > the microphone, leave native loopback disabled and use
+  /// > [feedPlaybackData] to supply the far-end speaker reference to AEC.
+  void setLoopback({required bool enable}) {
+    if (!_isInitialized) {
+      _log.warning(() => 'setLoopback: recorder is not initialized.');
+      return;
+    }
+    _recorder.impl.setLoopback(enable: enable);
+  }
+
+  /// Check whether native duplex loopback is currently enabled.
+  bool isLoopbackEnabled() {
+    if (!_isInitialized) {
+      return false;
+    }
+    return _recorder.impl.isLoopbackEnabled();
+  }
+
   // ///////////////////////
   //   FILTERS
   // ///////////////////////
@@ -519,5 +560,41 @@ interface class Recorder {
   /// Get filter param value.
   double getFilterParamValue(RecorderFilterType filterType, int attributeId) {
     return _recorder.impl.getFilterParamValue(filterType, attributeId);
+  }
+
+  /// Feed far-end playback audio data to the echo cancellation filter.
+  ///
+  /// Supplies external loudspeaker playback frames (e.g. from `flutter_soloud`
+  /// or a VoIP decoder) to the SpeexDSP Acoustic Echo Cancellation (AEC)
+  /// filter. AEC uses this reference signal to subtract speaker sound picked
+  /// up by the microphone.
+  ///
+  /// ### Use Cases:
+  /// - **Voice Calls & VoIP Conferencing**: When remote participants' voices
+  ///   are played through the device speaker, feeding the decoded playback
+  ///   frames prevents the remote caller from hearing their own voice echoing
+  ///   back.
+  /// - **Gaming with Voice Chat**: Game SFX and music played via
+  ///   `flutter_soloud` are captured using `soloud.startMixerOutputStream()`
+  ///   and fed here so teammates only hear your voice, not the game audio.
+  /// - **Voice Assistants / Smart Devices (Barge-In)**: The device can play
+  ///   spoken responses or music while listening for user wake words and
+  ///   commands without being triggered by its own speaker output.
+  ///
+  /// [data] raw PCM bytes of the playback stream.
+  /// [format] PCM format of the playback data (default [PCMFormat.f32le]).
+  /// [channels] number of channels in the playback data (default
+  /// [RecorderChannels.mono]). Stereo streams are automatically downmixed to
+  /// match the recorder channels.
+  void feedPlaybackData(
+    Uint8List data, {
+    PCMFormat format = PCMFormat.f32le,
+    RecorderChannels channels = RecorderChannels.mono,
+  }) {
+    if (!_isInitialized) {
+      _log.warning(() => 'feedPlaybackData: recorder is not initialized.');
+      return;
+    }
+    _recorder.impl.feedPlaybackData(data, format: format, channels: channels);
   }
 }

@@ -260,17 +260,21 @@ class RecorderFfi extends RecorderImpl {
 
   @override
   void deinit() {
-    _silenceCallback = null;
-    _visualizationCallback = null;
+    bindings.flutter_recorder_stopRecording();
+    bindings.flutter_recorder_stopStreamingData();
+    bindings.flutter_recorder_stop();
     bindings.flutter_recorder_setDartVisualizationCallback(ffi.nullptr);
     bindings.flutter_recorder_setDartEventCallback(ffi.nullptr, ffi.nullptr);
+    bindings.flutter_recorder_deinit();
+
+    _silenceCallback = null;
+    _visualizationCallback = null;
     nativeSilenceChangedCallable?.close();
     nativeSilenceChangedCallable = null;
     nativeStreamDataCallable?.close();
     nativeStreamDataCallable = null;
     nativeVisualizationCallable?.close();
     nativeVisualizationCallable = null;
-    bindings.flutter_recorder_deinit();
     super.deinit();
   }
 
@@ -527,6 +531,16 @@ class RecorderFfi extends RecorderImpl {
   }
 
   @override
+  void setLoopback({required bool enable}) {
+    bindings.flutter_recorder_setLoopback(enable);
+  }
+
+  @override
+  bool isLoopbackEnabled() {
+    return bindings.flutter_recorder_isLoopbackEnabled() == 1;
+  }
+
+  @override
   void setFilterParamValue(
     RecorderFilterType filterType,
     int attributeId,
@@ -545,5 +559,29 @@ class RecorderFfi extends RecorderImpl {
       filterType.value,
       attributeId,
     );
+  }
+
+  @override
+  void feedPlaybackData(
+    Uint8List data, {
+    required PCMFormat format,
+    required RecorderChannels channels,
+  }) {
+    if (data.isEmpty) return;
+    final bytesPerSample = format.sampleSize;
+    final totalSamples = data.lengthInBytes ~/ bytesPerSample;
+    final frameCount = totalSamples ~/ channels.count;
+    if (frameCount == 0) return;
+
+    using((Arena arena) {
+      final ptr = arena<ffi.Uint8>(data.lengthInBytes);
+      ptr.asTypedList(data.lengthInBytes).setAll(0, data);
+      bindings.flutter_recorder_feedPlaybackData(
+        ptr.cast<ffi.Void>(),
+        frameCount,
+        channels.count,
+        format.value,
+      );
+    });
   }
 }
