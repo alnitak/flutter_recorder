@@ -17,7 +17,26 @@ unset LDFLAGS
 unset SDKROOT
 unset SYSROOT
 
-# Set up temporary include directories so <opus/opus.h> and <ogg/ogg.h> resolve
+# Clone repositories if they don't exist
+if [ ! -d "../../xiph/ogg" ]; then
+    echo "Cloning ogg..."
+    git clone https://github.com/xiph/ogg ../../xiph/ogg
+    (cd ../../xiph/ogg && git reset --hard db5c7a4)
+fi
+
+if [ ! -d "../../xiph/opus" ]; then
+    echo "Cloning opus..."
+    git clone https://github.com/xiph/opus ../../xiph/opus
+    (cd ../../xiph/opus && git reset --hard c79a9bd)
+fi
+
+if [ ! -d "../../xiph/speexdsp" ]; then
+    echo "Cloning speexdsp..."
+    git clone https://github.com/xiph/speexdsp ../../xiph/speexdsp
+    (cd ../../xiph/speexdsp && git reset --hard 7a15878)
+fi
+
+# Set up temporary include directories so <opus/opus.h>, <ogg/ogg.h>, and <speex/speex_*.h> resolve
 # to the vendored xiph sources. A config_types.h is generated because Ogg's
 # os_types.h requires it on platforms it doesn't explicitly recognise.
 mkdir -p include
@@ -55,74 +74,131 @@ typedef uint32_t spx_uint32_t;
 #endif
 EOF
 
-#https://emscripten.org/docs/tools_reference/emcc.html
-#-g3 #keep debug info, including JS whitespace, function names
+mkdir -p obj/speexdsp
+mkdir -p obj/ogg
+mkdir -p obj/opus
+mkdir -p obj/plugin
 
+echo "Compiling SpeexDSP..."
+(
+  cd obj/speexdsp
+  emcc -O3 \
+    -DEXPORT="" \
+    -DVAR_ARRAYS=1 \
+    -DFLOATING_POINT=1 \
+    -DUSE_KISS_FFT=1 \
+    -I ../../include \
+    -I ../../include/speex \
+    -I ../../../../xiph/speexdsp/include \
+    -I ../../../../xiph/speexdsp/libspeexdsp \
+    -c \
+    ../../../../xiph/speexdsp/libspeexdsp/buffer.c \
+    ../../../../xiph/speexdsp/libspeexdsp/fftwrap.c \
+    ../../../../xiph/speexdsp/libspeexdsp/filterbank.c \
+    ../../../../xiph/speexdsp/libspeexdsp/jitter.c \
+    ../../../../xiph/speexdsp/libspeexdsp/kiss_fft.c \
+    ../../../../xiph/speexdsp/libspeexdsp/kiss_fftr.c \
+    ../../../../xiph/speexdsp/libspeexdsp/mdf.c \
+    ../../../../xiph/speexdsp/libspeexdsp/preprocess.c \
+    ../../../../xiph/speexdsp/libspeexdsp/resample.c \
+    ../../../../xiph/speexdsp/libspeexdsp/scal.c \
+    ../../../../xiph/speexdsp/libspeexdsp/smallft.c
+  emar rcs ../../libspeexdsp.a *.o
+)
+
+echo "Compiling Ogg..."
+(
+  cd obj/ogg
+  emcc -O3 \
+    -I ../../include \
+    -I ../../../../xiph/ogg/include \
+    -c \
+    ../../../../xiph/ogg/src/bitwise.c \
+    ../../../../xiph/ogg/src/framing.c
+  emar rcs ../../libogg.a *.o
+)
+
+echo "Compiling Opus..."
+(
+  cd obj/opus
+  emcc -O3 \
+    -DENABLE_ASSERTIONS=1 \
+    -DUSE_ALLOCA=1 \
+    -DOPUS_BUILD=1 \
+    -DFLOATING_POINT=1 \
+    -DVAR_ARRAYS=1 \
+    -I ../../include \
+    -I ../../include/opus \
+    -I ../../../../xiph/opus/include \
+    -I ../../../../xiph/opus/celt \
+    -I ../../../../xiph/opus/silk \
+    -I ../../../../xiph/opus/silk/float \
+    -I ../../../../xiph/opus/src \
+    -c \
+    ../../../../xiph/opus/src/opus.c \
+    ../../../../xiph/opus/src/opus_encoder.c \
+    ../../../../xiph/opus/src/opus_decoder.c \
+    ../../../../xiph/opus/src/opus_multistream.c \
+    ../../../../xiph/opus/src/opus_multistream_encoder.c \
+    ../../../../xiph/opus/src/opus_multistream_decoder.c \
+    ../../../../xiph/opus/src/opus_projection_encoder.c \
+    ../../../../xiph/opus/src/opus_projection_decoder.c \
+    ../../../../xiph/opus/src/repacketizer.c \
+    ../../../../xiph/opus/src/extensions.c \
+    ../../../../xiph/opus/src/analysis.c \
+    ../../../../xiph/opus/src/mlp.c \
+    ../../../../xiph/opus/src/mlp_data.c \
+    ../../../../xiph/opus/src/mapping_matrix.c \
+    ../../../../xiph/opus/silk/*.c \
+    ../../../../xiph/opus/silk/float/*.c \
+    ../../../../xiph/opus/celt/!(opus_custom_demo).c
+  emar rcs ../../libopus.a *.o
+)
+
+echo "Compiling plugin sources..."
+(
+  cd obj/plugin
+  emcc -O3 \
+    -msimd128 -msse3 \
+    -I ../../../../src/pffft \
+    -c ../../../../src/pffft/pffft.c
+
+  emcc -O3 \
+    -std=c++17 \
+    -msimd128 -msse3 \
+    -I ../../../../src \
+    -I ../../../../src/pffft \
+    -I ../../include \
+    -I ../../include/opus \
+    -I ../../include/ogg \
+    -I ../../include/speex \
+    -I ../../../../xiph/speexdsp/include \
+    -c \
+    ../../../../src/miniaudio.cpp \
+    ../../../../src/flutter_recorder.cpp \
+    ../../../../src/capture.cpp \
+    ../../../../src/analyzer.cpp \
+    ../../../../src/opus_encoder_pipeline.cpp \
+    ../../../../src/opus_ogg_writer.cpp \
+    ../../../../src/filters/filters.cpp \
+    ../../../../src/filters/autogain.cpp \
+    ../../../../src/filters/echo_cancellation.cpp
+)
+
+echo "Linking WebAssembly module..."
 emcc -O3 \
--DENABLE_ASSERTIONS=1 \
--DUSE_ALLOCA=1 \
--DOPUS_BUILD=1 \
--DFLOATING_POINT=1 \
--DUSE_KISS_FFT=1 \
--I ../../src/pffft \
--I ../../src \
--I include \
--I include/opus \
--I include/speex \
--I ../../xiph/speexdsp/include \
--I ../../xiph/speexdsp/libspeexdsp \
--I ../../xiph/opus/celt \
--I ../../xiph/opus/silk \
--I ../../xiph/opus/silk/float \
--I ../../xiph/opus/src \
-../../src/miniaudio.cpp \
-../../src/flutter_recorder.cpp \
-../../src/capture.cpp \
-../../src/analyzer.cpp \
-../../src/pffft/pffft.c \
-../../src/opus_encoder_pipeline.cpp \
-../../src/opus_ogg_writer.cpp \
-../../src/filters/filters.cpp \
-../../src/filters/autogain.cpp \
-../../src/filters/echo_cancellation.cpp \
-../../xiph/speexdsp/libspeexdsp/buffer.c \
-../../xiph/speexdsp/libspeexdsp/fftwrap.c \
-../../xiph/speexdsp/libspeexdsp/filterbank.c \
-../../xiph/speexdsp/libspeexdsp/jitter.c \
-../../xiph/speexdsp/libspeexdsp/kiss_fft.c \
-../../xiph/speexdsp/libspeexdsp/kiss_fftr.c \
-../../xiph/speexdsp/libspeexdsp/mdf.c \
-../../xiph/speexdsp/libspeexdsp/preprocess.c \
-../../xiph/speexdsp/libspeexdsp/resample.c \
-../../xiph/speexdsp/libspeexdsp/scal.c \
-../../xiph/speexdsp/libspeexdsp/smallft.c \
-../../xiph/ogg/src/bitwise.c \
-../../xiph/ogg/src/framing.c \
-../../xiph/opus/src/opus.c \
-../../xiph/opus/src/opus_encoder.c \
-../../xiph/opus/src/opus_decoder.c \
-../../xiph/opus/src/opus_multistream.c \
-../../xiph/opus/src/opus_multistream_encoder.c \
-../../xiph/opus/src/opus_multistream_decoder.c \
-../../xiph/opus/src/opus_projection_encoder.c \
-../../xiph/opus/src/opus_projection_decoder.c \
-../../xiph/opus/src/repacketizer.c \
-../../xiph/opus/src/extensions.c \
-../../xiph/opus/src/analysis.c \
-../../xiph/opus/src/mlp.c \
-../../xiph/opus/src/mlp_data.c \
-../../xiph/opus/src/mapping_matrix.c \
-../../xiph/opus/silk/*.c \
-../../xiph/opus/silk/float/*.c \
-../../xiph/opus/celt/!(opus_custom_demo).c \
--s MODULARIZE=1 -s EXPORT_NAME="'RecorderModule'" \
--msimd128 -msse3 \
--s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap']" \
--s "EXPORTED_FUNCTIONS=['_free', '_malloc']" \
--s EXPORT_ALL=1 \
--s NO_EXIT_RUNTIME=1 \
--s SAFE_HEAP=1 \
--s STACK_SIZE=4194304 \
--s ALLOW_TABLE_GROWTH=1 \
--s ALLOW_MEMORY_GROWTH=1 \
--o ../../web/libflutter_recorder_plugin.js
+  obj/plugin/*.o \
+  libspeexdsp.a \
+  libogg.a \
+  libopus.a \
+  -s MODULARIZE=1 -s EXPORT_NAME="'RecorderModule'" \
+  -msimd128 -msse3 \
+  -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap']" \
+  -s "EXPORTED_FUNCTIONS=['_free', '_malloc']" \
+  -s EXPORT_ALL=1 \
+  -s NO_EXIT_RUNTIME=1 \
+  -s SAFE_HEAP=1 \
+  -s STACK_SIZE=4194304 \
+  -s ALLOW_TABLE_GROWTH=1 \
+  -s ALLOW_MEMORY_GROWTH=1 \
+  -o ../../web/libflutter_recorder_plugin.js
