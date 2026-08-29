@@ -600,4 +600,43 @@ interface class Recorder {
     }
     _recorder.impl.feedPlaybackData(data, format: format, channels: channels);
   }
+
+  /// Sets browser Web Audio constraints (`echoCancellation`, `autoGainControl`,
+  /// `noiseSuppression`) when running on the Web platform.
+  ///
+  /// By default on Web, browsers enable their internal Automatic Gain Control
+  /// (AGC), Acoustic Echo Cancellation (AEC), and Noise Suppression. In many
+  /// recording and loopback situations, browser AGC can cause volume pumping
+  /// (rapid volume oscillations).
+  ///
+  /// Calling this method configures the browser preprocessing flags for
+  /// subsequent captures and attempts to dynamically apply them to any
+  /// currently active microphone tracks via `applyConstraints`.
+  ///
+  /// > **Note on Browser Limitations:**
+  /// > In Chromium-based and other browsers, the WebRTC audio preprocessing
+  /// > pipeline (AEC, AGC, Noise Suppression) is instantiated when the
+  /// > microphone stream is first created (`getUserMedia`). Dynamically
+  /// > changing these constraints on an already active stream may be ignored
+  /// > by the browser audio engine. For guaranteed effect, call this method
+  /// > **before** calling [init] or starting audio capture, or restart the
+  /// > capture after changing constraints.
+  ///
+  /// This method is a no-op on non-web platforms.
+  ///
+  /// [echoCancellation] whether the browser's built-in AEC is enabled.
+  /// [autoGainControl] whether the browser's built-in AGC is enabled.
+  /// [noiseSuppression] whether the browser's built-in noise suppressor is
+  /// enabled.
+  void setWebAudioConstraints({
+    bool echoCancellation = false,
+    bool autoGainControl = false,
+    bool noiseSuppression = false,
+  }) {
+    _recorder.impl.setWebAudioConstraints(
+      echoCancellation: echoCancellation,
+      autoGainControl: autoGainControl,
+      noiseSuppression: noiseSuppression,
+    );
+  }
 }

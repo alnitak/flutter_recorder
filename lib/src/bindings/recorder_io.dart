@@ -584,4 +584,13 @@ class RecorderFfi extends RecorderImpl {
       );
     });
   }
+
+  @override
+  void setWebAudioConstraints({
+    bool echoCancellation = false,
+    bool autoGainControl = false,
+    bool noiseSuppression = false,
+  }) {
+    // No-op on IO platforms.
+  }
 }

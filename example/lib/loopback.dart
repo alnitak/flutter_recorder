@@ -72,6 +72,20 @@ class _LoopBackState extends State<LoopBack> {
   bool echoCancellation = false;
   bool nativeLoopback = false;
 
+  bool webEchoCancellation = false;
+  bool webAutoGain = false;
+  bool webNoiseSuppression = false;
+
+  void _updateWebAudioConstraints() {
+    if (kIsWeb) {
+      recorder.setWebAudioConstraints(
+        echoCancellation: webEchoCancellation,
+        autoGainControl: webAutoGain,
+        noiseSuppression: webNoiseSuppression,
+      );
+    }
+  }
+
   /// Subscription to recorder stream (need to cancel on dispose)
   StreamSubscription<AudioDataContainer>? _recorderSubscription;
 
@@ -81,6 +95,9 @@ class _LoopBackState extends State<LoopBack> {
   @override
   void initState() {
     super.initState();
+    if (kIsWeb) {
+      _updateWebAudioConstraints();
+    }
     if (defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS) {
       Permission.microphone.request().isGranted.then((value) async {
@@ -310,12 +327,13 @@ class _LoopBackState extends State<LoopBack> {
         // Start / Stop
         Row(
           mainAxisSize: MainAxisSize.min,
+          spacing: 8,
           children: [
             OutlinedButton(
               onPressed: () async {
                 await init();
               },
-              child: const Text('Init loopback'),
+              child: const Text('Init recorder'),
             ),
             OutlinedButton(
               onPressed: () async {
@@ -396,6 +414,75 @@ class _LoopBackState extends State<LoopBack> {
             ),
           ],
         ),
+
+        if (kIsWeb) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade400),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Web Audio Preprocessing Constraints '
+                  '(set before starting capture):',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Wrap(
+                  spacing: 12,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Checkbox(
+                          value: webEchoCancellation,
+                          onChanged: (v) {
+                            if (v == null) return;
+                            setState(() => webEchoCancellation = v);
+                            _updateWebAudioConstraints();
+                          },
+                        ),
+                        const Text('Browser Echo Cancellation'),
+                      ],
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Checkbox(
+                          value: webAutoGain,
+                          onChanged: (v) {
+                            if (v == null) return;
+                            setState(() => webAutoGain = v);
+                            _updateWebAudioConstraints();
+                          },
+                        ),
+                        const Text('Browser Auto Gain (AGC)'),
+                      ],
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Checkbox(
+                          value: webNoiseSuppression,
+                          onChanged: (v) {
+                            if (v == null) return;
+                            setState(() => webNoiseSuppression = v);
+                            _updateWebAudioConstraints();
+                          },
+                        ),
+                        const Text('Browser Noise Suppression'),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
 
         if (autoGain) AutoGainSliders(),
 

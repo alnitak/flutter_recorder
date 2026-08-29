@@ -62,14 +62,29 @@ In capabilities, activate "Audio input" in debug and release schemes or add in `
 
 #### Web
 Add this in `web/index.html` under the `<head>` tag.
-```
+```html
 <script src="assets/packages/flutter_recorder/web/libflutter_recorder_plugin.js" defer></script>
 <script src="assets/packages/flutter_recorder/web/init_recorder_module.dart.js" defer></script>
 ```
 The plugin is **WASM** compatible and your app can be compiled and run locally with something like:
+```bash
+flutter run -d chrome --wasm -t lib/main.dart --release
 ```
-flutter run -d chrome --web-renderer canvaskit --web-browser-flag '--disable-web-security' -t lib/main.dart --release
+
+##### 🌐 Web Audio Preprocessing (AEC, AGC, Noise Suppression)
+By default, web browsers automatically enable their own built-in **Automatic Gain Control (AGC)**, **Acoustic Echo Cancellation (AEC)**, and **Noise Suppression** on the microphone. In loopback and custom filter setups, browser AGC can cause an unwanted volume pumping / oscillation effect.
+
+You can configure or disable these browser-level filters at any time using:
+```dart
+// Configure browser audio constraints (web only, no-op on other platforms):
+Recorder.instance.setWebAudioConstraints(
+  echoCancellation: false,  // Disable browser AEC (e.g. to use flutter_recorder's native AEC)
+  autoGainControl: false,   // Disable browser AGC to eliminate volume pumping/oscillation
+  noiseSuppression: false,  // Disable browser noise suppression for raw audio capture
+);
 ```
+> **Note:** In Chromium-based browsers, the browser's WebRTC audio processing graph is instantiated when `getUserMedia()` is first called. Dynamically changing these flags while recording (via `applyConstraints`) may be ignored by the browser. For guaranteed effect, call `setWebAudioConstraints()` **before** calling `Recorder.instance.init()` or starting capture.
+
 
 #### Linux
 - [`GStreamer`](https://gstreamer.freedesktop.org/documentation/installing/index.html?gi-language=c) is installed by default on most distributions, but if not, please [install it](https://gstreamer.freedesktop.org/documentation/installing/on-linux.html?gi-language=c) through your distribution's package manager.

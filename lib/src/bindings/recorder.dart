@@ -283,4 +283,20 @@ abstract class RecorderImpl {
     required PCMFormat format,
     required RecorderChannels channels,
   });
+
+  /// Set browser Web Audio constraints (`echoCancellation`, `autoGainControl`,
+  /// `noiseSuppression`).
+  ///
+  /// In Chromium-based browsers, the WebRTC audio processor is configured at
+  /// stream creation time (`getUserMedia`). Changing constraints on an already
+  /// active stream via `applyConstraints` may be ignored. For best results,
+  /// call this method before initializing the recorder.
+  ///
+  /// This setting is web-only and is a no-op on IO platforms.
+  @mustBeOverridden
+  void setWebAudioConstraints({
+    bool echoCancellation = false,
+    bool autoGainControl = false,
+    bool noiseSuppression = false,
+  });
 }

@@ -29,6 +29,10 @@ class RecorderController {
 /// Use this class to _capture_ audio (such as from a microphone).
 @internal
 class RecorderWeb extends RecorderImpl {
+  RecorderWeb() {
+    _hookGetUserMedia();
+  }
+
   SilenceCallback? _silenceCallback;
   void Function(AudioVisualizationData data)? _visualizationCallback;
   bool _wasmVisualizationCallbackSetUp = false;
@@ -63,11 +67,82 @@ class RecorderWeb extends RecorderImpl {
     return ret;
   }
 
+  bool _getUserMediaHooked = false;
+
+  void _hookGetUserMedia() {
+    if (_getUserMediaHooked) return;
+    _getUserMediaHooked = true;
+    try {
+      final nav = globalContext.getProperty<JSObject?>('navigator'.toJS);
+      final mediaDevices = nav?.getProperty<JSObject?>('mediaDevices'.toJS);
+      if (mediaDevices == null) return;
+
+      final origGetUserMedia =
+          mediaDevices.getProperty<JSFunction?>('getUserMedia'.toJS);
+      if (origGetUserMedia == null) return;
+
+      JSPromise customGetUserMedia(JSObject? rawConstraints) {
+        final constraints = rawConstraints ?? JSObject();
+        final stored = globalContext.getProperty<JSObject?>(
+          '_flutterRecorderWebAudioConstraints'.toJS,
+        );
+
+        if (stored != null) {
+          final audioProp = constraints.getProperty<JSAny?>('audio'.toJS);
+          if (audioProp != null && audioProp.isA<JSBoolean>()) {
+            constraints.setProperty('audio'.toJS, stored);
+          } else if (audioProp != null && audioProp.isA<JSObject>()) {
+            final audioObj = audioProp as JSObject;
+            final echo =
+                stored.getProperty<JSBoolean?>('echoCancellation'.toJS);
+            final agc = stored.getProperty<JSBoolean?>('autoGainControl'.toJS);
+            final noise =
+                stored.getProperty<JSBoolean?>('noiseSuppression'.toJS);
+            if (echo != null) {
+              audioObj.setProperty('echoCancellation'.toJS, echo);
+            }
+            if (agc != null) {
+              audioObj.setProperty('autoGainControl'.toJS, agc);
+            }
+            if (noise != null) {
+              audioObj.setProperty('noiseSuppression'.toJS, noise);
+            }
+          } else if (audioProp == null) {
+            constraints.setProperty('audio'.toJS, stored);
+          }
+        }
+
+        final promise = (origGetUserMedia.callAsFunction(
+          mediaDevices,
+          constraints,
+        ) as JSPromise?)!;
+
+        return promise.toDart.then((stream) {
+          if (stream != null) {
+            globalContext.setProperty(
+              '_flutterRecorderActiveMediaStream'.toJS,
+              stream as JSObject,
+            );
+          }
+          return stream;
+        }).toJS;
+      }
+
+      mediaDevices.setProperty(
+        'getUserMedia'.toJS,
+        customGetUserMedia.toJS,
+      );
+    } catch (_) {
+      // Ignore if navigator.mediaDevices is not available or restricted
+    }
+  }
+
   /// Waits for the WASM module to finish loading. `Recorder.init()` can be
   /// called by the app while `init_recorder_module.dart.js` is still
   /// instantiating the module; without this the first bindings call would hit
   /// a not-yet-defined `RecorderModule`.
   Future<void> _ensureModuleReady() async {
+    _hookGetUserMedia();
     if (_isModuleInstantiated()) return;
     final ready = flutterRecorderReady;
     if (ready != null) {
@@ -311,6 +386,25 @@ class RecorderWeb extends RecorderImpl {
   @override
   void deinit() {
     _silenceCallback = null;
+    final activeStream = globalContext.getProperty<JSObject?>(
+      '_flutterRecorderActiveMediaStream'.toJS,
+    );
+    if (activeStream != null) {
+      try {
+        final getTracks =
+            activeStream.getProperty<JSFunction>('getTracks'.toJS);
+        final tracks =
+            getTracks.callAsFunction(activeStream)! as JSArray<JSObject>;
+        for (var i = 0; i < tracks.length; i++) {
+          final track = tracks[i];
+          track.getProperty<JSFunction>('stop'.toJS).callAsFunction(track);
+        }
+      } catch (_) {}
+      globalContext.setProperty(
+        '_flutterRecorderActiveMediaStream'.toJS,
+        null,
+      );
+    }
     wasmDeinit();
     super.deinit();
   }
@@ -502,5 +596,48 @@ class RecorderWeb extends RecorderImpl {
     required RecorderChannels channels,
   }) {
     // Web implementation
+  }
+
+  @override
+  void setWebAudioConstraints({
+    bool echoCancellation = false,
+    bool autoGainControl = false,
+    bool noiseSuppression = false,
+  }) {
+    _hookGetUserMedia();
+
+    final constraints = <String, Object>{
+      'echoCancellation': echoCancellation,
+      'autoGainControl': autoGainControl,
+      'noiseSuppression': noiseSuppression,
+    }.jsify()! as JSObject;
+
+    globalContext.setProperty(
+      '_flutterRecorderWebAudioConstraints'.toJS,
+      constraints,
+    );
+
+    // If a media stream is currently active, apply the constraints dynamically
+    // to all of its audio tracks.
+    final activeStream = globalContext.getProperty<JSObject?>(
+      '_flutterRecorderActiveMediaStream'.toJS,
+    );
+    if (activeStream != null) {
+      try {
+        final getAudioTracks = activeStream.getProperty<JSFunction>(
+          'getAudioTracks'.toJS,
+        );
+        final tracks =
+            (getAudioTracks.callAsFunction(activeStream)! as JSArray<JSObject>)
+                .toDart;
+        for (final track in tracks) {
+          final applyConstraints =
+              track.getProperty<JSFunction?>('applyConstraints'.toJS);
+          applyConstraints?.callAsFunction(track, constraints);
+        }
+      } catch (_) {
+        // Ignore if tracks are not accessible
+      }
+    }
   }
 }
