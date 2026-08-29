@@ -13,6 +13,8 @@ set LIBS_DIR=%BASE_DIR%\..\windows\libs
 set INCLUDE_DIR=%BASE_DIR%\..\windows\include
 set OGG_DIR=%BASE_DIR%\\ogg
 set OPUS_DIR=%BASE_DIR%\\opus
+set SPEEXDSP_DIR=%BASE_DIR%\\speexdsp
+set REPO_SPEEXDSP=https://github.com/xiph/speexdsp
 
 :: Check if the OGG repo exists, if not, clone it
 if not exist "%OGG_DIR%" (
@@ -38,6 +40,19 @@ if not exist "%OPUS_DIR%" (
     echo OPUS repository already exists.
 )
 
+:: Check if the SPEEXDSP repo exists, if not, clone it
+if not exist "%SPEEXDSP_DIR%" (
+    echo Cloning SPEEXDSP repository...
+    git clone %REPO_SPEEXDSP%
+    :: reset to a known good commit
+    cd speexdsp
+    git reset --hard 7a15878
+    cd ..
+) else (
+    echo SPEEXDSP repository already exists.
+)
+copy /Y "%BASE_DIR%\speexdsp_CMakeLists.txt" "%SPEEXDSP_DIR%\CMakeLists.txt"
+
 :: Create directories if they don't exist
 if not exist "%BUILD_DIR%" mkdir "%BUILD_DIR%"
 if not exist "%LIBS_DIR%" mkdir "%LIBS_DIR%"
@@ -46,6 +61,7 @@ if not exist "%INCLUDE_DIR%" mkdir "%INCLUDE_DIR%"
 :: Create subdirectories for includes
 if not exist "%INCLUDE_DIR%\\ogg" mkdir "%INCLUDE_DIR%\\ogg"
 if not exist "%INCLUDE_DIR%\\opus" mkdir "%INCLUDE_DIR%\\opus"
+if not exist "%INCLUDE_DIR%\\speex" mkdir "%INCLUDE_DIR%\\speex"
 
 :: Step 1: Build OGG library
 echo Building OGG library...
@@ -74,6 +90,21 @@ echo Copying OPUS files...
 copy /Y ".\\Release\\*.lib" "%LIBS_DIR%"
 copy /Y ".\\Release\\*.dll" "%LIBS_DIR%"
 xcopy /Y /S "%OPUS_DIR%\\include" "%INCLUDE_DIR%\\opus\"
+
+cd "%BASE_DIR%"
+
+:: Step 5: Build SPEEXDSP library
+echo Building SPEEXDSP library...
+mkdir "%BUILD_DIR%\\speexdsp"
+cd "%BUILD_DIR%\\speexdsp"
+:: Build shared libraries
+cmake -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE:STRING=Release -DBUILD_SHARED_LIBS=ON -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded" "%SPEEXDSP_DIR%"
+cmake --build . --config Release
+:: Step 6: Copy SPEEXDSP .lib, .dll and include files
+echo Copying SPEEXDSP files...
+copy /Y ".\\Release\\*.lib" "%LIBS_DIR%"
+copy /Y ".\\Release\\*.dll" "%LIBS_DIR%"
+xcopy /Y /S "%SPEEXDSP_DIR%\\include\\speex" "%INCLUDE_DIR%\\speex\"
 
 cd "%BASE_DIR%"
 echo Done!

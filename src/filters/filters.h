@@ -7,6 +7,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <map>
 
 struct FilterObject
 {
@@ -32,6 +33,8 @@ public:
     Filters(unsigned int samplerate);
     ~Filters();
 
+    void setSampleRate(unsigned int samplerate);
+
     /// Return -1 if the filter is not active or its index
     int isFilterActive(RecorderFilterType filter);
     
@@ -47,9 +50,12 @@ public:
     /// If [handle]==0 the operation is done to global filters.
     float getFilterParams(RecorderFilterType filterType, int attributeId);
     
+    void feedPlaybackData(const void *pData, ma_uint32 frameCount, unsigned int channels, ma_format format);
+
     unsigned int mSamplerate;
 
     std::vector<std::unique_ptr<FilterObject>> filters;
+    std::map<RecorderFilterType, std::map<int, float>> mStoredParams;
 };
 
 #endif // PLAYER_H

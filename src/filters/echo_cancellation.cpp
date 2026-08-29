@@ -4,27 +4,119 @@
 #include <cmath>
 #include <cstring>
 #include <algorithm>
-#include <stdint.h>
+#include <stdexcept>
 
-EchoCancellation::EchoCancellation(unsigned int sampleRate)
-    : mWriteIndex(0),
-      mParams{ // def min max
-          {EchoDelayMs, {50.0f, 0.0f, 1000.0f}}, // Delay in ms (default, min, max)
-          {EchoAttenuation, {0.7f, 0.0f, 1.0f}}  // Attenuation (default, min, max)
+EchoCancellation::EchoCancellation()
+    : mSampleRate(44100),
+      mChannels(1),
+      mFrameSize(441),
+      mFilterLength(6615),
+      mEchoState(nullptr),
+      mParams{
+          {FilterLengthMs, {150.0f, 10.0f, 500.0f}}, // Tail length in ms (default, min, max)
+          {DenoiseEnabled, {1.0f, 0.0f, 1.0f}},       // Residual / background denoiser (1 = on, 0 = off)
+          {DenoiseLevelDb, {-30.0f, -60.0f, 0.0f}}    // Denoise attenuation in dB
       },
       mValues(ParamCount, 0.0f)
 {
-    // Initialize values with defaults
     for (const auto &[param, range] : mParams)
     {
         mValues[param] = range.defaultVal;
     }
-    mDelaySamples = static_cast<unsigned int>((getParamDef(EchoDelayMs) / 1000.0f) * sampleRate);
-    // Allocate twice the delay size to handle circular buffer
-    mBuffer = std::vector<float>(mDelaySamples * 2, 0.0f);
 }
 
-// Override parameter management methods
+EchoCancellation::EchoCancellation(unsigned int sampleRate)
+    : mSampleRate(sampleRate > 0 ? sampleRate : 44100),
+      mChannels(1),
+      mFrameSize((mSampleRate * 10) / 1000), // 10 ms frame size
+      mFilterLength((mSampleRate * 150) / 1000),
+      mEchoState(nullptr),
+      mParams{
+          {FilterLengthMs, {150.0f, 10.0f, 500.0f}},
+          {DenoiseEnabled, {1.0f, 0.0f, 1.0f}},
+          {DenoiseLevelDb, {-30.0f, -60.0f, 0.0f}}
+      },
+      mValues(ParamCount, 0.0f)
+{
+    if (mFrameSize < 64)
+        mFrameSize = 64;
+
+    for (const auto &[param, range] : mParams)
+    {
+        mValues[param] = range.defaultVal;
+    }
+}
+
+EchoCancellation::~EchoCancellation()
+{
+    std::lock_guard<std::mutex> lock(mMutex);
+    destroySpeex();
+}
+
+void EchoCancellation::initSpeex(unsigned int channels)
+{
+    destroySpeex();
+
+    mChannels = channels > 0 ? channels : 1;
+    mFrameSize = (mSampleRate * 10) / 1000;
+    if (mFrameSize < 64)
+        mFrameSize = 64;
+
+    mFilterLength = (mSampleRate * static_cast<int>(mValues[FilterLengthMs])) / 1000;
+    if (mFilterLength < mFrameSize)
+        mFilterLength = mFrameSize * 2;
+
+    if (mChannels == 1)
+    {
+        mEchoState = speex_echo_state_init(mFrameSize, mFilterLength);
+    }
+    else
+    {
+        mEchoState = speex_echo_state_init_mc(mFrameSize, mFilterLength, mChannels, mChannels);
+    }
+
+    int denoise = mValues[DenoiseEnabled] > 0.5f ? 1 : 0;
+    int noiseSuppress = static_cast<int>(mValues[DenoiseLevelDb]);
+    int echoSuppress = static_cast<int>(mValues[DenoiseLevelDb]);
+    int echoSuppressActive = echoSuppress / 2;
+
+    mPreprocessStates.resize(mChannels, nullptr);
+    for (unsigned int c = 0; c < mChannels; ++c)
+    {
+        mPreprocessStates[c] = speex_preprocess_state_init(mFrameSize, mSampleRate);
+        if (mEchoState != nullptr)
+        {
+            speex_preprocess_ctl(mPreprocessStates[c], SPEEX_PREPROCESS_SET_ECHO_STATE, mEchoState);
+            speex_preprocess_ctl(mPreprocessStates[c], SPEEX_PREPROCESS_SET_ECHO_SUPPRESS, &echoSuppress);
+            speex_preprocess_ctl(mPreprocessStates[c], SPEEX_PREPROCESS_SET_ECHO_SUPPRESS_ACTIVE, &echoSuppressActive);
+        }
+        speex_preprocess_ctl(mPreprocessStates[c], SPEEX_PREPROCESS_SET_DENOISE, &denoise);
+        speex_preprocess_ctl(mPreprocessStates[c], SPEEX_PREPROCESS_SET_NOISE_SUPPRESS, &noiseSuppress);
+    }
+}
+
+void EchoCancellation::destroySpeex()
+{
+    for (auto *state : mPreprocessStates)
+    {
+        if (state != nullptr)
+        {
+            speex_preprocess_state_destroy(state);
+        }
+    }
+    mPreprocessStates.clear();
+
+    if (mEchoState != nullptr)
+    {
+        speex_echo_state_destroy(mEchoState);
+        mEchoState = nullptr;
+    }
+
+    mMicFifo.clear();
+    mRefFifo.clear();
+    mOutFifo.clear();
+}
+
 int EchoCancellation::getParamCount() const
 {
     return ParamCount;
@@ -32,31 +124,37 @@ int EchoCancellation::getParamCount() const
 
 float EchoCancellation::getParamMax(int param) const
 {
-    validateParam(param);
+    if (param < 0 || param >= ParamCount)
+        return 0.0f;
     return mParams.at(static_cast<Params>(param)).maxVal;
 }
 
 float EchoCancellation::getParamMin(int param) const
 {
-    validateParam(param);
+    if (param < 0 || param >= ParamCount)
+        return 0.0f;
     return mParams.at(static_cast<Params>(param)).minVal;
 }
 
 float EchoCancellation::getParamDef(int param) const
 {
-    validateParam(param);
+    if (param < 0 || param >= ParamCount)
+        return 0.0f;
     return mParams.at(static_cast<Params>(param)).defaultVal;
 }
 
 std::string EchoCancellation::getParamName(int param) const
 {
-    validateParam(param);
+    if (param < 0 || param >= ParamCount)
+        return "Unknown";
     switch (static_cast<Params>(param))
     {
-    case EchoDelayMs:
-        return "Echo Delay (ms)";
-    case EchoAttenuation:
-        return "Echo Attenuation";
+    case FilterLengthMs:
+        return "Filter Length (ms)";
+    case DenoiseEnabled:
+        return "Denoise Enabled";
+    case DenoiseLevelDb:
+        return "Denoise Level (dB)";
     default:
         return "Unknown";
     }
@@ -64,149 +162,206 @@ std::string EchoCancellation::getParamName(int param) const
 
 void EchoCancellation::setParamValue(int param, float value)
 {
-    validateParam(param);
+    if (param < 0 || param >= ParamCount)
+        return;
     const auto &range = mParams.at(static_cast<Params>(param));
-    if (value < range.minVal || value > range.maxVal)
-    {
-        throw std::out_of_range("Parameter value out of range");
-    }
+    value = std::clamp(value, range.minVal, range.maxVal);
+
+    std::lock_guard<std::mutex> lock(mMutex);
     mValues[param] = value;
+
+    if (param == FilterLengthMs)
+    {
+        int newFilterLength = (mSampleRate * static_cast<int>(value)) / 1000;
+        if (newFilterLength < mFrameSize)
+            newFilterLength = mFrameSize * 2;
+        if (mEchoState != nullptr && newFilterLength != mFilterLength)
+        {
+            initSpeex(mChannels);
+        }
+    }
+    else if (param == DenoiseEnabled)
+    {
+        int denoise = value > 0.5f ? 1 : 0;
+        for (auto *state : mPreprocessStates)
+        {
+            if (state != nullptr)
+            {
+                speex_preprocess_ctl(state, SPEEX_PREPROCESS_SET_DENOISE, &denoise);
+            }
+        }
+    }
+    else if (param == DenoiseLevelDb)
+    {
+        int noiseSuppress = static_cast<int>(value);
+        int echoSuppress = static_cast<int>(value);
+        int echoSuppressActive = echoSuppress / 2;
+        for (auto *state : mPreprocessStates)
+        {
+            if (state != nullptr)
+            {
+                speex_preprocess_ctl(state, SPEEX_PREPROCESS_SET_NOISE_SUPPRESS, &noiseSuppress);
+                if (mEchoState != nullptr)
+                {
+                    speex_preprocess_ctl(state, SPEEX_PREPROCESS_SET_ECHO_SUPPRESS, &echoSuppress);
+                    speex_preprocess_ctl(state, SPEEX_PREPROCESS_SET_ECHO_SUPPRESS_ACTIVE, &echoSuppressActive);
+                }
+            }
+        }
+    }
 }
 
 float EchoCancellation::getParamValue(int param) const
 {
-    validateParam(param);
+    if (param < 0 || param >= ParamCount)
+        return 0.0f;
     return mValues[param];
+}
+
+void EchoCancellation::feedPlaybackData(const void *pData, ma_uint32 frameCount, unsigned int channels, ma_format format)
+{
+    if (pData == nullptr || frameCount == 0 || channels == 0)
+        return;
+
+    std::lock_guard<std::mutex> lock(mMutex);
+
+    if (mEchoState == nullptr)
+    {
+        initSpeex(mChannels == 0 ? channels : mChannels);
+    }
+
+    const size_t totalInputSamples = frameCount * channels;
+    std::vector<spx_int16_t> inputS16(totalInputSamples);
+    ma_pcm_convert(inputS16.data(), ma_format_s16, pData, format, totalInputSamples, ma_dither_mode_none);
+
+    if (channels == mChannels)
+    {
+        mRefFifo.insert(mRefFifo.end(), inputS16.begin(), inputS16.end());
+    }
+    else if (channels == 2 && mChannels == 1)
+    {
+        // Downmix stereo to mono
+        for (ma_uint32 i = 0; i < frameCount; i++)
+        {
+            int32_t mixed = (static_cast<int32_t>(inputS16[i * 2]) + static_cast<int32_t>(inputS16[i * 2 + 1])) / 2;
+            mRefFifo.push_back(static_cast<spx_int16_t>(mixed));
+        }
+    }
+    else if (channels == 1 && mChannels == 2)
+    {
+        // Upmix mono to stereo
+        for (ma_uint32 i = 0; i < frameCount; i++)
+        {
+            mRefFifo.push_back(inputS16[i]);
+            mRefFifo.push_back(inputS16[i]);
+        }
+    }
+    else
+    {
+        mRefFifo.insert(mRefFifo.end(), inputS16.begin(), inputS16.end());
+    }
+
+    const size_t maxRefSamples = static_cast<size_t>(mSampleRate * mChannels * 2);
+    if (mRefFifo.size() > maxRefSamples)
+    {
+        mRefFifo.erase(mRefFifo.begin(), mRefFifo.begin() + (mRefFifo.size() - maxRefSamples));
+    }
 }
 
 void EchoCancellation::process(void *pInput, ma_uint32 frameCount, unsigned int channels, ma_format format)
 {
-    switch (format)
-    {
-    case ma_format_u8:
-        processAudio<unsigned char>(pInput, frameCount, channels);
-        break;
-    case ma_format_s16:
-        processAudio<int16_t>(pInput, frameCount, channels);
-        break;
-    case ma_format_s24:
-        processAudioS24(pInput, frameCount, channels);
-        break;
-    case ma_format_s32:
-        processAudio<int32_t>(pInput, frameCount, channels);
-        break;
-    case ma_format_f32:
-        processAudio<float>(pInput, frameCount, channels);
-        break;
-    default:
-        std::cerr << "Unsupported format\n";
-        break;
-    }
+    processDuplex(pInput, nullptr, frameCount, channels, format);
 }
 
-template <typename T>
-void EchoCancellation::processAudio(void *pInput, ma_uint32 frameCount, unsigned int channels)
+void EchoCancellation::processDuplex(void *pInput, void *pOutput, ma_uint32 frameCount, unsigned int channels, ma_format format)
 {
-    T *input = static_cast<T *>(pInput);
+    if (pInput == nullptr || frameCount == 0 || channels == 0)
+        return;
 
-    for (ma_uint32 i = 0; i < frameCount * channels; ++i)
+    std::lock_guard<std::mutex> lock(mMutex);
+
+    if (mEchoState == nullptr || mChannels != channels)
     {
-        // Normalize sample to float [-1, 1]
-        float currentSample = normalizeSample(input[i]);
-        float delayedSample = mBuffer[mWriteIndex];
-
-        // Apply echo cancellation
-        float processedSample = currentSample - getParamValue(EchoAttenuation) * delayedSample;
-
-        // Store result back to circular buffer
-        mBuffer[mWriteIndex] = currentSample;
-
-        // Write processed sample back to input
-        input[i] = denormalizeSample<T>(processedSample);
-
-        // Increment and wrap write index
-        mWriteIndex = (mWriteIndex + 1) % mBuffer.size();
+        initSpeex(channels);
     }
-}
 
-void EchoCancellation::processAudioS24(void *pInput, ma_uint32 frameCount, unsigned int channels)
-{
-    uint8_t *input = static_cast<uint8_t *>(pInput);
+    const size_t totalSamples = frameCount * channels;
 
-    for (ma_uint32 i = 0; i < frameCount * channels; ++i)
+    // Convert near-end (mic) input to 16-bit PCM
+    std::vector<spx_int16_t> micConverted(totalSamples);
+    ma_pcm_convert(micConverted.data(), ma_format_s16, pInput, format, totalSamples, ma_dither_mode_none);
+
+    mMicFifo.insert(mMicFifo.end(), micConverted.begin(), micConverted.end());
+
+    // If pOutput is provided (native duplex loopback), append to mRefFifo
+    if (pOutput != nullptr)
     {
-        // Extract 24-bit signed integer from the 3 bytes
-        int32_t sample = (input[i * 3 + 0] << 8) | (input[i * 3 + 1] << 16) | (input[i * 3 + 2] << 24);
-        sample >>= 8; // Convert to signed 32-bit integer
-
-        // Normalize sample to float [-1, 1]
-        float currentSample = sample / 8388608.0f; // 2^23
-
-        float delayedSample = mBuffer[mWriteIndex];
-
-        // Apply echo cancellation
-        float processedSample = currentSample - getParamValue(EchoAttenuation) * delayedSample;
-
-        // Store result back to circular buffer
-        mBuffer[mWriteIndex] = currentSample;
-
-        // Write processed sample back to input
-        int32_t processedInt = static_cast<int32_t>(std::clamp(processedSample * 8388608.0f, -8388608.0f, 8388607.0f));
-        input[i * 3 + 0] = static_cast<uint8_t>((processedInt >> 8) & 0xFF);
-        input[i * 3 + 1] = static_cast<uint8_t>((processedInt >> 16) & 0xFF);
-        input[i * 3 + 2] = static_cast<uint8_t>((processedInt >> 24) & 0xFF);
-
-        // Increment and wrap write index
-        mWriteIndex = (mWriteIndex + 1) % mBuffer.size();
+        std::vector<spx_int16_t> refConverted(totalSamples);
+        ma_pcm_convert(refConverted.data(), ma_format_s16, pOutput, format, totalSamples, ma_dither_mode_none);
+        mRefFifo.insert(mRefFifo.end(), refConverted.begin(), refConverted.end());
     }
-}
 
-float EchoCancellation::normalizeSample(unsigned char sample)
-{
-    return (sample - 128) / 128.0f;
-}
-
-float EchoCancellation::normalizeSample(int16_t sample)
-{
-    return sample / 32768.0f;
-}
-
-float EchoCancellation::normalizeSample(int32_t sample)
-{
-    return sample / 2147483648.0f;
-}
-
-float EchoCancellation::normalizeSample(float sample)
-{
-    return sample; // Already normalized
-}
-
-template <typename T>
-T EchoCancellation::denormalizeSample(float sample)
-{
-    if (std::is_same<T, unsigned char>::value)
+    // If mRefFifo is smaller than mMicFifo (e.g. silence or no external feed), pad with silence
+    if (mRefFifo.size() < mMicFifo.size())
     {
-        return static_cast<unsigned char>(std::clamp(sample * 128.0f + 128, 0.0f, 255.0f));
+        mRefFifo.resize(mMicFifo.size(), 0);
     }
-    else if (std::is_same<T, int16_t>::value)
+
+    const size_t chunkSize = static_cast<size_t>(mFrameSize * mChannels);
+    std::vector<spx_int16_t> chunkOut(chunkSize);
+
+    while (mMicFifo.size() >= chunkSize && mRefFifo.size() >= chunkSize)
     {
-        return static_cast<int16_t>(std::clamp(sample * 32768.0f, -32768.0f, 32767.0f));
+        speex_echo_cancellation(mEchoState, mMicFifo.data(), mRefFifo.data(), chunkOut.data());
+
+        if (mChannels == 1)
+        {
+            if (!mPreprocessStates.empty() && mPreprocessStates[0] != nullptr)
+            {
+                speex_preprocess_run(mPreprocessStates[0], chunkOut.data());
+            }
+        }
+        else
+        {
+            for (unsigned int c = 0; c < mChannels; ++c)
+            {
+                if (c < mPreprocessStates.size() && mPreprocessStates[c] != nullptr)
+                {
+                    std::vector<spx_int16_t> chanBuf(mFrameSize);
+                    for (int i = 0; i < mFrameSize; ++i)
+                    {
+                        chanBuf[i] = chunkOut[i * mChannels + c];
+                    }
+                    speex_preprocess_run(mPreprocessStates[c], chanBuf.data());
+                    for (int i = 0; i < mFrameSize; ++i)
+                    {
+                        chunkOut[i * mChannels + c] = chanBuf[i];
+                    }
+                }
+            }
+        }
+
+        mOutFifo.insert(mOutFifo.end(), chunkOut.begin(), chunkOut.end());
+        mMicFifo.erase(mMicFifo.begin(), mMicFifo.begin() + chunkSize);
+        mRefFifo.erase(mRefFifo.begin(), mRefFifo.begin() + chunkSize);
     }
-    else if (std::is_same<T, int32_t>::value)
+
+    // Prepare output buffer back in target format
+    std::vector<spx_int16_t> outSamples(totalSamples, 0);
+    size_t available = std::min(totalSamples, mOutFifo.size());
+    if (available > 0)
     {
-        return static_cast<int32_t>(std::clamp(sample * 2147483648.0f, -2147483648.0f, 2147483647.0f));
+        std::copy(mOutFifo.begin(), mOutFifo.begin() + available, outSamples.begin());
+        mOutFifo.erase(mOutFifo.begin(), mOutFifo.begin() + available);
     }
-    else if (std::is_same<T, float>::value)
+    if (available < totalSamples)
     {
-        return sample;
+        std::copy(micConverted.begin() + available, micConverted.end(), outSamples.begin() + available);
     }
-    return 0;
+
+    ma_pcm_convert(pInput, format, outSamples.data(), ma_format_s16, totalSamples, ma_dither_mode_none);
 }
 
 void EchoCancellation::validateParam(int param) const
 {
-    if (param < 0 || param >= ParamCount)
-    {
-        throw std::invalid_argument("Invalid parameter index");
-    }
 }

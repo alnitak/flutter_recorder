@@ -1,6 +1,7 @@
 // ignore_for_file: avoid_positional_boolean_parameters
 
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter_recorder/src/audio_data_container.dart';
 import 'package:flutter_recorder/src/audio_visualization_data.dart';
@@ -255,6 +256,14 @@ abstract class RecorderImpl {
   @mustBeOverridden
   List<String> getFilterParamNames(RecorderFilterType filterType);
 
+  /// Set native duplex loopback to speaker.
+  @mustBeOverridden
+  void setLoopback({required bool enable});
+
+  /// Check whether native duplex loopback is enabled.
+  @mustBeOverridden
+  bool isLoopbackEnabled();
+
   /// Set filter param value.
   @mustBeOverridden
   void setFilterParamValue(
@@ -266,4 +275,12 @@ abstract class RecorderImpl {
   /// Get filter param value.
   @mustBeOverridden
   double getFilterParamValue(RecorderFilterType filterType, int attributeId);
+
+  /// Feed playback audio data to the echo cancellation filter.
+  @mustBeOverridden
+  void feedPlaybackData(
+    Uint8List data, {
+    required PCMFormat format,
+    required RecorderChannels channels,
+  });
 }

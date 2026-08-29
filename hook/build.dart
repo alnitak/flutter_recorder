@@ -32,7 +32,7 @@ void main(List<String> args) async {
     final defines = <String, String?>{
       'FLUTTER_PLUGIN_IMPL': null,
       // Comment out this line for debugging native code.
-      'NDEBUG': null,
+      // 'NDEBUG': null,
       'MA_NO_PULSEAUDIO': null,
       '_REENTRANT': '1',
       if (isApple) ...{'WITH_COREAUDIO': null, 'MA_NO_RUNTIME_LINKING': '1'},
@@ -46,9 +46,9 @@ void main(List<String> args) async {
     final flags = <String>[
       if (os != OS.windows) '-fvisibility=hidden',
       // For debugging:
-      // if (os == OS.windows) ...['/Od', '/Zi', '/EHsc'] else ...['-O0', '-g'],
+      if (os == OS.windows) ...['/Od', '/Zi', '/EHsc'] else ...['-O0', '-g'],
       // For production / default:
-      if (os == OS.windows) ...['/Ox', '/EHsc'] else '-O3',
+      // if (os == OS.windows) ...['/Ox', '/EHsc'] else '-O3',
       if (os == OS.android) ...[
         '-ffast-math',
         '-funroll-loops',

@@ -52,6 +52,14 @@ if [ ! -d "opus" ]; then
     cd ..
 fi
 
+if [ ! -d "speexdsp" ]; then
+    git clone https://github.com/xiph/speexdsp
+    cd speexdsp
+    git reset --hard 7a15878
+    cd ..
+fi
+cp speexdsp_CMakeLists.txt speexdsp/CMakeLists.txt
+
 # Function to build library for specific architecture
 build_lib() {
     local lib=$1
@@ -128,6 +136,8 @@ build_lib() {
             cp -r "$temp_install_path/include/ogg" "$OUTPUT_INCLUDE_DIR/"
         elif [ "$lib" = "opus" ]; then
             cp -r "$temp_install_path/include/opus" "$OUTPUT_INCLUDE_DIR/"
+        elif [ "$lib" = "speexdsp" ]; then
+            cp -r "$temp_install_path/include/speex" "$OUTPUT_INCLUDE_DIR/"
         fi
     fi
     
@@ -135,11 +145,12 @@ build_lib() {
     cd "$BASE_DIR"
 }
 
-# Build both libraries for all architectures
+# Build all libraries for all architectures
 for arch in "${ARCHS[@]}"; do
     echo -e "${BOLD_WHITE_ON_GREEN}=== Building for $arch ===${RESET}"
     build_lib "ogg" "$arch"
     build_lib "opus" "$arch"
+    build_lib "speexdsp" "$arch"
 done
 
 echo

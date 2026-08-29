@@ -42,7 +42,7 @@ final class XiphLink {
     switch (os) {
       case OS.macOS:
         const dir = 'macos/libs';
-        const libs = ['fr_ogg', 'fr_opus'];
+        const libs = ['fr_ogg', 'fr_opus', 'fr_speexdsp'];
         return XiphLink._(
           libraries: libs,
           libraryDirectories: [packageRoot.resolve(dir).toFilePath()],
@@ -58,7 +58,7 @@ final class XiphLink {
           IOSSdk.iPhoneSimulator => 'ios-arm64_x86_64-simulator',
           _ => 'ios-arm64',
         };
-        const libs = ['ogg', 'opus'];
+        const libs = ['ogg', 'opus', 'speexdsp'];
         return XiphLink._(
           libraries: libs,
           libraryDirectories: [
@@ -85,7 +85,7 @@ final class XiphLink {
           );
         }
         final dir = 'android/libs/$abi';
-        const libs = ['fr_ogg', 'fr_opus'];
+        const libs = ['fr_ogg', 'fr_opus', 'fr_speexdsp'];
         return XiphLink._(
           libraries: libs,
           libraryDirectories: [packageRoot.resolve(dir).toFilePath()],
@@ -106,7 +106,7 @@ final class XiphLink {
 
       case OS.windows:
         const dir = 'windows/libs';
-        const libs = ['ogg', 'opus'];
+        const libs = ['ogg', 'opus', 'speexdsp'];
         return XiphLink._(
           libraries: libs,
           libraryDirectories: [packageRoot.resolve(dir).toFilePath()],
@@ -130,7 +130,7 @@ final class XiphLink {
 
       case OS.linux:
         const dir = 'linux/libs';
-        const libs = ['ogg', 'opus'];
+        const libs = ['ogg', 'opus', 'speexdsp'];
         return XiphLink._(
           libraries: libs,
           libraryDirectories: [packageRoot.resolve(dir).toFilePath()],

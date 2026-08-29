@@ -182,10 +182,13 @@ FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_init(
     unsigned int channels,
     int androidInputPreset)
 {
-    if (!mFilters || mFilters.get()->mSamplerate != sampleRate)
+    if (!mFilters)
     {
-        mFilters.reset();
         mFilters = std::make_unique<Filters>(sampleRate);
+    }
+    else
+    {
+        mFilters->setSampleRate(sampleRate);
     }
     CaptureErrors res = capture.init(mFilters.get(), deviceID, (PCMFormat)pcmFormat, sampleRate, channels, androidInputPreset);
 
@@ -194,13 +197,16 @@ FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_init(
 
 FFI_PLUGIN_EXPORT void flutter_recorder_deinit()
 {
+    if (capture.isRecording)
+        capture.stopRecording();
+    capture.stopStreamingData();
+    capture.stop();
+    capture.dispose();
+
     dartSilenceChangedCallback = nullptr;
     dartStreamDataCallback = nullptr;
     Analyzer::instance().setDataCallback(nullptr);
     Analyzer::instance().setVisualizationEnabled(false);
-    if (capture.isRecording)
-        capture.stopRecording();
-    capture.dispose();
 }
 
 FFI_PLUGIN_EXPORT int flutter_recorder_isInited()
@@ -325,6 +331,16 @@ FFI_PLUGIN_EXPORT void flutter_recorder_setFftSmoothing(float smooth)
     Analyzer::instance().setSmoothing(smooth);
 }
 
+FFI_PLUGIN_EXPORT void flutter_recorder_setLoopback(bool enable)
+{
+    capture.setLoopback(enable);
+}
+
+FFI_PLUGIN_EXPORT int flutter_recorder_isLoopbackEnabled()
+{
+    return capture.isLoopback() ? 1 : 0;
+}
+
 /////////////////////////
 /// FILTERS
 /////////////////////////
@@ -335,12 +351,22 @@ FFI_PLUGIN_EXPORT int flutter_recorder_isFilterActive(enum RecorderFilterType fi
 
 FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_addFilter(enum RecorderFilterType filterType)
 {
-    return mFilters.get()->addFilter(filterType);
+    CaptureErrors err = mFilters.get()->addFilter(filterType);
+    if (err == captureNoError && filterType == RecorderFilterType::echoCancellation && capture.isInited())
+    {
+        capture.reinitDevice();
+    }
+    return err;
 }
 
 FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_removeFilter(enum RecorderFilterType filterType)
 {
-    return mFilters.get()->removeFilter(filterType);
+    CaptureErrors err = mFilters.get()->removeFilter(filterType);
+    if (err == captureNoError && filterType == RecorderFilterType::echoCancellation && capture.isInited())
+    {
+        capture.reinitDevice();
+    }
+    return err;
 }
 
 FFI_PLUGIN_EXPORT void flutter_recorder_getFilterParamNames(enum RecorderFilterType filterType, char **names, int *paramsCount)
@@ -363,4 +389,32 @@ FFI_PLUGIN_EXPORT void flutter_recorder_setFilterParams(enum RecorderFilterType 
 FFI_PLUGIN_EXPORT float flutter_recorder_getFilterParams(enum RecorderFilterType filterType, int attributeId)
 {
     return mFilters.get()->getFilterParams(filterType, attributeId);
+}
+
+FFI_PLUGIN_EXPORT void flutter_recorder_feedPlaybackData(const void *data, unsigned int frameCount, unsigned int channels, int pcmFormat)
+{
+    if (mFilters && data != nullptr && frameCount > 0 && channels > 0)
+    {
+        ma_format maFormat = ma_format_f32;
+        switch ((PCMFormat)pcmFormat)
+        {
+        case pcm_u8:
+            maFormat = ma_format_u8;
+            break;
+        case pcm_s16:
+            maFormat = ma_format_s16;
+            break;
+        case pcm_s24:
+            maFormat = ma_format_s24;
+            break;
+        case pcm_s32:
+            maFormat = ma_format_s32;
+            break;
+        case pcm_f32:
+        default:
+            maFormat = ma_format_f32;
+            break;
+        }
+        mFilters->feedPlaybackData(data, frameCount, channels, maFormat);
+    }
 }

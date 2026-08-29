@@ -32,7 +32,7 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   audio_session: eaca2512cf2b39212d724f35d11f46180ad3a33e
   flutter_recorder: 5653a824c312b94feb1fb100d2eadad6f8ef0567
-  flutter_soloud: 27bbb9bc4f68aa0ca41b61683871db9660f59283
+  flutter_soloud: 4322a497664da9906d95dc91d7588751659d9dbf
   FlutterMacOS: c232990155153907050900a2e175c7773903ba4e
   path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
 

@@ -393,6 +393,16 @@ class RecorderWeb extends RecorderImpl {
   }
 
   @override
+  void setLoopback({required bool enable}) {
+    // Web implementation
+  }
+
+  @override
+  bool isLoopbackEnabled() {
+    return false;
+  }
+
+  @override
   void setFilterParamValue(
     RecorderFilterType filterType,
     int attributeId,
@@ -405,5 +415,14 @@ class RecorderWeb extends RecorderImpl {
   double getFilterParamValue(RecorderFilterType filterType, int attributeId) {
     final value = wasmGetFilterParamValue(filterType.value, attributeId);
     return value;
+  }
+
+  @override
+  void feedPlaybackData(
+    Uint8List data, {
+    required PCMFormat format,
+    required RecorderChannels channels,
+  }) {
+    // Web implementation
   }
 }

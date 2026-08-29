@@ -31,8 +31,16 @@ if [ ! -d "opus" ]; then
     cd ..
 fi
 
+if [ ! -d "speexdsp" ]; then
+    git clone https://github.com/xiph/speexdsp
+    cd speexdsp
+    git reset --hard 7a15878
+    cd ..
+fi
+cp speexdsp_CMakeLists.txt speexdsp/CMakeLists.txt
+
 # Directories
-LIBS=("ogg" "opus")
+LIBS=("ogg" "opus" "speexdsp")
 BASE_DIR="$PWD"
 BUILD_DIR="$BASE_DIR/macos/build"
 INCLUDE_DIR="$BASE_DIR/../macos/include"

@@ -141,6 +141,12 @@ external int flutter_recorder_isVisualizationEnabled();
 @ffi.Native<ffi.Void Function(ffi.Float)>()
 external void flutter_recorder_setFftSmoothing(double smooth);
 
+@ffi.Native<ffi.Void Function(ffi.Bool)>()
+external void flutter_recorder_setLoopback(bool enable);
+
+@ffi.Native<ffi.Int Function()>()
+external int flutter_recorder_isLoopbackEnabled();
+
 /// //////////////////////
 /// FILTERS
 /// //////////////////////
@@ -177,6 +183,21 @@ external void flutter_recorder_setFilterParams(
 external double flutter_recorder_getFilterParams(
   int filterType,
   int attributeId,
+);
+
+@ffi.Native<
+  ffi.Void Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.UnsignedInt,
+    ffi.UnsignedInt,
+    ffi.Int,
+  )
+>()
+external void flutter_recorder_feedPlaybackData(
+  ffi.Pointer<ffi.Void> data,
+  int frameCount,
+  int channels,
+  int pcmFormat,
 );
 
 typedef dartSilenceChangedCallback_tFunction =

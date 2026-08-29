@@ -6,10 +6,10 @@
 #include <atomic>
 #include <cmath>
 #include <cstdarg>
+#include <cstring>
 #include <memory.h>
 #include <memory>
 #include <mutex>
-#include <cstring>
 #include <time.h>
 
 #ifdef _IS_ANDROID_
@@ -225,17 +225,30 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput,
   if (userData == nullptr)
     return;
 
-  // Filters operate on the configured PCM format in place. Do not reinterpret
-  // non-float input as float samples: doing so reads past AAudio's callback
-  // buffer for u8, s16 and s24 capture.
   void *captured = const_cast<void *>(pInput);
 
-  // Apply filters
+  // If loopback is enabled and in duplex mode, copy captured mic audio into
+  // pOutput for speaker playback
+  if (pOutput != nullptr) {
+    if (userData->isLoopbackEnabled) {
+      memcpy(
+          pOutput, captured,
+          frameCount * userData->deviceConfig.playback.channels *
+              ma_get_bytes_per_sample(userData->deviceConfig.playback.format));
+    } else {
+      memset(
+          pOutput, 0,
+          frameCount * userData->deviceConfig.playback.channels *
+              ma_get_bytes_per_sample(userData->deviceConfig.playback.format));
+    }
+  }
+
+  // Apply filters (e.g. EchoCancellation uses pOutput as far-end reference)
   if (userData->mFilters->filters.size() > 0) {
     for (auto &filter : userData->mFilters->filters) {
-      filter->filter->process(captured, frameCount,
-                              userData->deviceConfig.capture.channels,
-                              userData->deviceConfig.capture.format);
+      filter->filter->processDuplex(captured, pOutput, frameCount,
+                                    userData->deviceConfig.capture.channels,
+                                    userData->deviceConfig.capture.format);
     }
   }
 
@@ -254,7 +267,8 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput,
 
   if (capturedFloat != nullptr) {
     calculateEnergy(capturedFloat, frameCount);
-    Analyzer::instance().onAudioData(capturedFloat, frameCount, userData->deviceConfig.capture.channels);
+    Analyzer::instance().onAudioData(capturedFloat, frameCount,
+                                     userData->deviceConfig.capture.channels);
   }
 
   // Stream the audio data?
@@ -263,7 +277,7 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput,
       if (userData->streamOpusPipeline) {
         userData->streamOpusPipeline->push(pInput, frameCount);
       }
-    } else {
+    } else if (streamBuffer) {
       const unsigned char *data = (const unsigned char *)pInput;
       // Calculate total size in bytes considering frame size
       int frameSize =
@@ -336,8 +350,7 @@ Capture::Capture()
       silenceDuration(2.0f), secondsOfAudioToWriteBefore(0.0f),
       isRecording(false), isRecordingPaused(false), isStreamingData(false),
       recordingFormat(recordingFormatWav), streamingFormat(streamingFormatPcm),
-      mInited(false), mUsesContext(false) {
-}
+      mInited(false), mUsesContext(false) {}
 
 Capture::~Capture() { dispose(); }
 
@@ -396,7 +409,18 @@ CaptureErrors Capture::init(Filters *filters, int deviceID, PCMFormat pcmFormat,
     dispose();
   }
 
-  deviceConfig = ma_device_config_init(ma_device_type_capture);
+  mFilters = filters;
+  mDeviceID = deviceID;
+  mPcmFormat = pcmFormat;
+  mSampleRate = sampleRate;
+  mChannels = channels;
+  mAndroidInputPreset = androidInputPreset;
+
+  bool isDuplex =
+      (filters != nullptr &&
+       filters->isFilterActive(RecorderFilterType::echoCancellation) >= 0);
+  deviceConfig = ma_device_config_init(isDuplex ? ma_device_type_duplex
+                                                : ma_device_type_capture);
   mUsesContext = false;
   deviceConfig.periodSizeInFrames = BUFFER_SIZE;
   if (deviceID != -1) {
@@ -432,6 +456,11 @@ CaptureErrors Capture::init(Filters *filters, int deviceID, PCMFormat pcmFormat,
   }
   deviceConfig.capture.format = format;
   deviceConfig.capture.channels = channels;
+  if (isDuplex) {
+    deviceConfig.playback.format = format;
+    deviceConfig.playback.channels = channels;
+    deviceConfig.playback.pDeviceID = NULL;
+  }
   deviceConfig.sampleRate = sampleRate;
   deviceConfig.dataCallback = data_callback;
   deviceConfig.pUserData = this;
@@ -469,30 +498,31 @@ CaptureErrors Capture::init(Filters *filters, int deviceID, PCMFormat pcmFormat,
 #endif
 #if defined(MA_HAS_COREAUDIO)
   {
-  // Use explicit context with noAudioSessionActivate to let audio_session manage AVAudioSession
-  ma_context_config contextConfig = ma_context_config_init();
-  contextConfig.coreaudio.sessionCategory = ma_ios_session_category_none;
-  contextConfig.coreaudio.noAudioSessionActivate = true;
-  contextConfig.coreaudio.noAudioSessionDeactivate = true;
+    // Use explicit context with noAudioSessionActivate to let audio_session
+    // manage AVAudioSession
+    ma_context_config contextConfig = ma_context_config_init();
+    contextConfig.coreaudio.sessionCategory = ma_ios_session_category_none;
+    contextConfig.coreaudio.noAudioSessionActivate = true;
+    contextConfig.coreaudio.noAudioSessionDeactivate = true;
 
-  if (ma_context_init(NULL, 0, &contextConfig, &context) != MA_SUCCESS) {
-    printf("Failed to initialize capture context.\n");
-    return captureInitFailed;
-  }
-  mUsesContext = true;
-  if (ma_device_init(&context, &deviceConfig, &device) != MA_SUCCESS) {
-    printf("Failed to initialize capture device.\n");
-    ma_context_uninit(&context);
-    mUsesContext = false;
-    return captureInitFailed;
-  }
+    if (ma_context_init(NULL, 0, &contextConfig, &context) != MA_SUCCESS) {
+      printf("Failed to initialize capture context.\n");
+      return captureInitFailed;
+    }
+    mUsesContext = true;
+    if (ma_device_init(&context, &deviceConfig, &device) != MA_SUCCESS) {
+      printf("Failed to initialize capture device.\n");
+      ma_context_uninit(&context);
+      mUsesContext = false;
+      return captureInitFailed;
+    }
   }
 #else
   {
-  if (ma_device_init(NULL, &deviceConfig, &device) != MA_SUCCESS) {
-    printf("Failed to initialize capture device.\n");
-    return captureInitFailed;
-  }
+    if (ma_device_init(NULL, &deviceConfig, &device) != MA_SUCCESS) {
+      printf("Failed to initialize capture device.\n");
+      return captureInitFailed;
+    }
   }
 #endif
 
@@ -502,7 +532,20 @@ CaptureErrors Capture::init(Filters *filters, int deviceID, PCMFormat pcmFormat,
 }
 
 void Capture::dispose() {
+  if (!mInited)
+    return;
   mInited = false;
+
+  stop();
+  stopStreamingData();
+  stopRecording();
+
+  ma_device_uninit(&device);
+  if (mUsesContext) {
+    ma_context_uninit(&context);
+    mUsesContext = false;
+  }
+
   Analyzer::instance().setVisualizationEnabled(false);
   wav.close();
   opusWriter.close();
@@ -513,12 +556,6 @@ void Capture::dispose() {
   if (streamOpusPipeline)
     streamOpusPipeline.reset();
   isRecording = false;
-
-  ma_device_uninit(&device);
-  if (mUsesContext) {
-    ma_context_uninit(&context);
-    mUsesContext = false;
-  }
 }
 
 bool Capture::isInited() { return mInited; }
@@ -557,25 +594,25 @@ void Capture::startStreamingData(StreamingFormat streamingFormat) {
     streamOpusPipeline.reset();
   if (streamingFormat == streamingFormatOpus) {
     streamOpusPipeline = std::make_unique<OpusEncoderPipeline>();
-    CaptureErrors err = streamOpusPipeline->init(
-        deviceConfig.capture.format, deviceConfig.capture.channels,
-        deviceConfig.sampleRate);
+    CaptureErrors err = streamOpusPipeline->init(deviceConfig.capture.format,
+                                                 deviceConfig.capture.channels,
+                                                 deviceConfig.sampleRate);
     if (err != captureNoError) {
       streamOpusPipeline.reset();
       return;
     }
-    streamOpusPipeline->onPacket =
-        [](const unsigned char *packet, int packetSize) {
-          if (nativeStreamDataCallback == nullptr)
-            return;
-          auto *data = new unsigned char[packetSize + 4];
-          data[0] = static_cast<unsigned char>(packetSize & 0xFF);
-          data[1] = static_cast<unsigned char>((packetSize >> 8) & 0xFF);
-          data[2] = static_cast<unsigned char>((packetSize >> 16) & 0xFF);
-          data[3] = static_cast<unsigned char>((packetSize >> 24) & 0xFF);
-          std::memcpy(data + 4, packet, packetSize);
-          nativeStreamDataCallback(data, packetSize + 4);
-        };
+    streamOpusPipeline->onPacket = [](const unsigned char *packet,
+                                      int packetSize) {
+      if (nativeStreamDataCallback == nullptr)
+        return;
+      auto *data = new unsigned char[packetSize + 4];
+      data[0] = static_cast<unsigned char>(packetSize & 0xFF);
+      data[1] = static_cast<unsigned char>((packetSize >> 8) & 0xFF);
+      data[2] = static_cast<unsigned char>((packetSize >> 16) & 0xFF);
+      data[3] = static_cast<unsigned char>((packetSize >> 24) & 0xFF);
+      std::memcpy(data + 4, packet, packetSize);
+      nativeStreamDataCallback(data, packetSize + 4);
+    };
   }
   streamBuffer = std::make_unique<std::vector<unsigned char>>();
   streamBuffer->reserve(STREAM_BUFFER_SIZE * 6);
@@ -615,7 +652,7 @@ void Capture::setSecondsOfAudioToWriteBefore(
 }
 
 CaptureErrors Capture::startRecording(const char *path,
-                                       RecordingFormat recordingFormat) {
+                                      RecordingFormat recordingFormat) {
   if (!mInited)
     return captureNotInited;
   this->recordingFormat = recordingFormat;
@@ -650,3 +687,44 @@ void Capture::stopRecording() {
 
 float Capture::getVolumeDb() { return energy_db; }
 
+CaptureErrors Capture::reinitDevice() {
+  if (!mInited)
+    return captureNoError;
+
+  bool wasStarted = isDeviceStarted();
+  bool wasStreaming = isStreamingData;
+  StreamingFormat savedStreamingFormat = streamingFormat;
+  bool wasVisEnabled = Analyzer::instance().isVisualizationEnabled();
+  int visWindowSize = Analyzer::instance().windowSize();
+  VisualizationKind visKind = Analyzer::instance().kind();
+  int visChannel = Analyzer::instance().channelSelection();
+
+  if (wasStarted) {
+    stop();
+  }
+
+  CaptureErrors err = init(mFilters, mDeviceID, mPcmFormat, mSampleRate,
+                           mChannels, mAndroidInputPreset);
+  if (err != captureNoError) {
+    return err;
+  }
+
+  if (wasStreaming) {
+    startStreamingData(savedStreamingFormat);
+  }
+
+  if (wasVisEnabled) {
+    Analyzer::instance().setVisualizationEnabled(true, visWindowSize, visKind,
+                                                 visChannel, mChannels);
+  }
+
+  if (wasStarted) {
+    return start();
+  }
+
+  return captureNoError;
+}
+
+void Capture::setLoopback(bool enable) { isLoopbackEnabled = enable; }
+
+bool Capture::isLoopback() const { return isLoopbackEnabled; }

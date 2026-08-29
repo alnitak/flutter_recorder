@@ -113,7 +113,15 @@ public:
   /// the number of bytes per sample
   int bytesPerSample;
 
+  /// true when native loopback to speaker is enabled in duplex mode
+  bool isLoopbackEnabled;
+
+  void setLoopback(bool enable);
+  bool isLoopback() const;
+
   Filters *mFilters;
+
+  CaptureErrors reinitDevice();
 
 private:
   ma_context context;
@@ -123,6 +131,12 @@ private:
   ma_uint32 captureCount;
   ma_result result;
   ma_device device;
+
+  int mDeviceID;
+  PCMFormat mPcmFormat;
+  unsigned int mSampleRate;
+  unsigned int mChannels;
+  int mAndroidInputPreset;
 
   /// true when the capture device is initialized.
   bool mInited;
