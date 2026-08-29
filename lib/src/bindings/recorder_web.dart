@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 import 'dart:typed_data' show Float32List, Uint8List;
@@ -32,6 +33,71 @@ class RecorderWeb extends RecorderImpl {
   void Function(AudioVisualizationData data)? _visualizationCallback;
   bool _wasmVisualizationCallbackSetUp = false;
 
+  /// Calls `flutter_recorder_init`. In the multi-threaded (AudioWorklet)
+  /// build this can reach `emscripten_sleep` (miniaudio spin-waits while the
+  /// worklet thread starts up), and the ASYNCIFY build requires them to be
+  /// called with `{async: true}`. The single-threaded build has no ASYNCIFY,
+  /// so there it is a plain synchronous call.
+  Future<int> _callEngineAsync(String fn, List<int> args) async {
+    await _ensureModuleReady();
+    if (flutterRecorderHasAsyncify != true) {
+      if (fn == 'flutter_recorder_init') {
+        return wasmInit(
+          args[0],
+          args[1],
+          args[2],
+          args[3],
+          args.length > 4 ? args[4] : 0,
+        );
+      }
+      throw UnimplementedError('Unknown async function: $fn');
+    }
+    final promise = wasmCcallAsync(
+      fn.toJS,
+      'number'.toJS,
+      List.filled(args.length, 'number'.toJS).toJS,
+      args.map((a) => a.toJS).toList().toJS,
+      <String, Object>{'async': true}.jsify()! as JSObject,
+    );
+    final ret = (await promise.toDart).toDartInt;
+    return ret;
+  }
+
+  /// Waits for the WASM module to finish loading. `Recorder.init()` can be
+  /// called by the app while `init_recorder_module.dart.js` is still
+  /// instantiating the module; without this the first bindings call would hit
+  /// a not-yet-defined `RecorderModule`.
+  Future<void> _ensureModuleReady() async {
+    if (_isModuleInstantiated()) return;
+    final ready = flutterRecorderReady;
+    if (ready != null) {
+      await ready.toDart.timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => throw TimeoutException(
+          'flutter_recorder: the WASM module did not finish initializing in '
+          '15 seconds. If you serve the app with COOP/COEP headers, make '
+          'sure they are not duplicated or conflicting, which blocks the '
+          'worker threads the module needs.',
+        ),
+      );
+      return;
+    }
+    for (var i = 0; i < 100 && !_isModuleInstantiated(); i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      final r = flutterRecorderReady;
+      if (r != null) {
+        await r.toDart;
+        return;
+      }
+    }
+  }
+
+  /// Whether `self.RecorderModule` is the fully instantiated WASM module.
+  bool _isModuleInstantiated() {
+    final instance = moduleRecorderInstance;
+    return instance != null && !instance.isA<JSFunction>();
+  }
+
   void _setupWasmVisualizationCallback() {
     if (_wasmVisualizationCallbackSetUp) return;
     _wasmVisualizationCallbackSetUp = true;
@@ -49,52 +115,55 @@ class RecorderWeb extends RecorderImpl {
       final fftPtr = fftDataPerChannelPtr.toDartInt;
       final fSamples = fftSamples.toDartInt;
 
-      final waveList = <Float32List>[];
-      if (wSamples > 0 && wavePtr != 0) {
-        for (var c = 0; c < cCount; c++) {
-          final channelPtr = wasmGetI32Value(wavePtr + (c * 4), 'i32');
-          if (channelPtr != 0) {
-            final startIndex = channelPtr >> 2;
-            final endIndex = startIndex + wSamples;
-            waveList.add(
-              Float32List.fromList(
-                wasmHeapF32.toDart.sublist(startIndex, endIndex),
-              ),
-            );
+      try {
+        final heap = wasmHeapF32.toDart;
+        final heapLen = heap.length;
+
+        final waveList = <Float32List>[];
+        if (wSamples > 0 && wavePtr != 0) {
+          for (var c = 0; c < cCount; c++) {
+            final channelPtr = wasmGetI32Value(wavePtr + (c * 4), 'i32');
+            if (channelPtr != 0) {
+              final startIndex = channelPtr >> 2;
+              final endIndex = startIndex + wSamples;
+              if (startIndex >= 0 && endIndex <= heapLen) {
+                waveList.add(heap.sublist(startIndex, endIndex));
+              }
+            }
           }
         }
-      }
 
-      final fftList = <Float32List>[];
-      if (fSamples > 0 && fftPtr != 0) {
-        for (var c = 0; c < cCount; c++) {
-          final channelPtr = wasmGetI32Value(fftPtr + (c * 4), 'i32');
-          if (channelPtr != 0) {
-            final startIndex = channelPtr >> 2;
-            final endIndex = startIndex + fSamples;
-            fftList.add(
-              Float32List.fromList(
-                wasmHeapF32.toDart.sublist(startIndex, endIndex),
-              ),
-            );
+        final fftList = <Float32List>[];
+        if (fSamples > 0 && fftPtr != 0) {
+          for (var c = 0; c < cCount; c++) {
+            final channelPtr = wasmGetI32Value(fftPtr + (c * 4), 'i32');
+            if (channelPtr != 0) {
+              final startIndex = channelPtr >> 2;
+              final endIndex = startIndex + fSamples;
+              if (startIndex >= 0 && endIndex <= heapLen) {
+                fftList.add(heap.sublist(startIndex, endIndex));
+              }
+            }
           }
         }
-      }
 
-      final packet = AudioVisualizationData(
-        channelCount: cCount,
-        wave: waveList,
-        fft: fftList,
-      );
+        final packet = AudioVisualizationData(
+          channelCount: cCount,
+          wave: waveList,
+          fft: fftList,
+        );
 
-      _visualizationCallback?.call(packet);
-      if (audioVisualizationEventsController.hasListener) {
-        audioVisualizationEventsController.add(packet);
+        _visualizationCallback?.call(packet);
+        if (audioVisualizationEventsController.hasListener) {
+          audioVisualizationEventsController.add(packet);
+        }
+      } catch (_) {
+        // Ignore stale frames during WASM heap growth or reinitialization
       }
     }
 
     globalContext.setProperty(
-      '_wasmVisualizationCallback'.toJS,
+      '_wasmRecorderVisualizationCallback'.toJS,
       webVisualizationCallback.toJS,
     );
   }
@@ -103,6 +172,8 @@ class RecorderWeb extends RecorderImpl {
   /// from `web/worker.dart.js`
   @override
   Future<void> setDartEventCallbacks() async {
+    await _ensureModuleReady();
+
     // This calls the native WASM `createWorkerInWasm()` in `bindings.cpp`.
     // The latter creates a web Worker using `EM_ASM` inlining JS code to
     // create the worker in the WASM `Module`.
@@ -208,14 +279,21 @@ class RecorderWeb extends RecorderImpl {
   }
 
   @override
-  void init({
+  Future<void> init({
     required int deviceID,
     required PCMFormat format,
     required int sampleRate,
     required RecorderChannels channels,
     required AndroidInputPreset? androidInputPreset,
-  }) {
-    final error = wasmInit(deviceID, format.value, sampleRate, channels.count);
+  }) async {
+    await _ensureModuleReady();
+    final error = await _callEngineAsync('flutter_recorder_init', [
+      deviceID,
+      format.value,
+      sampleRate,
+      channels.count,
+      androidInputPreset?.index ?? 0,
+    ]);
     if (CaptureErrors.fromValue(error) != CaptureErrors.captureNoError) {
       throw RecorderCppException.fromRecorderError(
         CaptureErrors.fromValue(error),
@@ -394,12 +472,12 @@ class RecorderWeb extends RecorderImpl {
 
   @override
   void setLoopback({required bool enable}) {
-    // Web implementation
+    wasmSetLoopback(enable);
   }
 
   @override
   bool isLoopbackEnabled() {
-    return false;
+    return wasmIsLoopbackEnabled() == 1;
   }
 
   @override

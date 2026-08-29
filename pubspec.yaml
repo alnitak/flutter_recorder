@@ -73,6 +73,10 @@ flutter:
       platforms: [web]
     - path: web/libflutter_recorder_plugin.wasm
       platforms: [web]
+    - path: web/libflutter_recorder_plugin_mt.js
+      platforms: [web]
+    - path: web/libflutter_recorder_plugin_mt.wasm
+      platforms: [web]
 
 funding:
   - https://github.com/sponsors/alnitak

@@ -3,7 +3,17 @@ set -euo pipefail
 
 shopt -s extglob
 
-rm -f libflutter_recorder_plugin.*
+BOLD_WHITE_ON_GREEN="\033[1;37;42m"
+RESET="\033[0m"
+
+# Clean outputs if not skipped
+if [ "${SKIP_ST:-0}" != "1" ]; then
+    rm -f libflutter_recorder_plugin.js libflutter_recorder_plugin.wasm
+fi
+if [ "${SKIP_MT:-0}" != "1" ]; then
+    rm -f libflutter_recorder_plugin_mt.js libflutter_recorder_plugin_mt.wasm
+fi
+
 rm -rf build
 mkdir build
 cd build
@@ -77,7 +87,6 @@ EOF
 mkdir -p obj/speexdsp
 mkdir -p obj/ogg
 mkdir -p obj/opus
-mkdir -p obj/plugin
 
 echo "Compiling SpeexDSP..."
 (
@@ -155,50 +164,89 @@ echo "Compiling Opus..."
   emar rcs ../../libopus.a *.o
 )
 
-echo "Compiling plugin sources..."
-(
-  cd obj/plugin
-  emcc -O3 \
-    -msimd128 -msse3 \
-    -I ../../../../src/pffft \
-    -c ../../../../src/pffft/pffft.c
+build_flavor() {
+    local output_name="$1"
+    local obj_dir="obj/${output_name}"
+    shift
+    local extra_flags=("$@")
 
-  emcc -O3 \
-    -std=c++17 \
-    -msimd128 -msse3 \
-    -I ../../../../src \
-    -I ../../../../src/pffft \
-    -I ../../include \
-    -I ../../include/opus \
-    -I ../../include/ogg \
-    -I ../../include/speex \
-    -I ../../../../xiph/speexdsp/include \
-    -c \
-    ../../../../src/miniaudio.cpp \
-    ../../../../src/flutter_recorder.cpp \
-    ../../../../src/capture.cpp \
-    ../../../../src/analyzer.cpp \
-    ../../../../src/opus_encoder_pipeline.cpp \
-    ../../../../src/opus_ogg_writer.cpp \
-    ../../../../src/filters/filters.cpp \
-    ../../../../src/filters/autogain.cpp \
-    ../../../../src/filters/echo_cancellation.cpp
-)
+    echo -e "${BOLD_WHITE_ON_GREEN}Compiling plugin sources for ${output_name}...${RESET}"
+    mkdir -p "${obj_dir}"
+    (
+        cd "${obj_dir}"
+        emcc -O3 \
+            "${extra_flags[@]}" \
+            -msimd128 -msse3 \
+            -I ../../../../src/pffft \
+            -c ../../../../src/pffft/pffft.c
 
-echo "Linking WebAssembly module..."
-emcc -O3 \
-  obj/plugin/*.o \
-  libspeexdsp.a \
-  libogg.a \
-  libopus.a \
-  -s MODULARIZE=1 -s EXPORT_NAME="'RecorderModule'" \
-  -msimd128 -msse3 \
-  -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap']" \
-  -s "EXPORTED_FUNCTIONS=['_free', '_malloc']" \
-  -s EXPORT_ALL=1 \
-  -s NO_EXIT_RUNTIME=1 \
-  -s SAFE_HEAP=1 \
-  -s STACK_SIZE=4194304 \
-  -s ALLOW_TABLE_GROWTH=1 \
-  -s ALLOW_MEMORY_GROWTH=1 \
-  -o ../../web/libflutter_recorder_plugin.js
+        emcc -O3 \
+            "${extra_flags[@]}" \
+            -std=c++17 \
+            -msimd128 -msse3 \
+            -I ../../../../src \
+            -I ../../../../src/pffft \
+            -I ../../include \
+            -I ../../include/opus \
+            -I ../../include/ogg \
+            -I ../../include/speex \
+            -I ../../../../xiph/speexdsp/include \
+            -c \
+            ../../../../src/miniaudio.cpp \
+            ../../../../src/flutter_recorder.cpp \
+            ../../../../src/capture.cpp \
+            ../../../../src/analyzer.cpp \
+            ../../../../src/opus_encoder_pipeline.cpp \
+            ../../../../src/opus_ogg_writer.cpp \
+            ../../../../src/filters/filters.cpp \
+            ../../../../src/filters/autogain.cpp \
+            ../../../../src/filters/echo_cancellation.cpp
+    )
+
+    echo -e "${BOLD_WHITE_ON_GREEN}Linking WebAssembly module ${output_name}...${RESET}"
+    em++ -O2 \
+        "${extra_flags[@]}" \
+        -s ASSERTIONS=1 \
+        -g \
+        "${obj_dir}"/*.o \
+        libspeexdsp.a \
+        libogg.a \
+        libopus.a \
+        -s MODULARIZE=1 -s EXPORT_NAME="'RecorderModule'" \
+        -msimd128 -msse3 \
+        -std=c++17 \
+        -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','setValue','getValue','UTF8ToString','HEAPF32','HEAPU8']" \
+        -s "EXPORTED_FUNCTIONS=['_free', '_malloc', '_memcpy', '_memset']" \
+        -s EXPORT_ALL=1 \
+        -s NO_EXIT_RUNTIME=1 \
+        -s STACK_SIZE=4194304 \
+        -s ALLOW_TABLE_GROWTH=1 \
+        -s ALLOW_MEMORY_GROWTH=1 \
+        -s INITIAL_MEMORY=67108864 \
+        -s MAXIMUM_MEMORY=2147483648 \
+        -o "../../web/${output_name}.js"
+}
+
+# ST flavor (single-threaded, default)
+if [ "${SKIP_ST:-0}" != "1" ]; then
+    echo -e "${BOLD_WHITE_ON_GREEN}Building single-threaded flavor (libflutter_recorder_plugin)${RESET}"
+    build_flavor "libflutter_recorder_plugin" -s SAFE_HEAP=1
+fi
+
+# MT flavor (multi-threaded, AudioWorklet + pthread + SharedArrayBuffer)
+if [ "${SKIP_MT:-0}" != "1" ]; then
+    echo -e "${BOLD_WHITE_ON_GREEN}Building multi-threaded flavor (libflutter_recorder_plugin_mt)${RESET}"
+    build_flavor "libflutter_recorder_plugin_mt" \
+        -pthread \
+        -DMA_ENABLE_AUDIO_WORKLETS \
+        -s SHARED_MEMORY=1 \
+        -s PTHREAD_POOL_SIZE=8 \
+        -s ALLOW_BLOCKING_ON_MAIN_THREAD=1 \
+        -s AUDIO_WORKLET=1 \
+        -s WASM_WORKERS=1 \
+        -s ASYNCIFY=1 \
+        -s ASYNCIFY_STACK_SIZE=65536
+fi
+
+echo
+echo -e "${BOLD_WHITE_ON_GREEN}Build completed successfully!${RESET}"

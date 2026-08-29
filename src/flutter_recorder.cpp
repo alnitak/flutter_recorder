@@ -12,6 +12,11 @@
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
+#include <pthread.h>
+#ifdef MA_ENABLE_AUDIO_WORKLETS
+#include <emscripten/threading.h>
+#include <emscripten/webaudio.h>
+#endif
 #endif
 
 Capture capture;
@@ -44,43 +49,75 @@ FFI_PLUGIN_EXPORT void flutter_recorder_createWorkerInWasm()
     });
 }
 
+static void postSilenceToWorker(int messagePtr, int isSilent, int energyDbBits)
+{
+    float energyDb;
+    memcpy(&energyDb, &energyDbBits, sizeof(float));
+    EM_ASM({
+        if (RecorderModule.wasmWorker)
+        {
+            RecorderModule.wasmWorker.postMessage({
+                message : UTF8ToString($0),
+                isSilent : $1,
+                energyDb : $2,
+            });
+        }
+        else
+        {
+            console.error('Worker not found.');
+        }
+    }, messagePtr, isSilent, energyDb);
+}
+
 /// Post a new silence event message with the web worker.
 FFI_PLUGIN_EXPORT void flutter_recorder_sendSilenceEventToWorker(const char *message, bool isSilent, float energyDb)
 {
+    int energyDbBits;
+    memcpy(&energyDbBits, &energyDb, sizeof(float));
+#ifdef MA_ENABLE_AUDIO_WORKLETS
+    if (!emscripten_is_main_browser_thread())
+    {
+        emscripten_audio_worklet_post_function_viii(
+            EMSCRIPTEN_AUDIO_MAIN_THREAD, postSilenceToWorker,
+            (int)(uintptr_t)message, isSilent ? 1 : 0, energyDbBits);
+        return;
+    }
+#endif
+    postSilenceToWorker((int)(uintptr_t)message, isSilent ? 1 : 0, energyDbBits);
+}
+
+static void postStreamToWorker(int messagePtr, int audioDataPtr, int audioDataLength)
+{
     EM_ASM({
-            if (RecorderModule.wasmWorker)
-            {
-                // Send the message
-                RecorderModule.wasmWorker.postMessage({
-                    message : UTF8ToString($0),
-                    isSilent : $1,
-                    energyDb : $2,
-                });
-            }
-            else
-            {
-                console.error('Worker not found.');
-            } }, message, isSilent, energyDb);
+        if (RecorderModule.wasmWorker)
+        {
+            const audioDataArray = new Uint8Array(RecorderModule.HEAPU8.subarray($1, $1 + $2));
+            RecorderModule.wasmWorker.postMessage({
+                message : UTF8ToString($0),
+                data : audioDataArray,
+            });
+        }
+        else
+        {
+            console.error('Worker not found.');
+        }
+    }, messagePtr, audioDataPtr, audioDataLength);
+    delete[] (unsigned char*)audioDataPtr;
 }
 
 /// Post a stream of audio data with the web worker.
 FFI_PLUGIN_EXPORT void flutter_recorder_sendStreamToWorker(const char *message, const unsigned char *audioData, int audioDataLength)
 {
-    EM_ASM({
-            if (RecorderModule.wasmWorker)
-            {
-                // Convert audioData to Uint8Array for JavaScript compatibility
-                const audioDataArray = new Uint8Array(RecorderModule.HEAPU8.subarray($1, $1 + $2));
-                // Send the message and data
-                RecorderModule.wasmWorker.postMessage({
-                    message : UTF8ToString($0),
-                    data : audioDataArray,
-                });
-            }
-            else
-            {
-                console.error('Worker not found.');
-            } }, message, audioData, audioDataLength);
+#ifdef MA_ENABLE_AUDIO_WORKLETS
+    if (!emscripten_is_main_browser_thread())
+    {
+        emscripten_audio_worklet_post_function_viii(
+            EMSCRIPTEN_AUDIO_MAIN_THREAD, postStreamToWorker,
+            (int)(uintptr_t)message, (int)(uintptr_t)audioData, audioDataLength);
+        return;
+    }
+#endif
+    postStreamToWorker((int)(uintptr_t)message, (int)(uintptr_t)audioData, audioDataLength);
 }
 #endif
 
@@ -98,9 +135,10 @@ void streamDataCallback(const unsigned char *samples, const int numSamples)
 {
 #ifdef __EMSCRIPTEN__
     flutter_recorder_sendStreamToWorker("streamDataCallback", samples, numSamples);
-#endif
+#else
     if (dartStreamDataCallback != nullptr)
         dartStreamDataCallback(samples, numSamples);
+#endif
 }
 
 /// Set Dart functions to call when an event occurs.

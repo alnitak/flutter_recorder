@@ -3,13 +3,13 @@
 #include "circular_buffer.h"
 
 #include "analyzer.h"
+#include "fast_mutex.h"
 #include <atomic>
 #include <cmath>
 #include <cstdarg>
 #include <cstring>
 #include <memory.h>
 #include <memory>
-#include <mutex>
 #include <time.h>
 
 #ifdef _IS_ANDROID_
@@ -24,7 +24,7 @@
 #define STREAM_BUFFER_SIZE (BUFFER_SIZE * 2) // Buffer length in frames
 #define MOVING_AVERAGE_SIZE 4                // Moving average window size
 float capturedBuffer[BUFFER_SIZE * 2];       // Captured audio buffer
-std::mutex capturedBufferMutex;        // Mutex for protecting capturedBuffer
+FastMutex capturedBufferMutex;         // Mutex for protecting capturedBuffer
 std::atomic<bool> is_silent{true};     // Initial state
 bool delayed_silence_started = false;  // Whether the silence is delayed
 std::atomic<float> energy_db{-100.0f}; // Current energy
@@ -222,7 +222,7 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput,
     return;
 
   Capture *userData = (Capture *)pDevice->pUserData;
-  if (userData == nullptr)
+  if (userData == nullptr || !userData->isInited())
     return;
 
   void *captured = const_cast<void *>(pInput);
@@ -258,7 +258,7 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput,
   float *capturedFloat = nullptr;
   if (userData->deviceConfig.capture.format == ma_format_f32) {
     capturedFloat = static_cast<float *>(captured);
-    std::lock_guard<std::mutex> lock(capturedBufferMutex);
+    std::lock_guard<FastMutex> lock(capturedBufferMutex);
     copyCaptureWaveformBuffer(
         capturedBuffer, sizeof(capturedBuffer) / sizeof(capturedBuffer[0]),
         capturedFloat, userData->deviceConfig.capture.format, frameCount,

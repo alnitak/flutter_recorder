@@ -49,7 +49,7 @@ EchoCancellation::EchoCancellation(unsigned int sampleRate)
 
 EchoCancellation::~EchoCancellation()
 {
-    std::lock_guard<std::mutex> lock(mMutex);
+    std::lock_guard<FastMutex> lock(mMutex);
     destroySpeex();
 }
 
@@ -167,7 +167,7 @@ void EchoCancellation::setParamValue(int param, float value)
     const auto &range = mParams.at(static_cast<Params>(param));
     value = std::clamp(value, range.minVal, range.maxVal);
 
-    std::lock_guard<std::mutex> lock(mMutex);
+    std::lock_guard<FastMutex> lock(mMutex);
     mValues[param] = value;
 
     if (param == FilterLengthMs)
@@ -223,7 +223,7 @@ void EchoCancellation::feedPlaybackData(const void *pData, ma_uint32 frameCount,
     if (pData == nullptr || frameCount == 0 || channels == 0)
         return;
 
-    std::lock_guard<std::mutex> lock(mMutex);
+    std::lock_guard<FastMutex> lock(mMutex);
 
     if (mEchoState == nullptr)
     {
@@ -278,7 +278,7 @@ void EchoCancellation::processDuplex(void *pInput, void *pOutput, ma_uint32 fram
     if (pInput == nullptr || frameCount == 0 || channels == 0)
         return;
 
-    std::lock_guard<std::mutex> lock(mMutex);
+    std::lock_guard<FastMutex> lock(mMutex);
 
     if (mEchoState == nullptr || mChannels != channels)
     {

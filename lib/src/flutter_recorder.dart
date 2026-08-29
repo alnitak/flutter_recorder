@@ -111,6 +111,9 @@ interface class Recorder {
   /// Currently used recorder configuration.
   PCMFormat _recorderFormat = PCMFormat.s16le;
 
+  /// The PCM format currently used by the recorder.
+  PCMFormat get recorderFormat => _recorderFormat;
+
   /// Listening to silence state changes.
   Stream<SilenceState> get silenceChangedEvents =>
       _recorder.impl.silenceChangedEvents;
@@ -243,7 +246,7 @@ interface class Recorder {
       deinit();
     }
 
-    _recorder.impl.init(
+    await _recorder.impl.init(
       deviceID: deviceID,
       format: format,
       sampleRate: sampleRate,

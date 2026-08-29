@@ -117,7 +117,7 @@ abstract class RecorderImpl {
   /// device found with [deviceID] id.
   @mustBeOverridden
   @mustCallSuper
-  void init({
+  FutureOr<void> init({
     required int deviceID,
     required PCMFormat format,
     required int sampleRate,
