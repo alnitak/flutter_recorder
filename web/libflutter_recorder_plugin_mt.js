@@ -3495,12 +3495,12 @@ function checkIncomingModuleAPI() {
 }
 
 var ASM_CONSTS = {
-  88172: ($0, $1, $2, $3, $4) => {
+  88356: ($0, $1, $2, $3, $4) => {
     if (typeof _wasmRecorderVisualizationCallback === "function") {
       _wasmRecorderVisualizationCallback($0, $1, $2, $3, $4);
     }
   },
-  88298: ($0, $1, $2) => {
+  88482: ($0, $1, $2) => {
     const data = new Uint8Array((growMemViews(), HEAPU8).subarray($0, $0 + $1));
     const blob = new Blob([ data ], {
       type: "audio/wav"
@@ -3525,7 +3525,7 @@ var ASM_CONSTS = {
       URL.revokeObjectURL(url);
     }
   },
-  88968: () => {
+  89152: () => {
     if (!RecorderModule.wasmWorker) {
       var workerUri = "assets/packages/flutter_recorder/web/worker.dart.js";
       RecorderModule.wasmWorker = new Worker(workerUri);
@@ -3534,7 +3534,7 @@ var ASM_CONSTS = {
       console.log("EM_ASM web worker already created!");
     }
   },
-  89282: ($0, $1, $2) => {
+  89466: ($0, $1, $2) => {
     if (RecorderModule.wasmWorker) {
       RecorderModule.wasmWorker.postMessage({
         message: UTF8ToString($0),
@@ -3545,7 +3545,7 @@ var ASM_CONSTS = {
       console.error("Worker not found.");
     }
   },
-  89468: ($0, $1, $2) => {
+  89652: ($0, $1, $2) => {
     if (RecorderModule.wasmWorker) {
       const audioDataArray = new Uint8Array(RecorderModule.HEAPU8.subarray($1, $1 + $2));
       RecorderModule.wasmWorker.postMessage({
@@ -3556,7 +3556,7 @@ var ASM_CONSTS = {
       console.error("Worker not found.");
     }
   },
-  89731: ($0, $1, $2, $3, $4) => {
+  89915: ($0, $1, $2, $3, $4) => {
     if (typeof window === "undefined" || (window.AudioContext || window.webkitAudioContext) === undefined) {
       return 0;
     }
@@ -3628,7 +3628,7 @@ var ASM_CONSTS = {
     window.miniaudio.referenceCount += 1;
     return 1;
   },
-  91909: () => {
+  92093: () => {
     if (typeof (window.miniaudio) !== "undefined") {
       window.miniaudio.unlock_event_types.map(function(event_type) {
         document.removeEventListener(event_type, window.miniaudio.unlock, true);
@@ -3639,8 +3639,8 @@ var ASM_CONSTS = {
       }
     }
   },
-  92213: () => (navigator.mediaDevices !== undefined && navigator.mediaDevices.getUserMedia !== undefined),
-  92317: () => {
+  92397: () => (navigator.mediaDevices !== undefined && navigator.mediaDevices.getUserMedia !== undefined),
+  92501: () => {
     try {
       var temp = new (window.AudioContext || window.webkitAudioContext);
       var sampleRate = temp.sampleRate;
@@ -3650,12 +3650,12 @@ var ASM_CONSTS = {
       return 0;
     }
   },
-  92488: ($0, $1) => window.miniaudio.track_device({
+  92672: ($0, $1) => window.miniaudio.track_device({
     webaudio: emscriptenGetAudioObject($0),
     state: 1,
     pDevice: $1
   }),
-  92597: ($0, $1) => {
+  92781: ($0, $1) => {
     var getUserMediaResult = 0;
     var audioWorklet = emscriptenGetAudioObject($0);
     var audioContext = emscriptenGetAudioObject($1);
@@ -3673,14 +3673,14 @@ var ASM_CONSTS = {
     });
     return getUserMediaResult;
   },
-  93159: ($0, $1) => {
+  93343: ($0, $1) => {
     var audioWorklet = emscriptenGetAudioObject($0);
     var audioContext = emscriptenGetAudioObject($1);
     audioWorklet.connect(audioContext.destination);
     return 0;
   },
-  93319: $0 => emscriptenGetAudioObject($0).sampleRate,
-  93371: $0 => {
+  93503: $0 => emscriptenGetAudioObject($0).sampleRate,
+  93555: $0 => {
     var device = window.miniaudio.get_device_by_index($0);
     if (device.streamNode !== undefined) {
       device.streamNode.disconnect();
@@ -3688,20 +3688,20 @@ var ASM_CONSTS = {
     }
     device.pDevice = undefined;
   },
-  93562: $0 => {
+  93746: $0 => {
     window.miniaudio.untrack_device_by_index($0);
   },
-  93612: $0 => {
+  93796: $0 => {
     var device = window.miniaudio.get_device_by_index($0);
     device.webaudio.resume();
     device.state = window.miniaudio.device_state.started;
   },
-  93751: $0 => {
+  93935: $0 => {
     var device = window.miniaudio.get_device_by_index($0);
     device.webaudio.suspend();
     device.state = window.miniaudio.device_state.stopped;
   },
-  93891: ($0, $1, $2) => {
+  94075: ($0, $1, $2) => {
     const data = new Uint8Array((growMemViews(), HEAPU8).subarray($0, $0 + $1));
     const blob = new Blob([ data ], {
       type: "audio/ogg"
@@ -3734,9 +3734,27 @@ var __Z41flutter_recorder_sendSilenceEventToWorkerPKcbf = Module["__Z41flutter_r
 
 var __Z35flutter_recorder_sendStreamToWorkerPKcPKhi = Module["__Z35flutter_recorder_sendStreamToWorkerPKcPKhi"] = makeInvalidEarlyAccess("__Z35flutter_recorder_sendStreamToWorkerPKcPKhi");
 
+var _flutter_recorder_setDartEventCallbackForEngine = Module["_flutter_recorder_setDartEventCallbackForEngine"] = makeInvalidEarlyAccess("_flutter_recorder_setDartEventCallbackForEngine");
+
 var _flutter_recorder_setDartEventCallback = Module["_flutter_recorder_setDartEventCallback"] = makeInvalidEarlyAccess("_flutter_recorder_setDartEventCallback");
 
+var _flutter_recorder_setDartVisualizationCallbackForEngine = Module["_flutter_recorder_setDartVisualizationCallbackForEngine"] = makeInvalidEarlyAccess("_flutter_recorder_setDartVisualizationCallbackForEngine");
+
 var _flutter_recorder_setDartVisualizationCallback = Module["_flutter_recorder_setDartVisualizationCallback"] = makeInvalidEarlyAccess("_flutter_recorder_setDartVisualizationCallback");
+
+var _flutter_recorder_prepareEngineInit = Module["_flutter_recorder_prepareEngineInit"] = makeInvalidEarlyAccess("_flutter_recorder_prepareEngineInit");
+
+var _flutter_recorder_currentEngineShutdownEpoch = Module["_flutter_recorder_currentEngineShutdownEpoch"] = makeInvalidEarlyAccess("_flutter_recorder_currentEngineShutdownEpoch");
+
+var _flutter_recorder_prepareEngineInitForRequest = Module["_flutter_recorder_prepareEngineInitForRequest"] = makeInvalidEarlyAccess("_flutter_recorder_prepareEngineInitForRequest");
+
+var _flutter_recorder_clearDartCallbackRegistrationsForEngine = Module["_flutter_recorder_clearDartCallbackRegistrationsForEngine"] = makeInvalidEarlyAccess("_flutter_recorder_clearDartCallbackRegistrationsForEngine");
+
+var _flutter_recorder_clearDartCallbackRegistrations = Module["_flutter_recorder_clearDartCallbackRegistrations"] = makeInvalidEarlyAccess("_flutter_recorder_clearDartCallbackRegistrations");
+
+var _flutter_recorder_requestEngineTeardownForEngine = Module["_flutter_recorder_requestEngineTeardownForEngine"] = makeInvalidEarlyAccess("_flutter_recorder_requestEngineTeardownForEngine");
+
+var _flutter_recorder_retireDartCallbacksFinalizer = Module["_flutter_recorder_retireDartCallbacksFinalizer"] = makeInvalidEarlyAccess("_flutter_recorder_retireDartCallbacksFinalizer");
 
 var _flutter_recorder_nativeFree = Module["_flutter_recorder_nativeFree"] = makeInvalidEarlyAccess("_flutter_recorder_nativeFree");
 
@@ -3755,8 +3773,6 @@ var _flutter_recorder_deinit = Module["_flutter_recorder_deinit"] = makeInvalidE
 var _flutter_recorder_isInited = Module["_flutter_recorder_isInited"] = makeInvalidEarlyAccess("_flutter_recorder_isInited");
 
 var _flutter_recorder_isDeviceStarted = Module["_flutter_recorder_isDeviceStarted"] = makeInvalidEarlyAccess("_flutter_recorder_isDeviceStarted");
-
-var __Z33flutter_recorder_isCaptureStartedv = Module["__Z33flutter_recorder_isCaptureStartedv"] = makeInvalidEarlyAccess("__Z33flutter_recorder_isCaptureStartedv");
 
 var _flutter_recorder_start = Module["_flutter_recorder_start"] = makeInvalidEarlyAccess("_flutter_recorder_start");
 
@@ -3916,8 +3932,17 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports["flutter_recorder_createWorkerInWasm"] != "undefined", "missing Wasm export: flutter_recorder_createWorkerInWasm");
   assert(typeof wasmExports["_Z41flutter_recorder_sendSilenceEventToWorkerPKcbf"] != "undefined", "missing Wasm export: _Z41flutter_recorder_sendSilenceEventToWorkerPKcbf");
   assert(typeof wasmExports["_Z35flutter_recorder_sendStreamToWorkerPKcPKhi"] != "undefined", "missing Wasm export: _Z35flutter_recorder_sendStreamToWorkerPKcPKhi");
+  assert(typeof wasmExports["flutter_recorder_setDartEventCallbackForEngine"] != "undefined", "missing Wasm export: flutter_recorder_setDartEventCallbackForEngine");
   assert(typeof wasmExports["flutter_recorder_setDartEventCallback"] != "undefined", "missing Wasm export: flutter_recorder_setDartEventCallback");
+  assert(typeof wasmExports["flutter_recorder_setDartVisualizationCallbackForEngine"] != "undefined", "missing Wasm export: flutter_recorder_setDartVisualizationCallbackForEngine");
   assert(typeof wasmExports["flutter_recorder_setDartVisualizationCallback"] != "undefined", "missing Wasm export: flutter_recorder_setDartVisualizationCallback");
+  assert(typeof wasmExports["flutter_recorder_prepareEngineInit"] != "undefined", "missing Wasm export: flutter_recorder_prepareEngineInit");
+  assert(typeof wasmExports["flutter_recorder_currentEngineShutdownEpoch"] != "undefined", "missing Wasm export: flutter_recorder_currentEngineShutdownEpoch");
+  assert(typeof wasmExports["flutter_recorder_prepareEngineInitForRequest"] != "undefined", "missing Wasm export: flutter_recorder_prepareEngineInitForRequest");
+  assert(typeof wasmExports["flutter_recorder_clearDartCallbackRegistrationsForEngine"] != "undefined", "missing Wasm export: flutter_recorder_clearDartCallbackRegistrationsForEngine");
+  assert(typeof wasmExports["flutter_recorder_clearDartCallbackRegistrations"] != "undefined", "missing Wasm export: flutter_recorder_clearDartCallbackRegistrations");
+  assert(typeof wasmExports["flutter_recorder_requestEngineTeardownForEngine"] != "undefined", "missing Wasm export: flutter_recorder_requestEngineTeardownForEngine");
+  assert(typeof wasmExports["flutter_recorder_retireDartCallbacksFinalizer"] != "undefined", "missing Wasm export: flutter_recorder_retireDartCallbacksFinalizer");
   assert(typeof wasmExports["flutter_recorder_nativeFree"] != "undefined", "missing Wasm export: flutter_recorder_nativeFree");
   assert(typeof wasmExports["free"] != "undefined", "missing Wasm export: free");
   assert(typeof wasmExports["flutter_recorder_listCaptureDevices"] != "undefined", "missing Wasm export: flutter_recorder_listCaptureDevices");
@@ -3927,7 +3952,6 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports["flutter_recorder_deinit"] != "undefined", "missing Wasm export: flutter_recorder_deinit");
   assert(typeof wasmExports["flutter_recorder_isInited"] != "undefined", "missing Wasm export: flutter_recorder_isInited");
   assert(typeof wasmExports["flutter_recorder_isDeviceStarted"] != "undefined", "missing Wasm export: flutter_recorder_isDeviceStarted");
-  assert(typeof wasmExports["_Z33flutter_recorder_isCaptureStartedv"] != "undefined", "missing Wasm export: _Z33flutter_recorder_isCaptureStartedv");
   assert(typeof wasmExports["flutter_recorder_start"] != "undefined", "missing Wasm export: flutter_recorder_start");
   assert(typeof wasmExports["flutter_recorder_stop"] != "undefined", "missing Wasm export: flutter_recorder_stop");
   assert(typeof wasmExports["flutter_recorder_startStreamingData"] != "undefined", "missing Wasm export: flutter_recorder_startStreamingData");
@@ -4007,8 +4031,17 @@ function assignWasmExports(wasmExports) {
   _flutter_recorder_createWorkerInWasm = Module["_flutter_recorder_createWorkerInWasm"] = createExportWrapper("flutter_recorder_createWorkerInWasm", 0);
   __Z41flutter_recorder_sendSilenceEventToWorkerPKcbf = Module["__Z41flutter_recorder_sendSilenceEventToWorkerPKcbf"] = createExportWrapper("_Z41flutter_recorder_sendSilenceEventToWorkerPKcbf", 3);
   __Z35flutter_recorder_sendStreamToWorkerPKcPKhi = Module["__Z35flutter_recorder_sendStreamToWorkerPKcPKhi"] = createExportWrapper("_Z35flutter_recorder_sendStreamToWorkerPKcPKhi", 3);
+  _flutter_recorder_setDartEventCallbackForEngine = Module["_flutter_recorder_setDartEventCallbackForEngine"] = createExportWrapper("flutter_recorder_setDartEventCallbackForEngine", 3);
   _flutter_recorder_setDartEventCallback = Module["_flutter_recorder_setDartEventCallback"] = createExportWrapper("flutter_recorder_setDartEventCallback", 2);
+  _flutter_recorder_setDartVisualizationCallbackForEngine = Module["_flutter_recorder_setDartVisualizationCallbackForEngine"] = createExportWrapper("flutter_recorder_setDartVisualizationCallbackForEngine", 2);
   _flutter_recorder_setDartVisualizationCallback = Module["_flutter_recorder_setDartVisualizationCallback"] = createExportWrapper("flutter_recorder_setDartVisualizationCallback", 1);
+  _flutter_recorder_prepareEngineInit = Module["_flutter_recorder_prepareEngineInit"] = createExportWrapper("flutter_recorder_prepareEngineInit", 1);
+  _flutter_recorder_currentEngineShutdownEpoch = Module["_flutter_recorder_currentEngineShutdownEpoch"] = createExportWrapper("flutter_recorder_currentEngineShutdownEpoch", 0);
+  _flutter_recorder_prepareEngineInitForRequest = Module["_flutter_recorder_prepareEngineInitForRequest"] = createExportWrapper("flutter_recorder_prepareEngineInitForRequest", 2);
+  _flutter_recorder_clearDartCallbackRegistrationsForEngine = Module["_flutter_recorder_clearDartCallbackRegistrationsForEngine"] = createExportWrapper("flutter_recorder_clearDartCallbackRegistrationsForEngine", 1);
+  _flutter_recorder_clearDartCallbackRegistrations = Module["_flutter_recorder_clearDartCallbackRegistrations"] = createExportWrapper("flutter_recorder_clearDartCallbackRegistrations", 0);
+  _flutter_recorder_requestEngineTeardownForEngine = Module["_flutter_recorder_requestEngineTeardownForEngine"] = createExportWrapper("flutter_recorder_requestEngineTeardownForEngine", 1);
+  _flutter_recorder_retireDartCallbacksFinalizer = Module["_flutter_recorder_retireDartCallbacksFinalizer"] = createExportWrapper("flutter_recorder_retireDartCallbacksFinalizer", 1);
   _flutter_recorder_nativeFree = Module["_flutter_recorder_nativeFree"] = createExportWrapper("flutter_recorder_nativeFree", 1);
   _free = Module["_free"] = createExportWrapper("free", 1);
   _flutter_recorder_listCaptureDevices = Module["_flutter_recorder_listCaptureDevices"] = createExportWrapper("flutter_recorder_listCaptureDevices", 4);
@@ -4018,7 +4051,6 @@ function assignWasmExports(wasmExports) {
   _flutter_recorder_deinit = Module["_flutter_recorder_deinit"] = createExportWrapper("flutter_recorder_deinit", 0);
   _flutter_recorder_isInited = Module["_flutter_recorder_isInited"] = createExportWrapper("flutter_recorder_isInited", 0);
   _flutter_recorder_isDeviceStarted = Module["_flutter_recorder_isDeviceStarted"] = createExportWrapper("flutter_recorder_isDeviceStarted", 0);
-  __Z33flutter_recorder_isCaptureStartedv = Module["__Z33flutter_recorder_isCaptureStartedv"] = createExportWrapper("_Z33flutter_recorder_isCaptureStartedv", 0);
   _flutter_recorder_start = Module["_flutter_recorder_start"] = createExportWrapper("flutter_recorder_start", 0);
   _flutter_recorder_stop = Module["_flutter_recorder_stop"] = createExportWrapper("flutter_recorder_stop", 0);
   _flutter_recorder_startStreamingData = Module["_flutter_recorder_startStreamingData"] = createExportWrapper("flutter_recorder_startStreamingData", 1);

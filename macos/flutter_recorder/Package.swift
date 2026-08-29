@@ -15,13 +15,13 @@ let package = Package(
         .library(name: "flutter-recorder", type: .dynamic, targets: ["flutter_recorder"])
     ],
     dependencies: [
-        .package(name: "FlutterMacOS", path: "../FlutterMacOS")
+        .package(name: "FlutterFramework", path: "../FlutterFramework")
     ],
     targets: [
         .target(
             name: "flutter_recorder",
             dependencies: [
-                .product(name: "FlutterMacOS", package: "FlutterMacOS")
+                .product(name: "FlutterFramework", package: "FlutterFramework")
             ],
             exclude: [
                 // Symlink to the plugin's C++ sources, needed only for the

@@ -101,6 +101,11 @@ namespace dart_callbacks
     uint64_t claim(int64_t ownerEngineId)
     {
       detail::GateState &state = detail::gate();
+      if (state.liveGeneration != kNoGeneration &&
+          state.ownerEngineId == ownerEngineId)
+      {
+        return state.liveGeneration;
+      }
       state.ownerEngineId = ownerEngineId;
       state.liveGeneration = ++state.lastGeneration;
       return state.liveGeneration;

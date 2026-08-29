@@ -16,7 +16,7 @@ import 'xiph.dart';
 /// The asset id is `package:flutter_recorder/src/flutter_recorder.h`, matching
 /// the `asset-id` in `ffigen.yaml` used by the generated `@Native` bindings.
 const _assetName = 'src/flutter_recorder.h';
-const _libName = 'flutter_recorder';
+const _libName = 'flutter_recorder_plugin';
 
 void main(List<String> args) async {
   await build(args, (input, output) async {

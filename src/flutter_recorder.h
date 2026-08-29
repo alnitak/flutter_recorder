@@ -31,13 +31,13 @@ extern "C"
         int64_t engine_id);
 
     // Engine lifecycle exports
-    FFI_PLUGIN_EXPORT void prepareEngineInit(int64_t owner_engine_id);
-    FFI_PLUGIN_EXPORT uint64_t currentEngineShutdownEpoch(void);
-    FFI_PLUGIN_EXPORT bool prepareEngineInitForRequest(int64_t owner_engine_id, uint64_t shutdown_epoch);
-    FFI_PLUGIN_EXPORT bool clearDartCallbackRegistrationsForEngine(int64_t engine_id);
-    FFI_PLUGIN_EXPORT void clearDartCallbackRegistrations(void);
-    FFI_PLUGIN_EXPORT bool requestEngineTeardownForEngine(int64_t engine_id);
-    FFI_PLUGIN_EXPORT void retireDartCallbacksFinalizer(void *token);
+    FFI_PLUGIN_EXPORT void flutter_recorder_prepareEngineInit(int64_t owner_engine_id);
+    FFI_PLUGIN_EXPORT uint64_t flutter_recorder_currentEngineShutdownEpoch(void);
+    FFI_PLUGIN_EXPORT bool flutter_recorder_prepareEngineInitForRequest(int64_t owner_engine_id, uint64_t shutdown_epoch);
+    FFI_PLUGIN_EXPORT bool flutter_recorder_clearDartCallbackRegistrationsForEngine(int64_t engine_id);
+    FFI_PLUGIN_EXPORT void flutter_recorder_clearDartCallbackRegistrations(void);
+    FFI_PLUGIN_EXPORT bool flutter_recorder_requestEngineTeardownForEngine(int64_t engine_id);
+    FFI_PLUGIN_EXPORT void flutter_recorder_retireDartCallbacksFinalizer(void *token);
 
     FFI_PLUGIN_EXPORT void flutter_recorder_nativeFree(void *pointer);
 

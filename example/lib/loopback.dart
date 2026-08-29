@@ -276,6 +276,7 @@ class _LoopBackState extends State<LoopBack> {
     if (soloud.isInitialized) {
       await soloud.deinitAsync();
     }
+
     await soloud.init(
       bufferSize: 1024,
       channels: Channels.mono,
@@ -287,9 +288,9 @@ class _LoopBackState extends State<LoopBack> {
       sampleRate: sampleRate,
       channels: recorderChannels,
       androidInputPreset:
-          androidInputPreset, // <-- prevales over audio session preset (if not null)
+          androidInputPreset, // <-- prevails over audio session preset (if not null)
       iosInputPreset:
-          iosInputPreset, // <-- prevales over audio session preset (if not null)
+          iosInputPreset, // <-- prevails over audio session preset (if not null)
       webInputPreset: webInputPreset,
     );
 

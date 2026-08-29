@@ -48,28 +48,32 @@ external void flutter_recorder_setDartVisualizationCallbackForEngine(
 
 /// Engine lifecycle exports
 @ffi.Native<ffi.Void Function(ffi.Int64)>()
-external void prepareEngineInit(int owner_engine_id);
+external void flutter_recorder_prepareEngineInit(int owner_engine_id);
 
 @ffi.Native<ffi.Uint64 Function()>()
-external int currentEngineShutdownEpoch();
+external int flutter_recorder_currentEngineShutdownEpoch();
 
 @ffi.Native<ffi.Bool Function(ffi.Int64, ffi.Uint64)>()
-external bool prepareEngineInitForRequest(
+external bool flutter_recorder_prepareEngineInitForRequest(
   int owner_engine_id,
   int shutdown_epoch,
 );
 
 @ffi.Native<ffi.Bool Function(ffi.Int64)>()
-external bool clearDartCallbackRegistrationsForEngine(int engine_id);
+external bool flutter_recorder_clearDartCallbackRegistrationsForEngine(
+  int engine_id,
+);
 
 @ffi.Native<ffi.Void Function()>()
-external void clearDartCallbackRegistrations();
+external void flutter_recorder_clearDartCallbackRegistrations();
 
 @ffi.Native<ffi.Bool Function(ffi.Int64)>()
-external bool requestEngineTeardownForEngine(int engine_id);
+external bool flutter_recorder_requestEngineTeardownForEngine(int engine_id);
 
 @ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
-external void retireDartCallbacksFinalizer(ffi.Pointer<ffi.Void> token);
+external void flutter_recorder_retireDartCallbacksFinalizer(
+  ffi.Pointer<ffi.Void> token,
+);
 
 @ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
 external void flutter_recorder_nativeFree(ffi.Pointer<ffi.Void> pointer);

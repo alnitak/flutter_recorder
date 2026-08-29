@@ -40,7 +40,9 @@ class RecorderFfi extends RecorderImpl {
   void Function(AudioVisualizationData data)? _visualizationCallback;
 
   late final ffi.NativeFinalizer _isolateFinalizer = ffi.NativeFinalizer(
-    ffi.Native.addressOf(bindings.retireDartCallbacksFinalizer),
+    ffi.Native.addressOf(
+      bindings.flutter_recorder_retireDartCallbacksFinalizer,
+    ),
   );
   _IsolateLifecycleToken? _lifecycleToken;
 
@@ -139,7 +141,7 @@ class RecorderFfi extends RecorderImpl {
 
   @override
   void clearDartCallbackRegistrations() {
-    bindings.clearDartCallbackRegistrations();
+    bindings.flutter_recorder_clearDartCallbackRegistrations();
   }
 
   @override
@@ -283,17 +285,18 @@ class RecorderFfi extends RecorderImpl {
     required WebInputPreset? webInputPreset,
   }) async {
     if (DarwinEngineLifecycle.isSupported) {
-      final shutdownEpoch = bindings.currentEngineShutdownEpoch();
+      final shutdownEpoch = bindings
+          .flutter_recorder_currentEngineShutdownEpoch();
       const darwinLifecycle = DarwinEngineLifecycle();
       final result = await darwinLifecycle.prepareEngineInit(
         currentEngineId,
         shutdownEpoch,
       );
       if (result == DarwinEnginePrepareResult.unavailable) {
-        bindings.prepareEngineInit(currentEngineId);
+        bindings.flutter_recorder_prepareEngineInit(currentEngineId);
       }
     } else {
-      bindings.prepareEngineInit(currentEngineId);
+      bindings.flutter_recorder_prepareEngineInit(currentEngineId);
     }
 
     final error = bindings.flutter_recorder_init(

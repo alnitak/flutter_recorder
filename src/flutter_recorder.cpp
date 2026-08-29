@@ -204,20 +204,20 @@ FFI_PLUGIN_EXPORT void flutter_recorder_setDartVisualizationCallback(
 }
 
 // Engine lifecycle implementations
-FFI_PLUGIN_EXPORT void prepareEngineInit(int64_t owner_engine_id)
+FFI_PLUGIN_EXPORT void flutter_recorder_prepareEngineInit(int64_t owner_engine_id)
 {
     std::lock_guard<std::mutex> guard(engine_lifecycle_mutex);
     nativeInitOwnerEngineId = owner_engine_id;
     ++engineInitGeneration;
 }
 
-FFI_PLUGIN_EXPORT uint64_t currentEngineShutdownEpoch(void)
+FFI_PLUGIN_EXPORT uint64_t flutter_recorder_currentEngineShutdownEpoch(void)
 {
     std::lock_guard<std::mutex> guard(engine_lifecycle_mutex);
     return engineShutdownEpoch;
 }
 
-FFI_PLUGIN_EXPORT bool prepareEngineInitForRequest(int64_t owner_engine_id, uint64_t shutdown_epoch)
+FFI_PLUGIN_EXPORT bool flutter_recorder_prepareEngineInitForRequest(int64_t owner_engine_id, uint64_t shutdown_epoch)
 {
     std::lock_guard<std::mutex> guard(engine_lifecycle_mutex);
     if (shutdown_epoch != engineShutdownEpoch)
@@ -229,7 +229,7 @@ FFI_PLUGIN_EXPORT bool prepareEngineInitForRequest(int64_t owner_engine_id, uint
     return true;
 }
 
-FFI_PLUGIN_EXPORT bool clearDartCallbackRegistrationsForEngine(int64_t engine_id)
+FFI_PLUGIN_EXPORT bool flutter_recorder_clearDartCallbackRegistrationsForEngine(int64_t engine_id)
 {
     if (engine_id == dart_callbacks::kNoEngineId)
         return false;
@@ -244,7 +244,7 @@ FFI_PLUGIN_EXPORT bool clearDartCallbackRegistrationsForEngine(int64_t engine_id
     return true;
 }
 
-FFI_PLUGIN_EXPORT void clearDartCallbackRegistrations(void)
+FFI_PLUGIN_EXPORT void flutter_recorder_clearDartCallbackRegistrations(void)
 {
     dart_callbacks::Registration registration;
     registration.retireAll();
@@ -254,7 +254,7 @@ FFI_PLUGIN_EXPORT void clearDartCallbackRegistrations(void)
     Analyzer::instance().setVisualizationEnabled(false);
 }
 
-FFI_PLUGIN_EXPORT bool requestEngineTeardownForEngine(int64_t engine_id)
+FFI_PLUGIN_EXPORT bool flutter_recorder_requestEngineTeardownForEngine(int64_t engine_id)
 {
     {
         std::lock_guard<std::mutex> guard(engine_lifecycle_mutex);
@@ -264,7 +264,7 @@ FFI_PLUGIN_EXPORT bool requestEngineTeardownForEngine(int64_t engine_id)
         nativeInitOwnerEngineId = dart_callbacks::kNoEngineId;
     }
 
-    clearDartCallbackRegistrationsForEngine(engine_id);
+    flutter_recorder_clearDartCallbackRegistrationsForEngine(engine_id);
 
     std::thread teardownWorker([]() {
         flutter_recorder_deinit();
@@ -273,7 +273,7 @@ FFI_PLUGIN_EXPORT bool requestEngineTeardownForEngine(int64_t engine_id)
     return true;
 }
 
-FFI_PLUGIN_EXPORT void retireDartCallbacksFinalizer(void *token)
+FFI_PLUGIN_EXPORT void flutter_recorder_retireDartCallbacksFinalizer(void *token)
 {
     const int64_t engine_id = reinterpret_cast<intptr_t>(token);
     dart_callbacks::Registration registration;
@@ -389,11 +389,6 @@ FFI_PLUGIN_EXPORT int flutter_recorder_isInited()
 FFI_PLUGIN_EXPORT int flutter_recorder_isDeviceStarted()
 {
     return capture.isDeviceStarted();
-}
-
-FFI_PLUGIN_EXPORT int flutter_recorder_isCaptureStarted()
-{
-    return capture.isDeviceStarted() ? 1 : 0;
 }
 
 FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_start()
@@ -591,7 +586,7 @@ FFI_PLUGIN_EXPORT void flutter_recorder_feedPlaybackData(const void *data, unsig
     }
 }
 
-#ifdef _IS_ANDROID_
+#if defined(_IS_ANDROID_)
 #include <jni.h>
 
 extern "C" {
@@ -599,7 +594,7 @@ extern "C" {
   Java_flutter_recorder_flutter_1recorder_FlutterRecorderPlugin_nativeClearDartCallbackRegistrationsForEngine(
       JNIEnv *, jclass, jlong engine_id)
   {
-    return clearDartCallbackRegistrationsForEngine(
+    return flutter_recorder_clearDartCallbackRegistrationsForEngine(
         static_cast<int64_t>(engine_id));
   }
 
@@ -607,8 +602,7 @@ extern "C" {
   Java_flutter_recorder_flutter_1recorder_FlutterRecorderPlugin_nativeRequestEngineTeardownForEngine(
       JNIEnv *, jclass, jlong engine_id)
   {
-    return requestEngineTeardownForEngine(static_cast<int64_t>(engine_id));
+    return flutter_recorder_requestEngineTeardownForEngine(static_cast<int64_t>(engine_id));
   }
 }
 #endif
-

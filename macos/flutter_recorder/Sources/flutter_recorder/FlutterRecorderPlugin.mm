@@ -42,7 +42,7 @@ static const int64_t kNoEngineId = -1;
     const int64_t engineId = _engineId;
     _hasEngineId = NO;
     _engineId = kNoEngineId;
-    clearDartCallbackRegistrationsForEngine(engineId);
+    flutter_recorder_clearDartCallbackRegistrationsForEngine(engineId);
   }
 }
 
@@ -84,7 +84,7 @@ static const int64_t kNoEngineId = -1;
   const uint64_t shutdownEpoch =
       (uint64_t)[epochArgument unsignedLongLongValue];
 
-  if (!prepareEngineInitForRequest(engineId, shutdownEpoch)) {
+  if (!flutter_recorder_prepareEngineInitForRequest(engineId, shutdownEpoch)) {
     result([FlutterError
         errorWithCode:@"stale_prepare"
               message:@"This initialization was superseded by a shutdown."
@@ -96,7 +96,7 @@ static const int64_t kNoEngineId = -1;
   _hasEngineId = YES;
 
   // Hot-restart recovery
-  clearDartCallbackRegistrationsForEngine(engineId);
+  flutter_recorder_clearDartCallbackRegistrationsForEngine(engineId);
 
   result(@(YES));
 }
@@ -112,7 +112,7 @@ static const int64_t kNoEngineId = -1;
   _hasEngineId = NO;
   _engineId = kNoEngineId;
 
-  requestEngineTeardownForEngine(engineId);
+  flutter_recorder_requestEngineTeardownForEngine(engineId);
 }
 
 @end

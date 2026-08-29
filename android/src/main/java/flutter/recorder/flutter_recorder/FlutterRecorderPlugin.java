@@ -33,11 +33,17 @@ public final class FlutterRecorderPlugin implements FlutterPlugin {
         }
 
         try {
-            System.loadLibrary("flutter_recorder");
+            System.loadLibrary("flutter_recorder_plugin");
             nativeLibraryLoaded = true;
             return true;
         } catch (UnsatisfiedLinkError error) {
-            return false;
+            try {
+                System.loadLibrary("flutter_recorder");
+                nativeLibraryLoaded = true;
+                return true;
+            } catch (UnsatisfiedLinkError fallbackError) {
+                return false;
+            }
         }
     }
 

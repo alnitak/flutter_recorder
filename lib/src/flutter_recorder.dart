@@ -264,8 +264,6 @@ interface class Recorder {
       deinit();
     }
 
-    await _recorder.impl.setDartEventCallbacks();
-
     await _recorder.impl.init(
       deviceID: deviceID,
       format: format,
@@ -275,6 +273,9 @@ interface class Recorder {
       iosInputPreset: iosInputPreset,
       webInputPreset: webInputPreset,
     );
+
+    await _recorder.impl.setDartEventCallbacks();
+
     _recorderFormat = format;
     _isInitialized = true;
   }
