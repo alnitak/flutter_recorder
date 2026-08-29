@@ -3,8 +3,10 @@
 - Real-time audio visualization is now delivered via `Recorder.instance.audioVisualizationEvents` stream yielding `AudioVisualizationData` with mono (merged) and multi-channel support.
 - Added `setVisualizationEnabled`, `getVisualizationEnabled`, `setFftSmoothing`, `VisualizationKind`, and `VisualizationChannel`. Replaced legacy `getFft`, `getWave`, `getTexture`, and `getTexture2D` polling methods.
 - **breaking change: build system migration to Dart build hooks** (https://dart.dev/tools/hooks):
-  - Android, iOS, macOS, Linux and Windows native code is now compiled by `hook/build.dart` (`package:hooks` + `package:native_toolchain_c`) instead of per-platform plumbing (Android CMake, iOS/macOS CocoaPods script phases, SwiftPM unity build). No CMake or podspec script phases are needed anymore.
+  - Android, iOS, macOS, Linux and Windows native code is now compiled by `hook/build.dart` (`package:hooks` + `package:native_toolchain_c`) instead of per-platform plumbing.
 - Bumped minimum iOS SDK to 15 and MacOS to 12.
+- Add SpeexDSP Acoustic Echo Cancellation (`echoCancellationFilter`) with configurable filter length and residual denoise suppression.
+- Add `setLoopback` for zero-latency native duplex monitoring and `feedPlaybackData` for external playback reference (e.g. `flutter_soloud` mixer capture).
 
 ## 1.2.2
 - fix Android OpenSL capture shutdown blocking indefinitely when a stalled input queue cannot drain #51. Thanks to @Avejack #52
