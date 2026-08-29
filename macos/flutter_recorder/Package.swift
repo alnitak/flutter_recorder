@@ -3,24 +3,46 @@
 
 import PackageDescription
 
+// The native engine is built by the Dart build hook (hook/build.dart) and
+// bundled as a native code asset. This package only provides the
+// FlutterRecorderPlugin class, which observes the FlutterEngine lifecycle.
 let package = Package(
     name: "flutter_recorder",
     platforms: [
-        .macOS("10.15")
+        .macOS("10.13")
     ],
     products: [
-        .library(name: "flutter-recorder", targets: ["flutter_recorder"])
+        .library(name: "flutter-recorder", type: .dynamic, targets: ["flutter_recorder"])
     ],
     dependencies: [
-        .package(name: "FlutterFramework", path: "../FlutterFramework")
+        .package(name: "FlutterMacOS", path: "../FlutterMacOS")
     ],
     targets: [
         .target(
             name: "flutter_recorder",
             dependencies: [
-                .product(name: "FlutterFramework", package: "FlutterFramework")
+                .product(name: "FlutterMacOS", package: "FlutterMacOS")
             ],
-            path: "Sources/flutter_recorder"
+            exclude: [
+                // Symlink to the plugin's C++ sources, needed only for the
+                // "engine_lifecycle.h" header search path below.
+                "src",
+                // Force-included by the build hook on iOS, not compiled here.
+                "miniaudio_objc_prefix.h"
+            ],
+            cSettings: [
+                .headerSearchPath("src")
+            ],
+            cxxSettings: [
+                .headerSearchPath("src")
+            ],
+            linkerSettings: [
+                // FlutterRecorderPlugin.mm calls the engine-lifecycle exports,
+                // which live in the native code asset built by the Dart build
+                // hook; they are resolved at load time.
+                .unsafeFlags(["-Xlinker", "-undefined", "-Xlinker", "dynamic_lookup"])
+            ]
         )
-    ]
+    ],
+    cxxLanguageStandard: .cxx17
 )

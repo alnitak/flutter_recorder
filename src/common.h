@@ -37,8 +37,11 @@
 
 #if defined _IS_LINUX_ || defined _IS_MACOS_ || defined _IS_ANDROID_ || defined _WASM_
 #include <stdbool.h>
+#include <stdint.h>
 #define FFI_PLUGIN_EXPORT __attribute__((visibility("default"))) __attribute__((used))
 #endif
+
+#include <stdint.h>
 
 typedef void (*dartSilenceChangedCallback_t)(bool *, float *);
 
@@ -54,5 +57,7 @@ extern void (*nativeSilenceChangedCallback)(bool *, float *);
 extern void (*dartStreamDataCallback)(const unsigned char * data, const int dataLength);
 
 extern void (*nativeStreamDataCallback)(const unsigned char * data, const int dataLength);
+
+extern uint64_t g_eventCallbackGeneration;
 
 #endif // COMMON_H

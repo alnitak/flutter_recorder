@@ -7,7 +7,10 @@
 - **breaking change:** Bumped minimum iOS SDK to 15 and MacOS to 12.
 - Add SpeexDSP Acoustic Echo Cancellation (`echoCancellationFilter`) with configurable filter length and residual denoise suppression.
 - Add `setLoopback` for zero-latency native duplex monitoring and `feedPlaybackData` for external playback reference (e.g. `flutter_soloud` mixer capture).
-- **Web Audio Preprocessing Constraints**: Added `setWebAudioConstraints` to configure or disable browser-level microphone filters (`echoCancellation`, `autoGainControl`, and `noiseSuppression`). Also useful for capturing raw unprocessed microphone audio for custom DSP filters on the web.
+- **Platform Hardware & Browser Input Presets**:
+  - Added `IosInputPreset` to configure Apple hardware `AVAudioSession` voice processing (e.g. `voiceCommunication` with hardware AEC/AGC, `unprocessed` measurement mode).
+  - Added `WebInputPreset` to `Recorder.instance.init()` to configure browser `getUserMedia` preprocessing constraints (`unprocessed`, `voiceCommunication`, `voiceRecognition`, `noiseSuppression`, `echoCancellation`) at stream initialization time.
+  - Enhanced `AndroidInputPreset` documentation and integration for Android hardware DSP capture modes.
 
 ## 1.2.2
 - fix Android OpenSL capture shutdown blocking indefinitely when a stalled input queue cannot drain #51. Thanks to @Avejack #52

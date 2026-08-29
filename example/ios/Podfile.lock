@@ -43,7 +43,7 @@ SPEC CHECKSUMS:
   audio_session: 9bb7f6c970f21241b19f5a3658097ae459681ba0
   Flutter: 71a624a5bc0c04062bf19101d501e466baf2fb47
   flutter_recorder: 9ca6788b74f48ca6e1c2dfe885e1ce73e4617c82
-  flutter_soloud: b97deedf9e50353d2904336a5b8c2c65abc76e2f
+  flutter_soloud: 9f1184400eba4c826ee5ffaa0f2ad39903018ab2
   open_filex: 432f3cd11432da3e39f47fcc0df2b1603854eff1
   path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d

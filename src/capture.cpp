@@ -402,9 +402,13 @@ std::vector<CaptureDevice> Capture::listCaptureDevices() {
   return ret;
 }
 
+#if defined(__APPLE__)
+extern "C" int setIosAudioSessionPreset(int preset);
+#endif
+
 CaptureErrors Capture::init(Filters *filters, int deviceID, PCMFormat pcmFormat,
                             unsigned int sampleRate, unsigned int channels,
-                            int androidInputPreset) {
+                            int androidInputPreset, int iosInputPreset) {
   if (mInited) {
     dispose();
   }
@@ -415,6 +419,15 @@ CaptureErrors Capture::init(Filters *filters, int deviceID, PCMFormat pcmFormat,
   mSampleRate = sampleRate;
   mChannels = channels;
   mAndroidInputPreset = androidInputPreset;
+  mIosInputPreset = iosInputPreset;
+
+#if defined(__APPLE__)
+  if (iosInputPreset > 0) {
+    if (setIosAudioSessionPreset(iosInputPreset) != 0) {
+      return captureInitFailed;
+    }
+  }
+#endif
 
   bool isDuplex =
       (filters != nullptr &&
@@ -704,7 +717,7 @@ CaptureErrors Capture::reinitDevice() {
   }
 
   CaptureErrors err = init(mFilters, mDeviceID, mPcmFormat, mSampleRate,
-                           mChannels, mAndroidInputPreset);
+                           mChannels, mAndroidInputPreset, mIosInputPreset);
   if (err != captureNoError) {
     return err;
   }

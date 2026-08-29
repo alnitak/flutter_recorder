@@ -3,12 +3,14 @@
 
 import 'dart:ffi' as ffi;
 import 'dart:typed_data';
+import 'dart:ui' show PlatformDispatcher;
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter_recorder/src/audio_data_container.dart';
 import 'package:flutter_recorder/src/audio_visualization_data.dart';
+import 'package:flutter_recorder/src/bindings/darwin_engine_lifecycle.dart';
 import 'package:flutter_recorder/src/bindings/flutter_recorder_bindings_generated.dart'
     as bindings;
 import 'package:flutter_recorder/src/bindings/recorder.dart';
@@ -17,6 +19,8 @@ import 'package:flutter_recorder/src/exceptions/exceptions.dart';
 import 'package:flutter_recorder/src/filters/filters.dart';
 import 'package:flutter_recorder/src/flutter_recorder.dart';
 import 'package:meta/meta.dart';
+
+final class _IsolateLifecycleToken implements ffi.Finalizable {}
 
 @internal
 class RecorderController {
@@ -34,6 +38,20 @@ class RecorderController {
 class RecorderFfi extends RecorderImpl {
   SilenceCallback? _silenceCallback;
   void Function(AudioVisualizationData data)? _visualizationCallback;
+
+  late final ffi.NativeFinalizer _isolateFinalizer = ffi.NativeFinalizer(
+    ffi.Native.addressOf(bindings.retireDartCallbacksFinalizer),
+  );
+  _IsolateLifecycleToken? _lifecycleToken;
+
+  /// The engine ID of the current FlutterEngine, or -1 if unavailable.
+  int get currentEngineId {
+    try {
+      return PlatformDispatcher.instance.engineId ?? -1;
+    } on Object {
+      return -1;
+    }
+  }
 
   void _silenceChangedCallback(
     ffi.Pointer<ffi.Bool> silence,
@@ -106,11 +124,27 @@ class RecorderFfi extends RecorderImpl {
   nativeVisualizationCallable;
 
   @override
-  Future<void> setDartEventCallbacks() async {
-    // Close existing NativeCallables if any before recreating
+  void disposeNativeCallables() {
+    if (_lifecycleToken != null) {
+      _isolateFinalizer.detach(_lifecycleToken!);
+      _lifecycleToken = null;
+    }
     nativeSilenceChangedCallable?.close();
+    nativeSilenceChangedCallable = null;
     nativeStreamDataCallable?.close();
+    nativeStreamDataCallable = null;
     nativeVisualizationCallable?.close();
+    nativeVisualizationCallable = null;
+  }
+
+  @override
+  void clearDartCallbackRegistrations() {
+    bindings.clearDartCallbackRegistrations();
+  }
+
+  @override
+  Future<void> setDartEventCallbacks() async {
+    disposeNativeCallables();
 
     nativeSilenceChangedCallable =
         ffi.NativeCallable<
@@ -127,12 +161,21 @@ class RecorderFfi extends RecorderImpl {
           bindings.dartVisualizationCallback_tFunction
         >.listener(_visualizationDataCallback);
 
-    bindings.flutter_recorder_setDartEventCallback(
+    bindings.flutter_recorder_setDartEventCallbackForEngine(
       nativeSilenceChangedCallable!.nativeFunction,
       nativeStreamDataCallable!.nativeFunction,
+      currentEngineId,
     );
-    bindings.flutter_recorder_setDartVisualizationCallback(
+    bindings.flutter_recorder_setDartVisualizationCallbackForEngine(
       nativeVisualizationCallable!.nativeFunction,
+      currentEngineId,
+    );
+
+    _lifecycleToken = _IsolateLifecycleToken();
+    _isolateFinalizer.attach(
+      _lifecycleToken!,
+      ffi.Pointer.fromAddress(currentEngineId),
+      detach: _lifecycleToken,
     );
   }
 
@@ -230,19 +273,36 @@ class RecorderFfi extends RecorderImpl {
   }
 
   @override
-  void init({
+  Future<void> init({
     required int deviceID,
     required PCMFormat format,
     required int sampleRate,
     required RecorderChannels channels,
     required AndroidInputPreset? androidInputPreset,
-  }) {
+    required IosInputPreset? iosInputPreset,
+    required WebInputPreset? webInputPreset,
+  }) async {
+    if (DarwinEngineLifecycle.isSupported) {
+      final shutdownEpoch = bindings.currentEngineShutdownEpoch();
+      const darwinLifecycle = DarwinEngineLifecycle();
+      final result = await darwinLifecycle.prepareEngineInit(
+        currentEngineId,
+        shutdownEpoch,
+      );
+      if (result == DarwinEnginePrepareResult.unavailable) {
+        bindings.prepareEngineInit(currentEngineId);
+      }
+    } else {
+      bindings.prepareEngineInit(currentEngineId);
+    }
+
     final error = bindings.flutter_recorder_init(
       deviceID,
       format.value,
       sampleRate,
       channels.count,
       androidInputPreset?.value ?? 0,
+      iosInputPreset?.value ?? 0,
     );
     if (CaptureErrors.fromValue(error) != CaptureErrors.captureNoError) {
       throw RecorderCppException.fromRecorderError(
@@ -255,26 +315,21 @@ class RecorderFfi extends RecorderImpl {
       sampleRate: sampleRate,
       channels: channels,
       androidInputPreset: androidInputPreset,
+      iosInputPreset: iosInputPreset,
+      webInputPreset: webInputPreset,
     );
   }
 
   @override
   void deinit() {
+    disposeNativeCallables();
     bindings.flutter_recorder_stopRecording();
     bindings.flutter_recorder_stopStreamingData();
     bindings.flutter_recorder_stop();
-    bindings.flutter_recorder_setDartVisualizationCallback(ffi.nullptr);
-    bindings.flutter_recorder_setDartEventCallback(ffi.nullptr, ffi.nullptr);
     bindings.flutter_recorder_deinit();
 
     _silenceCallback = null;
     _visualizationCallback = null;
-    nativeSilenceChangedCallable?.close();
-    nativeSilenceChangedCallable = null;
-    nativeStreamDataCallable?.close();
-    nativeStreamDataCallable = null;
-    nativeVisualizationCallable?.close();
-    nativeVisualizationCallable = null;
     super.deinit();
   }
 
@@ -583,14 +638,5 @@ class RecorderFfi extends RecorderImpl {
         format.value,
       );
     });
-  }
-
-  @override
-  void setWebAudioConstraints({
-    bool echoCancellation = false,
-    bool autoGainControl = false,
-    bool noiseSuppression = false,
-  }) {
-    // No-op on IO platforms.
   }
 }

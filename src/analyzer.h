@@ -8,6 +8,7 @@
 #include <thread>
 #include <vector>
 
+#include "dart_callback_gate.h"
 #include "enums.h"
 #include "miniaudio.h"
 #include "pffft/pffft.h"
@@ -53,6 +54,9 @@ class Analyzer {
 
   /// Set the Dart notification callback.
   void setDataCallback(dartVisualizationCallback_t callback);
+
+  /// Set the Dart notification callback scoped to a specific FlutterEngine.
+  void setDataCallbackForEngine(dartVisualizationCallback_t callback, int64_t engine_id);
 
   /// Called from the audio thread for each captured block.
   void onAudioData(const float *data, unsigned int frames, int channels);
@@ -122,6 +126,7 @@ class Analyzer {
   const float *m_wavePtrsExport[kMaxChannels]{nullptr};
   const float *m_fftPtrsExport[kMaxChannels]{nullptr};
 
+  std::atomic<uint64_t> m_callbackGeneration{dart_callbacks::kNoGeneration};
   std::atomic<dartVisualizationCallback_t> m_callback{nullptr};
   std::thread m_workerThread;
 };

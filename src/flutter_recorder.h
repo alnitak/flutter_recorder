@@ -5,6 +5,7 @@
 #include "enums.h"
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C"
@@ -17,8 +18,26 @@ extern "C"
         dartSilenceChangedCallback_t silence_changed_callback,
         dartStreamDataCallback_t stream_data_callback);
 
+    FFI_PLUGIN_EXPORT void flutter_recorder_setDartEventCallbackForEngine(
+        dartSilenceChangedCallback_t silence_changed_callback,
+        dartStreamDataCallback_t stream_data_callback,
+        int64_t engine_id);
+
     FFI_PLUGIN_EXPORT void flutter_recorder_setDartVisualizationCallback(
         dartVisualizationCallback_t callback);
+
+    FFI_PLUGIN_EXPORT void flutter_recorder_setDartVisualizationCallbackForEngine(
+        dartVisualizationCallback_t callback,
+        int64_t engine_id);
+
+    // Engine lifecycle exports
+    FFI_PLUGIN_EXPORT void prepareEngineInit(int64_t owner_engine_id);
+    FFI_PLUGIN_EXPORT uint64_t currentEngineShutdownEpoch(void);
+    FFI_PLUGIN_EXPORT bool prepareEngineInitForRequest(int64_t owner_engine_id, uint64_t shutdown_epoch);
+    FFI_PLUGIN_EXPORT bool clearDartCallbackRegistrationsForEngine(int64_t engine_id);
+    FFI_PLUGIN_EXPORT void clearDartCallbackRegistrations(void);
+    FFI_PLUGIN_EXPORT bool requestEngineTeardownForEngine(int64_t engine_id);
+    FFI_PLUGIN_EXPORT void retireDartCallbacksFinalizer(void *token);
 
     FFI_PLUGIN_EXPORT void flutter_recorder_nativeFree(void *pointer);
 
@@ -39,7 +58,8 @@ extern "C"
         int pcmFormat,
         unsigned int sampleRate,
         unsigned int channels,
-        int androidInputPreset);
+        int androidInputPreset,
+        int iosInputPreset);
 
     FFI_PLUGIN_EXPORT void flutter_recorder_deinit();
 

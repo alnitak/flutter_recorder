@@ -30,24 +30,53 @@ Add the permission in the `AndroidManifest.xml`.
 <uses-permission android:name="android.permission.RECORD_AUDIO" />
 ```
 
-Android also supports choosing the capture input preset used by miniaudio:
+### 🎛️ Platform Input Presets (Hardware & Browser Audio Processing)
+
+Operating systems and browsers provide native hardware DSP and preprocessing pipelines (e.g. Acoustic Echo Cancellation, Automatic Gain Control, Noise Suppression). `flutter_recorder` allows configuring these directly in `init()`:
 
 ```dart
 await Recorder.instance.init(
-    androidInputPreset: AndroidInputPreset.voiceCommunication,
+  // Android hardware capture preset (OpenSL / AAudio DSP)
+  androidInputPreset: AndroidInputPreset.voiceCommunication,
+
+  // iOS AVAudioSession preset (Apple hardware VoiceProcessingIO / Measurement)
+  iosInputPreset: IosInputPreset.voiceCommunication,
+
+  // Web Audio constraints (getUserMedia echoCancellation, autoGainControl, noiseSuppression)
+  webInputPreset: WebInputPreset.unprocessed,
 );
 ```
 
-If `androidInputPreset` is omitted, the platform default is left unchanged.
-The option is ignored on non-Android platforms. Presets request Android capture
-source and processing behavior, but the actual result depends on the device,
-Android version, and OEM audio stack. For speech, `voiceCommunication` or
-`camcorder` can sound louder or more processed on some devices, while
-`voiceRecognition` and `unprocessed` are useful when less processing is desired.
+#### Android (`AndroidInputPreset`)
+- `voiceCommunication`: Requests hardware Acoustic Echo Cancellation (AEC), AGC, and noise suppression tuned for VoIP/telephony.
+- `voiceRecognition`: Tuned for speech-to-text; applies noise reduction while avoiding aggressive AGC volume distortion.
+- `camcorder`: Tuned for video recording with directional microphone selection and balanced gain.
+- `unprocessed`: Bypasses device DSP / manufacturer effects for clean, unprocessed audio capture.
+- `generic`: System default recording source.
 
-#### MacOS, iOS
+#### iOS (`IosInputPreset`)
+- `voiceCommunication`: Configures `AVAudioSessionModeVoiceChat` with Apple hardware VoiceProcessingIO (hardware AEC and AGC). Avoids the need for external `audio_session` configuration.
+- `videoChat`: Configures `AVAudioSessionModeVideoChat` with Apple voice processing optimized for video calls and speakerphone.
+- `speechRecognition`: Configures `AVAudioSessionModeMeasurement` with minimal hardware gain distortion for speech-to-text.
+- `unprocessed`: Configures `AVAudioSessionModeMeasurement` with flat frequency response and zero gain coloring for raw DSP analysis.
+- `generic`: Configures standard `AVAudioSessionCategoryPlayAndRecord` with default system routing.
+- If omitted (`null`), the active `AVAudioSession` is left untouched, preserving external session management (e.g. `audio_session` package).
+
+#### Web (`WebInputPreset`)
+- `unprocessed` *(Default)*: Disables browser AEC, AGC, and Noise Suppression (`{echoCancellation: false, autoGainControl: false, noiseSuppression: false}`). Prevents browser "volume pumping" / gating so raw audio reaches your app.
+- `voiceCommunication`: Enables browser AEC, AGC, and Noise Suppression (`{echoCancellation: true, autoGainControl: true, noiseSuppression: true}`).
+- `voiceRecognition`: Enables browser AGC and Noise Suppression without AEC (`{echoCancellation: false, autoGainControl: true, noiseSuppression: true}`).
+- `noiseSuppression`: Enables only browser Noise Suppression (`{noiseSuppression: true}`).
+- `echoCancellation`: Enables only browser Echo Cancellation (`{echoCancellation: true}`).
+
+#### macOS
+On macOS, CoreAudio HAL captures raw, unprocessed audio from the selected input device by default. System-wide "Voice Isolation" and "Wide Spectrum" Mic Modes in macOS Sonoma/Sequoia can be selected by the user in the macOS menu bar / Control Center.
+
+---
+
+#### MacOS, iOS Permissions
 Add the permission in `Runner/Info.plist`.
-```
+```xml
 <key>NSMicrophoneUsageDescription</key>
 <string>Some message to describe why you need this permission</string>
 ```
@@ -55,7 +84,7 @@ Add the permission in `Runner/Info.plist`.
 on **MacOS** :
 
 In capabilities, activate "Audio input" in debug and release schemes or add in `macos/Runner/*.entitlements` files:
-```
+```xml
 <key>com.apple.security.device.audio-input</key>
 <true/>
 ```

@@ -141,6 +141,7 @@ external int wasmInit(
   int sampleRate,
   int channels,
   int androidInputPreset,
+  int iosInputPreset,
 );
 
 @JS('RecorderModule._flutter_recorder_deinit')

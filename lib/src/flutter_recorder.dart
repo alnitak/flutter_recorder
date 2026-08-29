@@ -216,10 +216,27 @@ interface class Recorder {
   /// [format] PCM format. Default to [PCMFormat.s16le].
   /// [sampleRate] sample rate in Hz. Default to 22050.
   /// [channels] number of channels. Default to [RecorderChannels.mono].
-  /// [androidInputPreset] Android capture input preset. If null, the platform
-  /// default is used. Ignored on non-Android platforms.
+  /// [androidInputPreset] Android hardware capture preset. Configures device
+  /// DSP and hardware filters (e.g. [AndroidInputPreset.voiceCommunication] for
+  /// hardware AEC/AGC, [AndroidInputPreset.unprocessed] for raw audio). If
+  /// null, the platform default is used. Ignored on non-Android platforms.
+  /// [iosInputPreset] iOS system `AVAudioSession` preset. Configures Apple
+  /// hardware voice processing (e.g. [IosInputPreset.voiceCommunication] for
+  /// hardware AEC/AGC, [IosInputPreset.unprocessed] for clean raw audio). If
+  /// null, the active `AVAudioSession` configuration is left untouched. Ignored
+  /// on non-iOS platforms.
+  /// [webInputPreset] Web Audio preprocessing constraints (`echoCancellation`,
+  /// `autoGainControl`, `noiseSuppression`) configured on `getUserMedia`.
+  /// Defaults to [WebInputPreset.unprocessed] (raw audio without browser AGC
+  /// pumping). Ignored on non-Web platforms.
   ///
-  /// Thows [RecorderInitializeFailedException] if something goes wrong, ie. no
+  /// > **Note on macOS:**
+  /// > On macOS, CoreAudio HAL captures raw, unprocessed audio from the
+  /// > selected input device by default. System-wide "Voice Isolation" and
+  /// > "Wide Spectrum" Mic Modes in macOS Sonoma/Sequoia can be selected by
+  /// > the user in the macOS menu bar / Control Center.
+  ///
+  /// Throws [RecorderInitializeFailedException] if something goes wrong, ie. no
   /// device found with [deviceID] id.
   Future<void> init({
     int deviceID = -1,
@@ -227,11 +244,11 @@ interface class Recorder {
     int sampleRate = 22050,
     RecorderChannels channels = RecorderChannels.mono,
     AndroidInputPreset? androidInputPreset,
+    IosInputPreset? iosInputPreset,
+    WebInputPreset? webInputPreset,
   }) async {
-    await _recorder.impl.setDartEventCallbacks();
-
     // Sets the [_isInitialized].
-    // Usefult when the consumer use the hot restart and that flag
+    // Useful when the consumer uses hot restart and that flag
     // has been reset.
     isDeviceInitialized();
 
@@ -243,8 +260,11 @@ interface class Recorder {
         'a bug in your code. You may have neglected to deinit() Recorder '
         'during the current lifetime of the app.',
       );
+      _recorder.impl.clearDartCallbackRegistrations();
       deinit();
     }
+
+    await _recorder.impl.setDartEventCallbacks();
 
     await _recorder.impl.init(
       deviceID: deviceID,
@@ -252,6 +272,8 @@ interface class Recorder {
       sampleRate: sampleRate,
       channels: channels,
       androidInputPreset: androidInputPreset,
+      iosInputPreset: iosInputPreset,
+      webInputPreset: webInputPreset,
     );
     _recorderFormat = format;
     _isInitialized = true;
@@ -599,44 +621,5 @@ interface class Recorder {
       return;
     }
     _recorder.impl.feedPlaybackData(data, format: format, channels: channels);
-  }
-
-  /// Sets browser Web Audio constraints (`echoCancellation`, `autoGainControl`,
-  /// `noiseSuppression`) when running on the Web platform.
-  ///
-  /// By default on Web, browsers enable their internal Automatic Gain Control
-  /// (AGC), Acoustic Echo Cancellation (AEC), and Noise Suppression. In many
-  /// recording and loopback situations, browser AGC can cause volume pumping
-  /// (rapid volume oscillations).
-  ///
-  /// Calling this method configures the browser preprocessing flags for
-  /// subsequent captures and attempts to dynamically apply them to any
-  /// currently active microphone tracks via `applyConstraints`.
-  ///
-  /// > **Note on Browser Limitations:**
-  /// > In Chromium-based and other browsers, the WebRTC audio preprocessing
-  /// > pipeline (AEC, AGC, Noise Suppression) is instantiated when the
-  /// > microphone stream is first created (`getUserMedia`). Dynamically
-  /// > changing these constraints on an already active stream may be ignored
-  /// > by the browser audio engine. For guaranteed effect, call this method
-  /// > **before** calling [init] or starting audio capture, or restart the
-  /// > capture after changing constraints.
-  ///
-  /// This method is a no-op on non-web platforms.
-  ///
-  /// [echoCancellation] whether the browser's built-in AEC is enabled.
-  /// [autoGainControl] whether the browser's built-in AGC is enabled.
-  /// [noiseSuppression] whether the browser's built-in noise suppressor is
-  /// enabled.
-  void setWebAudioConstraints({
-    bool echoCancellation = false,
-    bool autoGainControl = false,
-    bool noiseSuppression = false,
-  }) {
-    _recorder.impl.setWebAudioConstraints(
-      echoCancellation: echoCancellation,
-      autoGainControl: autoGainControl,
-      noiseSuppression: noiseSuppression,
-    );
   }
 }

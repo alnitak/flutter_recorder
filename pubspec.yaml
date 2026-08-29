@@ -50,12 +50,16 @@ flutter:
   plugin:
     platforms:
       android:
+        package: flutter.recorder.flutter_recorder
+        pluginClass: FlutterRecorderPlugin
         ffiPlugin: true
       ios:
+        pluginClass: FlutterRecorderPlugin
         ffiPlugin: true
       linux:
         ffiPlugin: true
       macos:
+        pluginClass: FlutterRecorderPlugin
         ffiPlugin: true
       windows:
         ffiPlugin: true

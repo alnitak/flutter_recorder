@@ -1,0 +1,118 @@
+#import "FlutterRecorderPlugin.h"
+
+#include "engine_lifecycle.h"
+
+/// The engine-local channel Dart uses to hand this plugin its engine id.
+static NSString *const kEngineLifecycleChannel =
+    @"flutter_recorder/engine_lifecycle";
+
+/// Matches `kNoEngineId` in the shared C++ implementation.
+static const int64_t kNoEngineId = -1;
+
+@implementation FlutterRecorderPlugin {
+  FlutterMethodChannel *_channel;
+  int64_t _engineId;
+  BOOL _hasEngineId;
+  BOOL _detached;
+}
+
++ (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar> *)registrar {
+  FlutterRecorderPlugin *instance = [[FlutterRecorderPlugin alloc] init];
+  FlutterMethodChannel *channel =
+      [FlutterMethodChannel methodChannelWithName:kEngineLifecycleChannel
+                                  binaryMessenger:[registrar messenger]];
+  instance->_channel = channel;
+  [registrar addMethodCallDelegate:instance channel:channel];
+  [registrar publish:instance];
+}
+
+- (instancetype)init {
+  self = [super init];
+  if (self != nil) {
+    _engineId = kNoEngineId;
+    _hasEngineId = NO;
+    _detached = NO;
+  }
+  return self;
+}
+
+- (void)handleMethodCall:(FlutterMethodCall *)call
+                  result:(FlutterResult)result {
+  if (![call.method isEqualToString:@"prepareEngineInit"]) {
+    result(FlutterMethodNotImplemented);
+    return;
+  }
+
+  if (_detached) {
+    result([FlutterError errorWithCode:@"engine_detached"
+                               message:@"The FlutterEngine is being destroyed."
+                               details:nil]);
+    return;
+  }
+
+  NSDictionary *arguments = call.arguments;
+  if (![arguments isKindOfClass:[NSDictionary class]]) {
+    result([FlutterError errorWithCode:@"invalid_arguments"
+                               message:@"Expected a map of prepare arguments."
+                               details:nil]);
+    return;
+  }
+
+  NSNumber *engineIdArgument = arguments[@"engineId"];
+  NSNumber *epochArgument = arguments[@"shutdownEpoch"];
+  if (![engineIdArgument isKindOfClass:[NSNumber class]] ||
+      ![epochArgument isKindOfClass:[NSNumber class]]) {
+    result([FlutterError
+        errorWithCode:@"invalid_arguments"
+              message:@"Expected an engine id and a shutdown epoch."
+              details:nil]);
+    return;
+  }
+
+  const int64_t engineId = [engineIdArgument longLongValue];
+  if (engineId == kNoEngineId) {
+    result([FlutterError
+        errorWithCode:@"invalid_engine_id"
+              message:@"The engine id is the no-engine sentinel."
+              details:nil]);
+    return;
+  }
+
+  const uint64_t shutdownEpoch =
+      (uint64_t)[epochArgument unsignedLongLongValue];
+
+  if (!prepareEngineInitForRequest(engineId, shutdownEpoch)) {
+    result([FlutterError
+        errorWithCode:@"stale_prepare"
+              message:@"This initialization was superseded by a shutdown."
+              details:nil]);
+    return;
+  }
+
+  _engineId = engineId;
+  _hasEngineId = YES;
+
+  // Hot-restart recovery: retire stale callables from previous isolate
+  clearDartCallbackRegistrationsForEngine(engineId);
+
+  result(@(YES));
+}
+
+- (void)detachFromEngineForRegistrar:
+    (NSObject<FlutterPluginRegistrar> *)registrar {
+  _detached = YES;
+  [_channel setMethodCallHandler:nil];
+  _channel = nil;
+
+  if (!_hasEngineId) {
+    return;
+  }
+
+  const int64_t engineId = _engineId;
+  _hasEngineId = NO;
+  _engineId = kNoEngineId;
+
+  requestEngineTeardownForEngine(engineId);
+}
+
+@end

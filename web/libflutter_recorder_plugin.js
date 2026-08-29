@@ -1946,7 +1946,7 @@ function assignWasmExports(wasmExports) {
   _flutter_recorder_listCaptureDevices = Module["_flutter_recorder_listCaptureDevices"] = createExportWrapper("flutter_recorder_listCaptureDevices", 4);
   _malloc = Module["_malloc"] = createExportWrapper("malloc", 1);
   _flutter_recorder_freeListCaptureDevices = Module["_flutter_recorder_freeListCaptureDevices"] = createExportWrapper("flutter_recorder_freeListCaptureDevices", 4);
-  _flutter_recorder_init = Module["_flutter_recorder_init"] = createExportWrapper("flutter_recorder_init", 5);
+  _flutter_recorder_init = Module["_flutter_recorder_init"] = createExportWrapper("flutter_recorder_init", 6);
   _flutter_recorder_deinit = Module["_flutter_recorder_deinit"] = createExportWrapper("flutter_recorder_deinit", 0);
   _flutter_recorder_isInited = Module["_flutter_recorder_isInited"] = createExportWrapper("flutter_recorder_isInited", 0);
   _flutter_recorder_isDeviceStarted = Module["_flutter_recorder_isDeviceStarted"] = createExportWrapper("flutter_recorder_isDeviceStarted", 0);

@@ -1,14 +1,18 @@
 #include "miniaudio.h"
 
 #include "flutter_recorder.h"
+#include "engine_lifecycle.h"
+#include "dart_callback_gate.h"
 #include "capture.h"
 #include "analyzer.h"
 #include "filters/filters.h"
 
 #include <memory>
+#include <mutex>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <thread>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
@@ -22,10 +26,26 @@
 Capture capture;
 std::unique_ptr<Filters> mFilters = std::make_unique<Filters>(0);
 
-dartSilenceChangedCallback_t dartSilenceChangedCallback;
-dartSilenceChangedCallback_t nativeSilenceChangedCallback;
-dartStreamDataCallback_t dartStreamDataCallback;
-dartStreamDataCallback_t nativeStreamDataCallback;
+dartSilenceChangedCallback_t dartSilenceChangedCallback = nullptr;
+dartSilenceChangedCallback_t nativeSilenceChangedCallback = nullptr;
+dartStreamDataCallback_t dartStreamDataCallback = nullptr;
+dartStreamDataCallback_t nativeStreamDataCallback = nullptr;
+
+uint64_t g_eventCallbackGeneration = dart_callbacks::kNoGeneration;
+
+namespace {
+  std::mutex engine_lifecycle_mutex;
+  int64_t nativeInitOwnerEngineId = dart_callbacks::kNoEngineId;
+  uint64_t engineInitGeneration = 0;
+  uint64_t engineShutdownEpoch = 0;
+
+  void clearDartCallbackPointersLocked() {
+    dartSilenceChangedCallback = nullptr;
+    nativeSilenceChangedCallback = nullptr;
+    dartStreamDataCallback = nullptr;
+    nativeStreamDataCallback = nullptr;
+  }
+}
 
 //////////////////////////////////////////////////////////////
 /// WEB WORKER
@@ -127,7 +147,8 @@ void silenceChangedCallback(bool *isSilent, float *energyDb)
     // Calling JavaScript from C/C++
     flutter_recorder_sendSilenceEventToWorker("silenceChangedCallback", *isSilent, *energyDb);
 #endif
-    if (dartSilenceChangedCallback != nullptr)
+    dart_callbacks::InvocationPass pass;
+    if (pass.isLive(g_eventCallbackGeneration) && dartSilenceChangedCallback != nullptr)
         dartSilenceChangedCallback(isSilent, energyDb);
 }
 
@@ -136,16 +157,21 @@ void streamDataCallback(const unsigned char *samples, const int numSamples)
 #ifdef __EMSCRIPTEN__
     flutter_recorder_sendStreamToWorker("streamDataCallback", samples, numSamples);
 #else
-    if (dartStreamDataCallback != nullptr)
+    dart_callbacks::InvocationPass pass;
+    if (pass.isLive(g_eventCallbackGeneration) && dartStreamDataCallback != nullptr)
         dartStreamDataCallback(samples, numSamples);
 #endif
 }
 
-/// Set Dart functions to call when an event occurs.
-FFI_PLUGIN_EXPORT void flutter_recorder_setDartEventCallback(
+/// Set Dart functions to call when an event occurs with engine id.
+FFI_PLUGIN_EXPORT void flutter_recorder_setDartEventCallbackForEngine(
     dartSilenceChangedCallback_t silence_changed_callback,
-    dartStreamDataCallback_t stream_data_callback)
+    dartStreamDataCallback_t stream_data_callback,
+    int64_t engine_id)
 {
+    dart_callbacks::Registration registration;
+    g_eventCallbackGeneration = registration.claim(engine_id);
+
     dartSilenceChangedCallback = silence_changed_callback;
     nativeSilenceChangedCallback = silenceChangedCallback;
 
@@ -153,10 +179,117 @@ FFI_PLUGIN_EXPORT void flutter_recorder_setDartEventCallback(
     nativeStreamDataCallback = streamDataCallback;
 }
 
+/// Set Dart functions to call when an event occurs.
+FFI_PLUGIN_EXPORT void flutter_recorder_setDartEventCallback(
+    dartSilenceChangedCallback_t silence_changed_callback,
+    dartStreamDataCallback_t stream_data_callback)
+{
+    flutter_recorder_setDartEventCallbackForEngine(
+        silence_changed_callback,
+        stream_data_callback,
+        dart_callbacks::kNoEngineId);
+}
+
+FFI_PLUGIN_EXPORT void flutter_recorder_setDartVisualizationCallbackForEngine(
+    dartVisualizationCallback_t callback,
+    int64_t engine_id)
+{
+    Analyzer::instance().setDataCallbackForEngine(callback, engine_id);
+}
+
 FFI_PLUGIN_EXPORT void flutter_recorder_setDartVisualizationCallback(
     dartVisualizationCallback_t callback)
 {
     Analyzer::instance().setDataCallback(callback);
+}
+
+// Engine lifecycle implementations
+FFI_PLUGIN_EXPORT void prepareEngineInit(int64_t owner_engine_id)
+{
+    std::lock_guard<std::mutex> guard(engine_lifecycle_mutex);
+    nativeInitOwnerEngineId = owner_engine_id;
+    ++engineInitGeneration;
+}
+
+FFI_PLUGIN_EXPORT uint64_t currentEngineShutdownEpoch(void)
+{
+    std::lock_guard<std::mutex> guard(engine_lifecycle_mutex);
+    return engineShutdownEpoch;
+}
+
+FFI_PLUGIN_EXPORT bool prepareEngineInitForRequest(int64_t owner_engine_id, uint64_t shutdown_epoch)
+{
+    std::lock_guard<std::mutex> guard(engine_lifecycle_mutex);
+    if (shutdown_epoch != engineShutdownEpoch)
+    {
+        return false;
+    }
+    nativeInitOwnerEngineId = owner_engine_id;
+    ++engineInitGeneration;
+    return true;
+}
+
+FFI_PLUGIN_EXPORT bool clearDartCallbackRegistrationsForEngine(int64_t engine_id)
+{
+    if (engine_id == dart_callbacks::kNoEngineId)
+        return false;
+
+    dart_callbacks::Registration registration;
+    if (!registration.retire(engine_id))
+        return false;
+
+    clearDartCallbackPointersLocked();
+    Analyzer::instance().setDataCallback(nullptr);
+    Analyzer::instance().setVisualizationEnabled(false);
+    return true;
+}
+
+FFI_PLUGIN_EXPORT void clearDartCallbackRegistrations(void)
+{
+    dart_callbacks::Registration registration;
+    registration.retireAll();
+
+    clearDartCallbackPointersLocked();
+    Analyzer::instance().setDataCallback(nullptr);
+    Analyzer::instance().setVisualizationEnabled(false);
+}
+
+FFI_PLUGIN_EXPORT bool requestEngineTeardownForEngine(int64_t engine_id)
+{
+    {
+        std::lock_guard<std::mutex> guard(engine_lifecycle_mutex);
+        if (engine_id == dart_callbacks::kNoEngineId || nativeInitOwnerEngineId != engine_id)
+            return false;
+        ++engineShutdownEpoch;
+        nativeInitOwnerEngineId = dart_callbacks::kNoEngineId;
+    }
+
+    clearDartCallbackRegistrationsForEngine(engine_id);
+
+    std::thread teardownWorker([]() {
+        flutter_recorder_deinit();
+    });
+    teardownWorker.detach();
+    return true;
+}
+
+FFI_PLUGIN_EXPORT void retireDartCallbacksFinalizer(void *token)
+{
+    const int64_t engine_id = reinterpret_cast<intptr_t>(token);
+    dart_callbacks::Registration registration;
+    if (engine_id != dart_callbacks::kNoEngineId)
+    {
+        if (!registration.retire(engine_id))
+            return;
+    }
+    else
+    {
+        registration.retireAll();
+    }
+
+    clearDartCallbackPointersLocked();
+    Analyzer::instance().setDataCallback(nullptr);
+    Analyzer::instance().setVisualizationEnabled(false);
 }
 
 FFI_PLUGIN_EXPORT void flutter_recorder_nativeFree(void *pointer)
@@ -218,7 +351,8 @@ FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_init(
     int pcmFormat,
     unsigned int sampleRate,
     unsigned int channels,
-    int androidInputPreset)
+    int androidInputPreset,
+    int iosInputPreset)
 {
     if (!mFilters)
     {
@@ -228,7 +362,7 @@ FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_init(
     {
         mFilters->setSampleRate(sampleRate);
     }
-    CaptureErrors res = capture.init(mFilters.get(), deviceID, (PCMFormat)pcmFormat, sampleRate, channels, androidInputPreset);
+    CaptureErrors res = capture.init(mFilters.get(), deviceID, (PCMFormat)pcmFormat, sampleRate, channels, androidInputPreset, iosInputPreset);
 
     return res;
 }
@@ -456,3 +590,25 @@ FFI_PLUGIN_EXPORT void flutter_recorder_feedPlaybackData(const void *data, unsig
         mFilters->feedPlaybackData(data, frameCount, channels, maFormat);
     }
 }
+
+#ifdef _IS_ANDROID_
+#include <jni.h>
+
+extern "C" {
+  JNIEXPORT jboolean JNICALL
+  Java_flutter_recorder_flutter_1recorder_FlutterRecorderPlugin_nativeClearDartCallbackRegistrationsForEngine(
+      JNIEnv *, jclass, jlong engine_id)
+  {
+    return clearDartCallbackRegistrationsForEngine(
+        static_cast<int64_t>(engine_id));
+  }
+
+  JNIEXPORT jboolean JNICALL
+  Java_flutter_recorder_flutter_1recorder_FlutterRecorderPlugin_nativeRequestEngineTeardownForEngine(
+      JNIEnv *, jclass, jlong engine_id)
+  {
+    return requestEngineTeardownForEngine(static_cast<int64_t>(engine_id));
+  }
+}
+#endif
+
