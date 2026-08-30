@@ -65,40 +65,40 @@ if not exist "%INCLUDE_DIR%\\speex" mkdir "%INCLUDE_DIR%\\speex"
 
 :: Step 1: Build OGG library
 echo Building OGG library...
-mkdir "%BUILD_DIR%\\ogg"
-cd "%BUILD_DIR%\\ogg"
+mkdir "%BUILD_DIR%\ogg"
+cd "%BUILD_DIR%\ogg"
 :: Build shared libraries
-cmake -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE:STRING=Release -DBUILD_SHARED_LIBS=ON -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded" "%OGG_DIR%"
+cmake -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE:STRING=Release -DBUILD_SHARED_LIBS=ON -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded" -DCMAKE_PROJECT_INCLUDE="%BASE_DIR%\fr_rename.cmake" "%OGG_DIR%"
 cmake --build . --config Release
 :: Step 2: Copy OGG .lib, .dll and include files
 echo Copying OGG files...
-copy /Y ".\\Release\\*.lib" "%LIBS_DIR%"
-copy /Y ".\\Release\\*.dll" "%LIBS_DIR%"
-xcopy /Y /S "%OGG_DIR%\\include\\ogg" "%INCLUDE_DIR%\\ogg\"
+copy /Y ".\Release\*.lib" "%LIBS_DIR%"
+copy /Y ".\Release\*.dll" "%LIBS_DIR%"
+xcopy /Y /S "%OGG_DIR%\include\ogg" "%INCLUDE_DIR%\ogg\"
 
 cd "%BASE_DIR%"
 
 :: Step 3: Build OPUS library
 echo Building OPUS library...
-mkdir "%BUILD_DIR%\\opus"
-cd "%BUILD_DIR%\\opus"
+mkdir "%BUILD_DIR%\opus"
+cd "%BUILD_DIR%\opus"
 :: Build shared libraries
-cmake -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE:STRING=Release -DBUILD_SHARED_LIBS=ON -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded" "%OPUS_DIR%"
+cmake -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE:STRING=Release -DBUILD_SHARED_LIBS=ON -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded" -DCMAKE_PROJECT_INCLUDE="%BASE_DIR%\fr_rename.cmake" "%OPUS_DIR%"
 cmake --build . --config Release
 :: Step 4: Copy OPUS .lib, .dll and include files
 echo Copying OPUS files...
-copy /Y ".\\Release\\*.lib" "%LIBS_DIR%"
-copy /Y ".\\Release\\*.dll" "%LIBS_DIR%"
-xcopy /Y /S "%OPUS_DIR%\\include" "%INCLUDE_DIR%\\opus\"
+copy /Y ".\Release\*.lib" "%LIBS_DIR%"
+copy /Y ".\Release\*.dll" "%LIBS_DIR%"
+xcopy /Y /S "%OPUS_DIR%\include" "%INCLUDE_DIR%\opus\"
 
 cd "%BASE_DIR%"
 
 :: Step 5: Build SPEEXDSP library
 echo Building SPEEXDSP library...
-mkdir "%BUILD_DIR%\\speexdsp"
-cd "%BUILD_DIR%\\speexdsp"
+mkdir "%BUILD_DIR%\speexdsp"
+cd "%BUILD_DIR%\speexdsp"
 :: Build shared libraries
-cmake -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE:STRING=Release -DBUILD_SHARED_LIBS=ON -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded" "%SPEEXDSP_DIR%"
+cmake -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE:STRING=Release -DBUILD_SHARED_LIBS=ON -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded" -DCMAKE_PROJECT_INCLUDE="%BASE_DIR%\fr_rename.cmake" "%SPEEXDSP_DIR%"
 cmake --build . --config Release
 :: Step 6: Copy SPEEXDSP .lib, .dll and include files
 echo Copying SPEEXDSP files...

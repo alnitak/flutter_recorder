@@ -44,5 +44,6 @@ set(flutter_recorder_bundled_libraries
   $<TARGET_FILE:flutter_recorder>
   ${OGG_LIBRARY}
   ${OPUS_LIBRARY}
+  ${SPEEXDSP_LIBRARY}
   PARENT_SCOPE
 )
