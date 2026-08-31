@@ -13,7 +13,6 @@
 - **Platform Hardware & Browser Input Presets**:
   - Added `IosInputPreset` to configure Apple hardware `AVAudioSession` voice processing (e.g. `voiceCommunication` with hardware AEC/AGC, `unprocessed` measurement mode).
   - Added `WebInputPreset` to `Recorder.instance.init()` to configure browser `getUserMedia` preprocessing constraints (`unprocessed`, `voiceCommunication`, `voiceRecognition`, `noiseSuppression`, `echoCancellation`) at stream initialization time.
-  - Enhanced `AndroidInputPreset` documentation and integration for Android hardware DSP capture modes.
 
 ## 1.2.2
 - fix Android OpenSL capture shutdown blocking indefinitely when a stalled input queue cannot drain #51. Thanks to @Avejack #52
