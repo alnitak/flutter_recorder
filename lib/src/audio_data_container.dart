@@ -49,7 +49,7 @@ class AudioDataContainer {
         return u8Data;
       case PCMFormat.s16le:
         final result = Uint8List(u8Data.length ~/ 2);
-        final from = u8Data.buffer.asInt16List();
+        final from = Int16List.sublistView(u8Data);
         for (var i = 0; i < result.length; i++) {
           result[i] = (from[i] + 32768) ~/ 256;
         }
@@ -79,7 +79,7 @@ class AudioDataContainer {
         return result;
       case PCMFormat.f32le:
         final result = Uint8List(u8Data.length ~/ 4);
-        final f32Buffer = Float32List.view(u8Data.buffer);
+        final f32Buffer = Float32List.sublistView(u8Data);
         for (var i = 0; i < result.length; i++) {
           result[i] = (f32Buffer[i] * 127.0 + 128.0).clamp(0, 255).toInt();
         }
@@ -91,7 +91,11 @@ class AudioDataContainer {
   Int8List toS8List({required PCMFormat from}) {
     switch (from) {
       case PCMFormat.u8:
-        return Int8List.fromList(u8Data.map((e) => e - 128).toList());
+        final result = Int8List(u8Data.length);
+        for (var i = 0; i < u8Data.length; i++) {
+          result[i] = u8Data[i] - 128;
+        }
+        return result;
       case PCMFormat.s16le:
         final result = Int8List(u8Data.length ~/ 2);
         for (var i = 0; i < result.length; i++) {
@@ -123,7 +127,7 @@ class AudioDataContainer {
         return result;
       case PCMFormat.f32le:
         final result = Int8List(u8Data.length ~/ 4);
-        final f32Buffer = Float32List.view(u8Data.buffer);
+        final f32Buffer = Float32List.sublistView(u8Data);
         for (var i = 0; i < result.length; i++) {
           result[i] = (f32Buffer[i] * 127.0).clamp(-128, 127).toInt();
         }
@@ -141,7 +145,11 @@ class AudioDataContainer {
         }
         return result;
       case PCMFormat.s16le:
-        return Int16List.view(u8Data.buffer);
+        return Int16List.view(
+          u8Data.buffer,
+          u8Data.offsetInBytes,
+          u8Data.lengthInBytes ~/ 2,
+        );
       case PCMFormat.s24le:
         final result = Int16List(u8Data.length ~/ 3);
         for (var i = 0; i < result.length; i++) {
@@ -158,7 +166,7 @@ class AudioDataContainer {
         return result;
       case PCMFormat.s32le:
         final result = Int16List(u8Data.length ~/ 4);
-        final from = u8Data.buffer.asInt32List();
+        final from = Int32List.sublistView(u8Data);
         for (var i = 0; i < result.length; i++) {
           // result[i] = (_readInt32le(i * 4) >> 16).clamp(-32768, 32767);
           result[i] = from[i] ~/ 32768;
@@ -166,7 +174,7 @@ class AudioDataContainer {
         return result;
       case PCMFormat.f32le:
         final result = Int16List(u8Data.length ~/ 4);
-        final f32Buffer = Float32List.view(u8Data.buffer);
+        final f32Buffer = Float32List.sublistView(u8Data);
         for (var i = 0; i < result.length; i++) {
           result[i] = (f32Buffer[i] * 32767.0).clamp(-32768, 32767).toInt();
         }
@@ -214,7 +222,7 @@ class AudioDataContainer {
         return result;
       case PCMFormat.f32le:
         final result = Int32List(u8Data.length ~/ 4);
-        final f32Buffer = Float32List.view(u8Data.buffer);
+        final f32Buffer = Float32List.sublistView(u8Data);
         for (var i = 0; i < result.length; i++) {
           result[i] = (f32Buffer[i] * 8388607.0)
               .clamp(-8388608, 8388607)
@@ -253,8 +261,12 @@ class AudioDataContainer {
         return result;
 
       case PCMFormat.s24le:
-        // If the data is already 24-bit, copy it directly
-        return Int8List.fromList(u8Data);
+        // If the data is already 24-bit, return a zero-copy Int8List view
+        return Int8List.view(
+          u8Data.buffer,
+          u8Data.offsetInBytes,
+          u8Data.lengthInBytes,
+        );
 
       case PCMFormat.s32le:
         // Converts from 32-bit signed to 24-bit signed, truncating the least
@@ -271,7 +283,7 @@ class AudioDataContainer {
       case PCMFormat.f32le:
         // Convert from float32 to 24-bit signed
         final result = Int8List((u8Data.length ~/ 4) * 3);
-        final f32Buffer = Float32List.view(u8Data.buffer);
+        final f32Buffer = Float32List.sublistView(u8Data);
         for (var i = 0; i < f32Buffer.length; i++) {
           final sample = (f32Buffer[i] * 8388607.0)
               .clamp(-8388608, 8388607)
@@ -314,10 +326,14 @@ class AudioDataContainer {
         }
         return result;
       case PCMFormat.s32le:
-        return Int32List.view(u8Data.buffer);
+        return Int32List.view(
+          u8Data.buffer,
+          u8Data.offsetInBytes,
+          u8Data.lengthInBytes ~/ 4,
+        );
       case PCMFormat.f32le:
         final result = Int32List(u8Data.length ~/ 4);
-        final f32Buffer = Float32List.view(u8Data.buffer);
+        final f32Buffer = Float32List.sublistView(u8Data);
         for (var i = 0; i < result.length; i++) {
           result[i] = (f32Buffer[i] * 2147483647.0)
               .clamp(-2147483648, 2147483647)
@@ -338,7 +354,7 @@ class AudioDataContainer {
         return result;
       case PCMFormat.s16le:
         final result = Float32List(u8Data.length ~/ 2);
-        final from = u8Data.buffer.asInt16List();
+        final from = Int16List.sublistView(u8Data);
         for (var i = 0; i < result.length; i++) {
           result[i] = from[i] / 32768.0;
         }
@@ -358,13 +374,17 @@ class AudioDataContainer {
         return result;
       case PCMFormat.s32le:
         final result = Float32List(u8Data.length ~/ 4);
-        final from = u8Data.buffer.asInt32List();
+        final from = Int32List.sublistView(u8Data);
         for (var i = 0; i < result.length; i++) {
           result[i] = from[i] / 2147483648.0;
         }
         return result;
       case PCMFormat.f32le:
-        return Float32List.view(u8Data.buffer);
+        return Float32List.view(
+          u8Data.buffer,
+          u8Data.offsetInBytes,
+          u8Data.lengthInBytes ~/ 4,
+        );
     }
   }
 }

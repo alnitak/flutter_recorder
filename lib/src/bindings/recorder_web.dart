@@ -273,7 +273,7 @@ class RecorderWeb extends RecorderImpl {
           }
 
           if (event['message'] == 'streamDataCallback') {
-            final audioData = Uint8List.fromList(event['data'] as Uint8List);
+            final audioData = event['data'] as Uint8List;
             uint8ListController.add(AudioDataContainer(audioData));
           }
       }

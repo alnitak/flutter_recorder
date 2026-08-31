@@ -68,11 +68,12 @@ class RecorderFfi extends RecorderImpl {
 
   void _streamDataCallback(ffi.Pointer<ffi.UnsignedChar> data, int dataLength) {
     try {
-      // Create a copy of the data
-      final audioData = data.cast<ffi.Uint8>().asTypedList(dataLength).toList();
-      uint8ListController.add(
-        AudioDataContainer(Uint8List.fromList(audioData)),
+      // Direct copy from native buffer into Dart Uint8List without
+      // intermediate List<int>.
+      final audioData = Uint8List.fromList(
+        data.cast<ffi.Uint8>().asTypedList(dataLength),
       );
+      uint8ListController.add(AudioDataContainer(audioData));
     } finally {
       // Free the memory allocated in C++
       bindings.flutter_recorder_nativeFree(data.cast<ffi.Void>());
