@@ -30,12 +30,14 @@ class WavePainter extends CustomPainter {
             : (c == 0 ? Colors.yellow : Colors.cyan);
 
       final leftOffset = c * channelWidth;
+      final centerY = size.height / 2;
       for (var i = 0; i < waveData.length; i++) {
-        final barHeight = size.height * waveData[i].abs();
+        final sample = waveData[i].clamp(-1.0, 1.0);
+        final barHeight = size.height * sample.abs();
         canvas.drawRect(
           Rect.fromLTWH(
             leftOffset + barWidth * i,
-            (size.height - barHeight) / 2,
+            centerY - (barHeight / 2),
             barWidth,
             barHeight,
           ),
