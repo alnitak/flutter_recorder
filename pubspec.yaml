@@ -29,7 +29,7 @@ environment:
 
 dependencies:
   code_assets: ^2.0.0
-  ffi: ^2.1.4
+  ffi: ^2.2.0
   flutter:
     sdk: flutter
   hooks: ^2.2.0
@@ -40,8 +40,8 @@ dependencies:
   web: ^1.1.0
 
 dev_dependencies:
-  ffigen: ^19.1.0
-  flutter_lints: ^5.0.0
+  ffigen: ^21.0.0
+  flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
   very_good_analysis: ^6.0.0
