@@ -89,15 +89,37 @@ In capabilities, activate "Audio input" in debug and release schemes or add in `
 <true/>
 ```
 
-#### Web
-Add this in `web/index.html` under the `<head>` tag.
+#### Web (Single-Threaded & Multi-Threaded AudioWorklet)
+
+`flutter_recorder` supports both **Single-Threaded (ST)** and **Multi-Threaded (MT)** WebAssembly builds:
+- **Multi-Threaded (AudioWorklet)**: Offloads audio capture, DSP filtering, and Opus encoding to a dedicated Web Audio `AudioWorklet` / `pthread` thread for high-performance, glitch-free audio without frame drops.
+- **Single-Threaded**: Fallback mode for environments where `SharedArrayBuffer` is unavailable.
+
+##### 1. Configure `web/index.html`
+Add `init_recorder_module.dart.js` to your `web/index.html`. It automatically picks the right WASM build flavor (MT or ST) at runtime and dynamically loads the required JS glue:
+
 ```html
-<script src="assets/packages/flutter_recorder/web/libflutter_recorder_plugin.js" defer></script>
 <script src="assets/packages/flutter_recorder/web/init_recorder_module.dart.js" defer></script>
 ```
-The plugin is **WASM** compatible and your app can be compiled and run locally with something like:
+
+##### 2. Enabling Multi-Threaded Mode (COOP/COEP Headers)
+Multi-threaded WASM requires `SharedArrayBuffer`, which modern browsers only enable in cross-origin isolated contexts. Ensure your web server serves the following HTTP response headers:
+```http
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+```
+
+##### 3. Running & Building with WASM
+Run or build your app enabling Dart to WebAssembly compilation via `--wasm`:
+
 ```bash
-flutter run -d chrome --wasm -t lib/main.dart --release
+# Run locally with WASM:
+flutter run -d chrome --wasm \
+  --web-browser-flag '--disable-web-security' \
+  -t lib/main.dart --release
+
+# Build for production with WASM:
+flutter build web --wasm --release
 ```
 
 ##### 🌐 Web Audio Preprocessing (AEC, AGC, Noise Suppression)

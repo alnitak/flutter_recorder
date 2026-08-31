@@ -35,7 +35,7 @@ To run the web app in Chrome during development:
 
 ```sh
 flutter run -d chrome \
-  --web-renderer canvaskit \
+  --wasm \
   --web-browser-flag '--disable-web-security' \
   -t lib/main.dart \
   --release

@@ -7,6 +7,9 @@
 - **breaking change:** Bumped minimum iOS SDK to 15 and MacOS to 12.
 - Add SpeexDSP Acoustic Echo Cancellation (`echoCancellationFilter`) with configurable filter length and residual denoise suppression.
 - Add `setLoopback` for zero-latency native duplex monitoring and `feedPlaybackData` for external playback reference (e.g. `flutter_soloud` mixer capture).
+- **Multi-Threaded WebAssembly (AudioWorklet)**:
+  - Added multi-threaded WASM build running audio capture on dedicated Web Audio `AudioWorklet` / `pthread` threads.
+  - Offloads audio capture, DSP filtering, and Opus encoding off the browser main thread for high-performance, glitch-free audio without UI jank.
 - **Platform Hardware & Browser Input Presets**:
   - Added `IosInputPreset` to configure Apple hardware `AVAudioSession` voice processing (e.g. `voiceCommunication` with hardware AEC/AGC, `unprocessed` measurement mode).
   - Added `WebInputPreset` to `Recorder.instance.init()` to configure browser `getUserMedia` preprocessing constraints (`unprocessed`, `voiceCommunication`, `voiceRecognition`, `noiseSuppression`, `echoCancellation`) at stream initialization time.

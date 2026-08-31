@@ -144,7 +144,7 @@ Available presets:
 
 To run web apps locally during development:
 ```sh
-flutter run -d chrome --web-renderer canvaskit --web-browser-flag '--disable-web-security' -t lib/main.dart --release
+flutter run -d chrome --wasm --web-browser-flag '--disable-web-security' -t lib/main.dart --release
 ```
 
 *Web note: On web, initialize `Recorder.instance.init()` and wait for user interaction to grant microphone permissions before calling `Recorder.instance.start()`.*
