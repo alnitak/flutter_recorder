@@ -13,10 +13,10 @@ packages:
     dependency: "direct main"
     description:
       name: audio_session
-      sha256: "7217b229db57cc4dc577a8abb56b7429a5a212b978517a5be578704bfe5e568b"
+      sha256: f9e7711a0e24ca8b40f5d7ac374c3c6e55016f3157912badd18199cdbbca5c4d
       url: "https://pub.dev"
     source: hosted
-    version: "0.2.3"
+    version: "0.2.4"
   boolean_selector:
     dependency: transitive
     description:
@@ -69,10 +69,10 @@ packages:
     dependency: "direct main"
     description:
       name: cupertino_icons
-      sha256: ba631d1c7f7bef6b729a622b7b752645a2d076dba9976925b8f25725a30e1ee6
+      sha256: "41e005c33bd814be4d3096aff55b1908d419fde52ca656c8c47719ec745873cd"
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.8"
+    version: "1.0.9"
   fake_async:
     dependency: transitive
     description:
@@ -258,10 +258,10 @@ packages:
     dependency: "direct main"
     description:
       name: path_provider
-      sha256: "50c5dd5b6e1aaf6fb3a78b33f6aa3afca52bf903a8a5298f53101fdaee55bbcd"
+      sha256: a7f4874f987173da295a61c181b8ee71dab59b332a486b391babf26a1b884825
       url: "https://pub.dev"
     source: hosted
-    version: "2.1.5"
+    version: "2.1.6"
   path_provider_android:
     dependency: transitive
     description:
