@@ -58,6 +58,10 @@ extern void (*dartStreamDataCallback)(const unsigned char * data, const int data
 
 extern void (*nativeStreamDataCallback)(const unsigned char * data, const int dataLength);
 
+extern void (*dartDeviceNotificationCallback)(int);
+
+extern void (*nativeDeviceNotificationCallback)(int);
+
 extern uint64_t g_eventCallbackGeneration;
 
 #endif // COMMON_H

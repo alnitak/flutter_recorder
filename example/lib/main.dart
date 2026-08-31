@@ -63,6 +63,9 @@ class _MyAppState extends State<MyApp> {
   var androidInputPresetValue = 0;
   var iosInputPresetValue = 0;
   var webInputPresetValue = 0;
+  var micStatus = 'stopped';
+  List<CaptureDevice> devices = [];
+  int selectedDeviceId = -1;
 
   File? file;
 
@@ -121,6 +124,7 @@ class _MyAppState extends State<MyApp> {
 
   late final AppLifecycleListener _lifecycleListener;
   StreamSubscription<AudioDataContainer>? _audioStreamSubscription;
+  StreamSubscription<RecorderDeviceNotification>? _deviceNotifSubscription;
 
   @override
   void initState() {
@@ -139,6 +143,20 @@ class _MyAppState extends State<MyApp> {
         }
       });
     }
+
+    /// Listen to device notification and microphone lifecycle events.
+    _deviceNotifSubscription = recorder.deviceNotificationEvents.listen((
+      event,
+    ) {
+      setState(() {
+        micStatus = event.name;
+      });
+      if (event == RecorderDeviceNotification.rerouted) {
+        _refreshDevices();
+      }
+    });
+
+    _refreshDevices();
 
     /// Listen to audio data stream. The data is received as Uint8List.
     _audioStreamSubscription = recorder.uint8ListStream.listen((data) {
@@ -159,6 +177,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void dispose() {
     _lifecycleListener.dispose();
+    _deviceNotifSubscription?.cancel();
     _audioStreamSubscription?.cancel();
     recorder.deinit();
     super.dispose();
@@ -250,6 +269,7 @@ class _MyAppState extends State<MyApp> {
                   onPressed: () async {
                     try {
                       await recorder.init(
+                        deviceID: selectedDeviceId,
                         format: format,
                         sampleRate: sampleRate,
                         channels: channels,
@@ -276,8 +296,21 @@ class _MyAppState extends State<MyApp> {
                 OutlinedButton(
                   onPressed: () {
                     recorder.deinit();
+                    setState(() {
+                      micStatus = 'stopped';
+                    });
                   },
                   child: const Text('deinit'),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 8,
+                  ),
+                  child: Text(
+                    'Mic status: $micStatus',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             ),
@@ -586,33 +619,108 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
+  void _refreshDevices() {
+    try {
+      final list = recorder.listCaptureDevices();
+      setState(() {
+        devices = list;
+        if (selectedDeviceId != -1 &&
+            !devices.any((d) => d.id == selectedDeviceId)) {
+          selectedDeviceId = -1;
+        }
+      });
+    } on Exception catch (e) {
+      debugPrint('Failed to list capture devices: $e');
+    }
+  }
+
   Future<void> showDeviceListDialog() async {
-    final devices = recorder.listCaptureDevices();
-    String devicesString = devices
-        .asMap()
-        .entries
-        .map((entry) {
-          return '${entry.value.id} ${entry.value.isDefault ? 'DEFAULT' : ''} - '
-              ' ${entry.value.name}';
-        })
-        .join('\n\n');
+    _refreshDevices();
+    final list = recorder.listCaptureDevices();
 
     return showDialog<void>(
       context: context,
       barrierDismissible: true,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Available input devices'),
-          content: Text(devicesString),
-          actions: <Widget>[
-            const Text(''),
-            TextButton(
-              child: const Text('close'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final activeDeviceId = list.any((d) => d.id == selectedDeviceId)
+                ? selectedDeviceId
+                : -1;
+
+            return AlertDialog(
+              title: const Text('Input capture devices'),
+              content: SizedBox(
+                width: 360,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Select active device:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButton<int>(
+                      isExpanded: true,
+                      value: activeDeviceId,
+                      items: [
+                        const DropdownMenuItem<int>(
+                          value: -1,
+                          child: Text('Default device'),
+                        ),
+                        ...list.map(
+                          (device) => DropdownMenuItem<int>(
+                            value: device.id,
+                            child: Text(
+                              '${device.id}: ${device.name}'
+                              '${device.isDefault ? ' (DEFAULT)' : ''}',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) async {
+                        if (value == null) return;
+                        setState(() => selectedDeviceId = value);
+                        setDialogState(() {});
+                        if (recorder.isInitialized) {
+                          final wasStarted = recorder.isDeviceStarted();
+                          recorder.deinit();
+                          try {
+                            await recorder.init(
+                              deviceID: value,
+                              format: format,
+                              sampleRate: sampleRate,
+                              channels: channels,
+                              androidInputPreset: selectedAndroidInputPreset,
+                              iosInputPreset: selectedIosInputPreset,
+                              webInputPreset: selectedWebInputPreset,
+                            );
+                            if (wasStarted) {
+                              recorder.start();
+                            }
+                          } on Exception catch (e) {
+                            debugPrint(
+                              '-------------- init() on device change error: $e\n',
+                            );
+                          }
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  child: const Text('close'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
         );
       },
     );

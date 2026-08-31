@@ -17,6 +17,7 @@ A low-level audio recorder plugin that uses miniaudio as the backend and support
 - **Customizable Silence Threshold**: Define what’s considered “silence” for your recordings.
 - *Adjustable Pause Timing**: Set how long silence lasts before pausing, and how soon to resume recording.
 - **Real-time Audio Metrics**: Access volume, audio wave, and FFT data in real-time.
+- **Device & Microphone Lifecycle Notifications**: Listen to `deviceNotificationEvents` for hardware route changes, disconnects, and OS interruptions (e.g. phone calls).
 - **Auto Gain**: Experimental Auto Gain filter.
 - **Cross Platform**: Supports all platforms with WASM support for the web.
 
@@ -269,6 +270,29 @@ Recorder.instance.stopStreamingData();
 > [!CAUTION]
 > Audio data must be processed as it is received. To optimize performance, the same memory is used to store data for all incoming streams, meaning the data will be overwritten. Therefore, you must copy the data if you need to populate a buffer while it arrives.
 > For example, when using **RxDart.bufferTime**, it will fill a **List** of `AudioDataContainer` objects, but when you attempt to read them, you will find that all the items contain the same data.
+
+### 🎧 Device & Microphone Lifecycle Notifications
+
+Hardware state changes and OS audio events can happen outside your app's direct control (e.g. unplugging headphones, system audio route changes, or incoming phone calls on iOS). You can listen to native device notifications via the `deviceNotificationEvents` broadcast stream:
+
+```dart
+Recorder.instance.deviceNotificationEvents.listen((RecorderDeviceNotification event) {
+  switch (event) {
+    case RecorderDeviceNotification.started:
+      debugPrint('Microphone capture started.');
+    case RecorderDeviceNotification.stopped:
+      debugPrint('Microphone capture stopped.');
+    case RecorderDeviceNotification.rerouted:
+      debugPrint('Audio input route changed (e.g. headset connected/disconnected).');
+    case RecorderDeviceNotification.interruptionBegan:
+      debugPrint('OS audio interruption began (e.g. incoming call, Siri, alarm).');
+    case RecorderDeviceNotification.interruptionEnded:
+      debugPrint('OS audio interruption ended.');
+    case RecorderDeviceNotification.unlocked:
+      debugPrint('Audio device lock released.');
+  }
+});
+```
 
 ### 🎚️ Auto Gain Filter
 

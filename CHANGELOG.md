@@ -13,6 +13,9 @@
 - **Platform Hardware & Browser Input Presets**:
   - Added `IosInputPreset` to configure Apple hardware `AVAudioSession` voice processing (e.g. `voiceCommunication` with hardware AEC/AGC, `unprocessed` measurement mode).
   - Added `WebInputPreset` to `Recorder.instance.init()` to configure browser `getUserMedia` preprocessing constraints (`unprocessed`, `voiceCommunication`, `voiceRecognition`, `noiseSuppression`, `echoCancellation`) at stream initialization time.
+- **Microphone & Device State Notifications**:
+  - Added `Recorder.instance.deviceNotificationEvents` broadcast stream yielding `RecorderDeviceNotification` events (`started`, `stopped`, `rerouted`, `interruptionBegan`, `interruptionEnded`, `unlocked`).
+  - Enables listening to hardware mic state changes, audio route updates, device disconnections, and OS audio interruptions (e.g. incoming calls or Siri on iOS).
 
 ## 1.2.2
 - fix Android OpenSL capture shutdown blocking indefinitely when a stalled input queue cannot drain #51. Thanks to @Avejack #52

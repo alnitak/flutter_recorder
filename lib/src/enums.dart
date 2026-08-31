@@ -346,3 +346,46 @@ abstract final class VisualizationChannel {
   /// Output all input channels individually.
   static const int all = -2;
 }
+
+/// Device notification and microphone lifecycle events emitted by the native
+/// audio engine.
+enum RecorderDeviceNotification {
+  /// The audio capture device has started running.
+  started(0),
+
+  /// The audio capture device has stopped running (either requested or due to
+  /// hardware/OS changes).
+  stopped(1),
+
+  /// The audio stream was rerouted (e.g. headset plugged/unplugged, system
+  /// audio routing change).
+  rerouted(2),
+
+  /// An OS-level audio interruption began (e.g. incoming phone call, alarm,
+  /// Siri on iOS).
+  interruptionBegan(3),
+
+  /// An OS-level audio interruption ended.
+  interruptionEnded(4),
+
+  /// The audio device lock was released.
+  unlocked(5);
+
+  const RecorderDeviceNotification(this.value);
+
+  /// The internal integer representation.
+  final int value;
+
+  /// Create a [RecorderDeviceNotification] from an internal value.
+  static RecorderDeviceNotification fromValue(int value) => switch (value) {
+    0 => started,
+    1 => stopped,
+    2 => rerouted,
+    3 => interruptionBegan,
+    4 => interruptionEnded,
+    5 => unlocked,
+    _ => throw ArgumentError(
+      'Unknown value for RecorderDeviceNotification: $value',
+    ),
+  };
+}
