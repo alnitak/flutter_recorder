@@ -1,5 +1,5 @@
 ---
-name: flutter_recorder-silence-detection
+name: flutter-recorder-silence-detection
 version: 1
 description: Teaches how to configure automated silence detection, voice activity detection (VAD), silence thresholds in dB, duration triggers, pre-roll buffer retention, and silence event streams. Use when the user asks to detect silence, pause recording when silent, auto-resume recording when speaking, or skip silent sections in audio.
 ---

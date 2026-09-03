@@ -1,5 +1,5 @@
 ---
-name: flutter_recorder-setup
+name: flutter-recorder-setup
 version: 1
 description: Teaches how to add flutter_recorder to a Flutter app, configure permissions on Android, iOS, macOS, and Linux, configure the web platform (script tags and WASM module), initialize and deinitialize the capture engine, configure hardware and browser presets (AndroidInputPreset, IosInputPreset, WebInputPreset), coordinate audio sessions with package:audio_session, and integrate with flutter_soloud. Use when a user asks to install flutter_recorder, initialize the recorder, configure microphone permissions, troubleshoot web setup, or choose audio input presets.
 ---

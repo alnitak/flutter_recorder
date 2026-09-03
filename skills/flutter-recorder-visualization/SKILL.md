@@ -1,5 +1,5 @@
 ---
-name: flutter_recorder-visualization
+name: flutter-recorder-visualization
 version: 1
 description: Teaches how to capture real-time audio visualization data (time-domain waveforms, frequency-domain FFT spectrum bins, and volume in dB), configure PFFFT window sizes, apply FFT smoothing, and render waveform, spectrum bar, and VU meter CustomPainters. Use when the user asks to build an audio visualizer, frequency spectrum analyzer, oscilloscope waveform, or VU volume meter.
 ---
