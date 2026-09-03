@@ -63,11 +63,23 @@ typedef enum VisualizationKind
 #define VISUALIZATION_CHANNEL_MERGED -1
 #define VISUALIZATION_CHANNEL_ALL -2
 
+typedef enum RecorderDeviceNotificationType
+{
+    recorderDeviceStarted = 0,
+    recorderDeviceStopped = 1,
+    recorderDeviceRerouted = 2,
+    recorderDeviceInterruptionBegan = 3,
+    recorderDeviceInterruptionEnded = 4,
+    recorderDeviceUnlocked = 5
+} RecorderDeviceNotificationType;
+
 typedef void (*dartVisualizationCallback_t)(
     int channelCount,
     const float **waveDataPerChannel,
     int waveSamples,
     const float **fftDataPerChannel,
     int fftSamples);
+
+typedef void (*dartDeviceNotificationCallback_t)(int eventType);
 
 #endif // ENUMS_H

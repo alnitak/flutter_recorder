@@ -37,6 +37,7 @@ class RecordingController extends ChangeNotifier {
   double get volumeDb => _volumeDb;
 
   StreamSubscription<AudioVisualizationData>? _visSub;
+  StreamSubscription<RecorderDeviceNotification>? _deviceNotifSub;
 
   Future<bool> initialize() async {
     if (_recorder.isInitialized) return true;
@@ -68,6 +69,28 @@ class RecordingController extends ChangeNotifier {
       _visSub = _recorder.audioVisualizationEvents.listen((data) {
         _volumeDb = _recorder.getVolumeDb();
         notifyListeners();
+      });
+
+      // 5. Listen to native device lifecycle & interruption events
+      _deviceNotifSub = _recorder.deviceNotificationEvents.listen((event) {
+        switch (event) {
+          case RecorderDeviceNotification.stopped:
+            if (_state == RecordingState.recording) {
+              _state = RecordingState.ready;
+              notifyListeners();
+            }
+          case RecorderDeviceNotification.interruptionBegan:
+            if (_state == RecordingState.recording) {
+              pauseRecording();
+            }
+          case RecorderDeviceNotification.interruptionEnded:
+            // Interruption ended; optionally resume or stay paused
+            break;
+          case RecorderDeviceNotification.rerouted:
+          case RecorderDeviceNotification.started:
+          case RecorderDeviceNotification.unlocked:
+            break;
+        }
       });
 
       _state = RecordingState.ready;
@@ -122,6 +145,7 @@ class RecordingController extends ChangeNotifier {
   @override
   void dispose() {
     _visSub?.cancel();
+    _deviceNotifSub?.cancel();
     if (_recorder.isInitialized) {
       if (_state == RecordingState.recording || _state == RecordingState.paused) {
         _recorder.stopRecording();

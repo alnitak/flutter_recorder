@@ -23,6 +23,8 @@ public:
   Capture();
   ~Capture();
 
+  static void notification_callback(const ma_device_notification *pNotification);
+
   /// stores a list of available capture devices
   /// detected by miniaudio
   std::vector<CaptureDevice> listCaptureDevices();

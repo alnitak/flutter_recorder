@@ -213,6 +213,15 @@ void detectSilence(Capture *userData) {
   }
 }
 
+void Capture::notification_callback(const ma_device_notification *pNotification) {
+  if (pNotification == nullptr)
+    return;
+
+  if (nativeDeviceNotificationCallback != nullptr) {
+    nativeDeviceNotificationCallback((int)pNotification->type);
+  }
+}
+
 // A "frame" is one sample for each channel. For example, in a stereo stream (2
 // channels),
 // one frame is 2 samples: one for the left, one for the right.
@@ -476,6 +485,7 @@ CaptureErrors Capture::init(Filters *filters, int deviceID, PCMFormat pcmFormat,
   }
   deviceConfig.sampleRate = sampleRate;
   deviceConfig.dataCallback = data_callback;
+  deviceConfig.notificationCallback = notification_callback;
   deviceConfig.pUserData = this;
 
   CaptureErrors presetResult =

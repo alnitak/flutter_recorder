@@ -30,6 +30,8 @@ dartSilenceChangedCallback_t dartSilenceChangedCallback = nullptr;
 dartSilenceChangedCallback_t nativeSilenceChangedCallback = nullptr;
 dartStreamDataCallback_t dartStreamDataCallback = nullptr;
 dartStreamDataCallback_t nativeStreamDataCallback = nullptr;
+dartDeviceNotificationCallback_t dartDeviceNotificationCallback = nullptr;
+dartDeviceNotificationCallback_t nativeDeviceNotificationCallback = nullptr;
 
 uint64_t g_eventCallbackGeneration = dart_callbacks::kNoGeneration;
 
@@ -44,6 +46,8 @@ namespace {
     nativeSilenceChangedCallback = nullptr;
     dartStreamDataCallback = nullptr;
     nativeStreamDataCallback = nullptr;
+    dartDeviceNotificationCallback = nullptr;
+    nativeDeviceNotificationCallback = nullptr;
   }
 }
 
@@ -139,6 +143,38 @@ FFI_PLUGIN_EXPORT void flutter_recorder_sendStreamToWorker(const char *message, 
 #endif
     postStreamToWorker((int)(uintptr_t)message, (int)(uintptr_t)audioData, audioDataLength);
 }
+
+static void postNotificationToWorker(int messagePtr, int notificationType)
+{
+    EM_ASM({
+        if (RecorderModule.wasmWorker)
+        {
+            RecorderModule.wasmWorker.postMessage({
+                message : UTF8ToString($0),
+                type : $1,
+            });
+        }
+        else
+        {
+            console.error('Worker not found.');
+        }
+    }, messagePtr, notificationType);
+}
+
+/// Post a device notification with the web worker.
+FFI_PLUGIN_EXPORT void flutter_recorder_sendNotificationToWorker(const char *message, int notificationType)
+{
+#ifdef MA_ENABLE_AUDIO_WORKLETS
+    if (!emscripten_is_main_browser_thread())
+    {
+        emscripten_audio_worklet_post_function_vii(
+            EMSCRIPTEN_AUDIO_MAIN_THREAD, postNotificationToWorker,
+            (int)(uintptr_t)message, notificationType);
+        return;
+    }
+#endif
+    postNotificationToWorker((int)(uintptr_t)message, notificationType);
+}
 #endif
 
 void silenceChangedCallback(bool *isSilent, float *energyDb)
@@ -160,6 +196,17 @@ void streamDataCallback(const unsigned char *samples, const int numSamples)
     dart_callbacks::InvocationPass pass;
     if (pass.isLive(g_eventCallbackGeneration) && dartStreamDataCallback != nullptr)
         dartStreamDataCallback(samples, numSamples);
+#endif
+}
+
+void deviceNotificationCallback(int eventType)
+{
+#ifdef __EMSCRIPTEN__
+    flutter_recorder_sendNotificationToWorker("deviceNotificationCallback", eventType);
+#else
+    dart_callbacks::InvocationPass pass;
+    if (pass.isLive(g_eventCallbackGeneration) && dartDeviceNotificationCallback != nullptr)
+        dartDeviceNotificationCallback(eventType);
 #endif
 }
 
@@ -187,6 +234,25 @@ FFI_PLUGIN_EXPORT void flutter_recorder_setDartEventCallback(
     flutter_recorder_setDartEventCallbackForEngine(
         silence_changed_callback,
         stream_data_callback,
+        dart_callbacks::kNoEngineId);
+}
+
+FFI_PLUGIN_EXPORT void flutter_recorder_setDartDeviceNotificationCallbackForEngine(
+    dartDeviceNotificationCallback_t callback,
+    int64_t engine_id)
+{
+    dart_callbacks::Registration registration;
+    g_eventCallbackGeneration = registration.claim(engine_id);
+
+    dartDeviceNotificationCallback = callback;
+    nativeDeviceNotificationCallback = deviceNotificationCallback;
+}
+
+FFI_PLUGIN_EXPORT void flutter_recorder_setDartDeviceNotificationCallback(
+    dartDeviceNotificationCallback_t callback)
+{
+    flutter_recorder_setDartDeviceNotificationCallbackForEngine(
+        callback,
         dart_callbacks::kNoEngineId);
 }
 

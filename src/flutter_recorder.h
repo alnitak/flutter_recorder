@@ -30,6 +30,13 @@ extern "C"
         dartVisualizationCallback_t callback,
         int64_t engine_id);
 
+    FFI_PLUGIN_EXPORT void flutter_recorder_setDartDeviceNotificationCallback(
+        dartDeviceNotificationCallback_t callback);
+
+    FFI_PLUGIN_EXPORT void flutter_recorder_setDartDeviceNotificationCallbackForEngine(
+        dartDeviceNotificationCallback_t callback,
+        int64_t engine_id);
+
     // Engine lifecycle exports
     FFI_PLUGIN_EXPORT void flutter_recorder_prepareEngineInit(int64_t owner_engine_id);
     FFI_PLUGIN_EXPORT uint64_t flutter_recorder_currentEngineShutdownEpoch(void);

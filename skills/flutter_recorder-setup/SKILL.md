@@ -208,6 +208,7 @@ All methods live on `Recorder.instance` (`import 'package:flutter_recorder/flutt
 - `bool isDeviceInitialized()` / `bool get isInitialized`: Checks whether the capture engine is ready.
 - `bool isDeviceStarted()` / `bool get isStarted`: Checks whether the microphone capture is active.
 - `List<CaptureDevice> listCaptureDevices()`: Enumerates available input devices. Returns `CaptureDevice(name, isDefault, id)`. Safe to call before `init()`.
+- `Stream<RecorderDeviceNotification> get deviceNotificationEvents`: Broadcast stream of native device notifications and lifecycle events (`started`, `stopped`, `rerouted`, `interruptionBegan`, `interruptionEnded`, `unlocked`).
 - `void setLoopback({required bool enable})` / `bool isLoopbackEnabled()`: Enables low-latency (< 15ms) native duplex loopback (mic routed directly to speakers/headphones).
 - `void feedPlaybackData(Uint8List data, {PCMFormat format = PCMFormat.f32le, RecorderChannels channels = RecorderChannels.mono})`: Feeds far-end reference playback audio (e.g. from `flutter_soloud`) into the recorder for SpeexDSP Acoustic Echo Cancellation.
 - `double getVolumeDb()`: Returns current RMS volume level in dB `[-100, 0]`. Requires `PCMFormat.f32le`.

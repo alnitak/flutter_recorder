@@ -61,6 +61,15 @@ abstract class RecorderImpl {
   Stream<AudioVisualizationData> get audioVisualizationEvents =>
       audioVisualizationEventsController.stream;
 
+  /// Controller for device notification and lifecycle events.
+  late final StreamController<RecorderDeviceNotification>
+  deviceNotificationEventsController =
+      StreamController<RecorderDeviceNotification>.broadcast();
+
+  /// Stream of device notification and lifecycle events.
+  Stream<RecorderDeviceNotification> get deviceNotificationEvents =>
+      deviceNotificationEventsController.stream;
+
   /// Set Dart functions to call when an event occurs.
   @mustBeOverridden
   Future<void> setDartEventCallbacks();

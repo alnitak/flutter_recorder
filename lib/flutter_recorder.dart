@@ -11,6 +11,7 @@ export 'src/enums.dart'
         IosInputPreset,
         PCMFormat,
         RecorderChannels,
+        RecorderDeviceNotification,
         RecordingFormat,
         StreamingFormat,
         VisualizationChannel,

@@ -119,12 +119,25 @@ class RecorderFfi extends RecorderImpl {
     }
   }
 
+  void _deviceNotificationCallback(int eventType) {
+    try {
+      final notif = RecorderDeviceNotification.fromValue(eventType);
+      if (deviceNotificationEventsController.hasListener) {
+        deviceNotificationEventsController.add(notif);
+      }
+    } catch (_) {
+      // Ignore unknown event type safely
+    }
+  }
+
   ffi.NativeCallable<bindings.dartSilenceChangedCallback_tFunction>?
   nativeSilenceChangedCallable;
   ffi.NativeCallable<bindings.dartStreamDataCallback_tFunction>?
   nativeStreamDataCallable;
   ffi.NativeCallable<bindings.dartVisualizationCallback_tFunction>?
   nativeVisualizationCallable;
+  ffi.NativeCallable<bindings.dartDeviceNotificationCallback_tFunction>?
+  nativeDeviceNotificationCallable;
 
   @override
   void disposeNativeCallables() {
@@ -138,6 +151,8 @@ class RecorderFfi extends RecorderImpl {
     nativeStreamDataCallable = null;
     nativeVisualizationCallable?.close();
     nativeVisualizationCallable = null;
+    nativeDeviceNotificationCallable?.close();
+    nativeDeviceNotificationCallable = null;
   }
 
   @override
@@ -164,6 +179,11 @@ class RecorderFfi extends RecorderImpl {
           bindings.dartVisualizationCallback_tFunction
         >.listener(_visualizationDataCallback);
 
+    nativeDeviceNotificationCallable =
+        ffi.NativeCallable<
+          bindings.dartDeviceNotificationCallback_tFunction
+        >.listener(_deviceNotificationCallback);
+
     bindings.flutter_recorder_setDartEventCallbackForEngine(
       nativeSilenceChangedCallable!.nativeFunction,
       nativeStreamDataCallable!.nativeFunction,
@@ -171,6 +191,10 @@ class RecorderFfi extends RecorderImpl {
     );
     bindings.flutter_recorder_setDartVisualizationCallbackForEngine(
       nativeVisualizationCallable!.nativeFunction,
+      currentEngineId,
+    );
+    bindings.flutter_recorder_setDartDeviceNotificationCallbackForEngine(
+      nativeDeviceNotificationCallable!.nativeFunction,
       currentEngineId,
     );
 

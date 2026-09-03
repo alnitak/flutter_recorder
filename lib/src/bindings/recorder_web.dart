@@ -276,6 +276,16 @@ class RecorderWeb extends RecorderImpl {
             final audioData = event['data'] as Uint8List;
             uint8ListController.add(AudioDataContainer(audioData));
           }
+
+          if (event['message'] == 'deviceNotificationCallback') {
+            try {
+              final typeVal = event['type'] as int;
+              final notif = RecorderDeviceNotification.fromValue(typeVal);
+              deviceNotificationEventsController.add(notif);
+            } catch (_) {
+              // Ignore unknown event type safely
+            }
+          }
       }
     });
   }

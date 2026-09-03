@@ -122,6 +122,12 @@ interface class Recorder {
   Stream<AudioVisualizationData> get audioVisualizationEvents =>
       _recorder.impl.audioVisualizationEvents;
 
+  /// Listening to native audio capture device notifications and lifecycle
+  /// state events (e.g. device started, stopped, rerouted to another input,
+  /// or interrupted by an incoming phone call on iOS).
+  Stream<RecorderDeviceNotification> get deviceNotificationEvents =>
+      _recorder.impl.deviceNotificationEvents;
+
   /// Listen to audio data.
   ///
   /// The streaming must be enabled calling [startStreamingData].
