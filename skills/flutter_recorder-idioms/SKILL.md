@@ -1,7 +1,7 @@
 ---
 name: flutter_recorder-idioms
 version: 1
-description: Teaches robust architecture and design patterns for flutter_recorder, including service facades, ChangeNotifier/Riverpod state controllers, widget lifecycle management with AppLifecycleListener, audio session coordination with package:audio_session, and exception handling. Use when the user asks how to structure recording state, handle app backgrounding/lifecycle, integrate with state management, or write clean, bug-free audio recording code.
+description: Teaches robust architecture and design patterns for flutter_recorder, including service facades, ChangeNotifier/Riverpod state controllers, widget lifecycle management with AppLifecycleListener, audio session coordination with package:audio_session, and integration with flutter_soloud. Use when the user asks how to structure recording state, handle app backgrounding/lifecycle, integrate with flutter_soloud, coordinate audio_session, or write clean, bug-free audio recording code.
 ---
 
 # flutter_recorder idioms & best practices
@@ -55,6 +55,9 @@ class RecordingController extends ChangeNotifier {
         format: PCMFormat.f32le,
         sampleRate: 44100,
         channels: RecorderChannels.mono,
+        androidInputPreset: AndroidInputPreset.voiceCommunication,
+        iosInputPreset: IosInputPreset.voiceCommunication,
+        webInputPreset: WebInputPreset.unprocessed,
       );
 
       // 3. Start hardware capture
@@ -162,30 +165,92 @@ class _RecordingScreenState extends State<RecordingScreen> {
 }
 ```
 
-## Coordinating Audio Sessions (`audio_session`)
+## Integrating `flutter_recorder` with `flutter_soloud` & `audio_session`
 
-When using multiple audio plugins (e.g. `flutter_recorder` with `flutter_soloud` or speech synthesis), coordinate the system audio session using `package:audio_session` to avoid audio interruptions on iOS and Android:
+When building applications that simultaneously play audio (games, music, sound effects via `flutter_soloud`) and capture microphone audio (voice chat, speech recognition, karaoke via `flutter_recorder`), use `package:audio_session` to prevent audio interruptions, speakerphone dropouts, or OS ducking:
+
+### Choosing Presets vs `audio_session`:
+
+- **Option A: Built-in Input Presets** (`IosInputPreset` / `AndroidInputPreset` / `WebInputPreset`):
+  Use when you want a standalone, zero-dependency configuration for microphone recording without manually managing audio sessions.
+- **Option B: `package:audio_session` Coordination**:
+  Use when orchestrating multiple audio packages (e.g. `flutter_recorder` + `flutter_soloud`). Set `iosInputPreset: null` so `flutter_recorder` preserves the `AVAudioSession` configuration set by `audio_session`.
+
+### Complete Integration Recipe:
 
 ```dart
+import 'dart:async';
+import 'dart:typed_data';
 import 'package:audio_session/audio_session.dart';
+import 'package:flutter_recorder/flutter_recorder.dart';
+import 'package:flutter_soloud/flutter_soloud.dart';
 
-Future<void> configureSystemAudioSession() async {
-  final session = await AudioSession.instance;
-  await session.configure(
-    AudioSessionConfiguration(
-      avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
-      avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth |
-          AVAudioSessionCategoryOptions.defaultToSpeaker,
-      avAudioSessionMode: AVAudioSessionMode.voiceChat,
-      androidAudioAttributes: const AndroidAudioAttributes(
-        usage: AndroidAudioUsage.voiceCommunication,
-        contentType: AndroidAudioContentType.speech,
-        flags: AndroidAudioFlags.none,
+class DuplexAudioService {
+  final SoLoud _soloud = SoLoud.instance;
+  final Recorder _recorder = Recorder.instance;
+  StreamSubscription<Uint8List>? _soloudMixerSub;
+
+  Future<void> initialize({int sampleRate = 22050}) async {
+    // 1. Configure audio_session for simultaneous PlayAndRecord
+    final session = await AudioSession.instance;
+    await session.configure(
+      AudioSessionConfiguration(
+        avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
+        avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth |
+            AVAudioSessionCategoryOptions.defaultToSpeaker,
+        avAudioSessionMode: AVAudioSessionMode.voiceChat,
+        androidAudioAttributes: const AndroidAudioAttributes(
+          usage: AndroidAudioUsage.voiceCommunication,
+          contentType: AndroidAudioContentType.speech,
+          flags: AndroidAudioFlags.none,
+        ),
+        androidWillPauseWhenDucked: false,
       ),
-      androidWillPauseWhenDucked: false,
-    ),
-  );
-  await session.setActive(true);
+    );
+    await session.setActive(true);
+
+    // 2. Initialize SoLoud playback engine
+    await _soloud.init(
+      channels: Channels.mono,
+      sampleRate: sampleRate,
+    );
+
+    // 3. Initialize Recorder capture engine (keep iosInputPreset null to preserve audio_session)
+    await _recorder.init(
+      format: PCMFormat.f32le,
+      sampleRate: sampleRate,
+      channels: RecorderChannels.mono,
+      androidInputPreset: AndroidInputPreset.voiceCommunication,
+      webInputPreset: WebInputPreset.unprocessed,
+    );
+    _recorder.start();
+
+    // 4. Activate AEC and bridge SoLoud mixer output to Recorder
+    _recorder.filters.echoCancellationFilter.activate();
+    _soloudMixerSub = _soloud.startMixerOutputStream(
+      format: MixerOutputFormat.pcmF32le,
+      channels: 1,
+    ).listen((Uint8List mixerBytes) {
+      if (_recorder.isInitialized &&
+          _recorder.filters.echoCancellationFilter.isActive) {
+        _recorder.feedPlaybackData(
+          mixerBytes,
+          format: PCMFormat.f32le,
+          channels: RecorderChannels.mono,
+        );
+      }
+    });
+  }
+
+  Future<void> dispose() async {
+    await _soloudMixerSub?.cancel();
+    if (_recorder.isInitialized) {
+      _recorder.deinit();
+    }
+    if (_soloud.isInitialized) {
+      await _soloud.deinitAsync();
+    }
+  }
 }
 ```
 

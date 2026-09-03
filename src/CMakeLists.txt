@@ -39,6 +39,7 @@ add_library(flutter_recorder SHARED
   "flutter_recorder.cpp"
   "analyzer.cpp"
   "capture.cpp"
+  "miniaudio.cpp"
   "opus_encoder_pipeline.cpp"
   "opus_ogg_writer.cpp"
   "pffft/pffft.c"
@@ -78,17 +79,17 @@ if (NOT APPLE)
       message(FATAL_ERROR "libfr_speexdsp not found in ${OGGOPUS_LIBRARY_DIR}")
     endif()
   else()
-    find_library(OGG_LIBRARY NAMES ogg PATHS ${OGGOPUS_LIBRARY_DIR} NO_DEFAULT_PATH)
-    find_library(OPUS_LIBRARY NAMES opus PATHS ${OGGOPUS_LIBRARY_DIR} NO_DEFAULT_PATH)
-    find_library(SPEEXDSP_LIBRARY NAMES speexdsp PATHS ${OGGOPUS_LIBRARY_DIR} NO_DEFAULT_PATH)
+    find_library(OGG_LIBRARY NAMES fr_ogg ogg PATHS ${OGGOPUS_LIBRARY_DIR} NO_DEFAULT_PATH)
+    find_library(OPUS_LIBRARY NAMES fr_opus opus PATHS ${OGGOPUS_LIBRARY_DIR} NO_DEFAULT_PATH)
+    find_library(SPEEXDSP_LIBRARY NAMES fr_speexdsp speexdsp PATHS ${OGGOPUS_LIBRARY_DIR} NO_DEFAULT_PATH)
     if (NOT OGG_LIBRARY)
-      message(FATAL_ERROR "libogg not found in ${OGGOPUS_LIBRARY_DIR}")
+      message(FATAL_ERROR "fr_ogg/ogg library not found in ${OGGOPUS_LIBRARY_DIR}")
     endif()
     if (NOT OPUS_LIBRARY)
-      message(FATAL_ERROR "libopus not found in ${OGGOPUS_LIBRARY_DIR}")
+      message(FATAL_ERROR "fr_opus/opus library not found in ${OGGOPUS_LIBRARY_DIR}")
     endif()
     if (NOT SPEEXDSP_LIBRARY)
-      message(FATAL_ERROR "libspeexdsp not found in ${OGGOPUS_LIBRARY_DIR}")
+      message(FATAL_ERROR "fr_speexdsp/speexdsp library not found in ${OGGOPUS_LIBRARY_DIR}")
     endif()
   endif()
   target_link_libraries(flutter_recorder ${OGG_LIBRARY} ${OPUS_LIBRARY} ${SPEEXDSP_LIBRARY})

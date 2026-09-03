@@ -8,12 +8,14 @@ export 'src/enums.dart'
         AndroidInputPreset,
         CaptureDevice,
         CaptureErrors,
+        IosInputPreset,
         PCMFormat,
         RecorderChannels,
         RecordingFormat,
         StreamingFormat,
         VisualizationChannel,
-        VisualizationKind;
+        VisualizationKind,
+        WebInputPreset;
 export 'src/filters/autogain.dart';
 export 'src/filters/echo_cancellation.dart';
 export 'src/filters/filters.dart'

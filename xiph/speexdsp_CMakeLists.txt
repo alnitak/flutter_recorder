@@ -52,6 +52,9 @@ configure_file(
 )
 
 add_library(speexdsp ${SPEEXDSP_SOURCES})
+set_target_properties(speexdsp PROPERTIES
+    WINDOWS_EXPORT_ALL_SYMBOLS ON
+)
 
 target_include_directories(speexdsp PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

@@ -22,9 +22,57 @@ external void flutter_recorder_setDartEventCallback(
   dartStreamDataCallback_t stream_data_callback,
 );
 
+@ffi.Native<
+  ffi.Void Function(
+    dartSilenceChangedCallback_t,
+    dartStreamDataCallback_t,
+    ffi.Int64,
+  )
+>()
+external void flutter_recorder_setDartEventCallbackForEngine(
+  dartSilenceChangedCallback_t silence_changed_callback,
+  dartStreamDataCallback_t stream_data_callback,
+  int engine_id,
+);
+
 @ffi.Native<ffi.Void Function(dartVisualizationCallback_t)>()
 external void flutter_recorder_setDartVisualizationCallback(
   dartVisualizationCallback_t callback,
+);
+
+@ffi.Native<ffi.Void Function(dartVisualizationCallback_t, ffi.Int64)>()
+external void flutter_recorder_setDartVisualizationCallbackForEngine(
+  dartVisualizationCallback_t callback,
+  int engine_id,
+);
+
+/// Engine lifecycle exports
+@ffi.Native<ffi.Void Function(ffi.Int64)>()
+external void flutter_recorder_prepareEngineInit(int owner_engine_id);
+
+@ffi.Native<ffi.Uint64 Function()>()
+external int flutter_recorder_currentEngineShutdownEpoch();
+
+@ffi.Native<ffi.Bool Function(ffi.Int64, ffi.Uint64)>()
+external bool flutter_recorder_prepareEngineInitForRequest(
+  int owner_engine_id,
+  int shutdown_epoch,
+);
+
+@ffi.Native<ffi.Bool Function(ffi.Int64)>()
+external bool flutter_recorder_clearDartCallbackRegistrationsForEngine(
+  int engine_id,
+);
+
+@ffi.Native<ffi.Void Function()>()
+external void flutter_recorder_clearDartCallbackRegistrations();
+
+@ffi.Native<ffi.Bool Function(ffi.Int64)>()
+external bool flutter_recorder_requestEngineTeardownForEngine(int engine_id);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
+external void flutter_recorder_retireDartCallbacksFinalizer(
+  ffi.Pointer<ffi.Void> token,
 );
 
 @ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
@@ -67,6 +115,7 @@ external void flutter_recorder_freeListCaptureDevices(
     ffi.UnsignedInt,
     ffi.UnsignedInt,
     ffi.Int,
+    ffi.Int,
   )
 >()
 external int flutter_recorder_init(
@@ -75,6 +124,7 @@ external int flutter_recorder_init(
   int sampleRate,
   int channels,
   int androidInputPreset,
+  int iosInputPreset,
 );
 
 @ffi.Native<ffi.Void Function()>()

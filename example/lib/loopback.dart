@@ -42,7 +42,10 @@ void main() async {
     MaterialApp(
       home: Scaffold(
         appBar: AppBar(title: Text('loopback and filter example')),
-        body: Padding(padding: const EdgeInsets.all(16.0), child: LoopBack()),
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: SingleChildScrollView(child: LoopBack()),
+        ),
       ),
     ),
   );
@@ -57,10 +60,10 @@ class LoopBack extends StatefulWidget {
 
 class _LoopBackState extends State<LoopBack> {
   final audioStreamChannels = Channels.mono;
-  final audioStreamFormat = BufferType.s16le;
+  final audioStreamFormat = BufferType.f32le;
 
   final recorderChannels = RecorderChannels.mono;
-  final recorderFormat = PCMFormat.s16le;
+  final recorderFormat = PCMFormat.f32le;
 
   final sampleRate = 22050;
 
@@ -71,6 +74,10 @@ class _LoopBackState extends State<LoopBack> {
   bool autoGain = false;
   bool echoCancellation = false;
   bool nativeLoopback = false;
+
+  AndroidInputPreset androidInputPreset = AndroidInputPreset.voiceCommunication;
+  IosInputPreset iosInputPreset = IosInputPreset.voiceCommunication;
+  WebInputPreset webInputPreset = WebInputPreset.unprocessed;
 
   /// Subscription to recorder stream (need to cancel on dispose)
   StreamSubscription<AudioDataContainer>? _recorderSubscription;
@@ -123,22 +130,24 @@ class _LoopBackState extends State<LoopBack> {
 
     /// Listen for microphne data.
     _recorderSubscription = recorder.uint8ListStream.listen((chunks) {
+      if (!recorder.isInitialized || !soloud.isInitialized) return;
+
       // If native loopback is enabled, audio plays natively through duplex output.
       // If disabled, route audio to SoLoud buffer stream for playback.
       if (!recorder.isLoopbackEnabled()) {
+        final f32Data = chunks
+            .toF32List(from: recorder.recorderFormat)
+            .buffer
+            .asUint8List();
         if (audioSource != null) {
-          soloud.addAudioDataStream(
-            audioSource!,
-            chunks.toF32List(from: PCMFormat.f32le).buffer.asUint8List(),
-          );
+          soloud.addAudioDataStream(audioSource!, f32Data);
         } else {
           initAudioSource();
-          soloud
-            ..addAudioDataStream(
-              audioSource!,
-              chunks.toF32List(from: PCMFormat.f32le).buffer.asUint8List(),
-            )
-            ..play(audioSource!, volume: 1);
+          if (audioSource != null && soloud.isInitialized) {
+            soloud
+              ..addAudioDataStream(audioSource!, f32Data)
+              ..play(audioSource!, volume: 1);
+          }
         }
       }
     });
@@ -183,6 +192,7 @@ class _LoopBackState extends State<LoopBack> {
 
   /// Initialize the audio source
   void initAudioSource() {
+    if (!soloud.isInitialized) return;
     if (audioSource != null) disposeAudioSource();
 
     audioSource = soloud.setBufferStream(
@@ -204,7 +214,9 @@ class _LoopBackState extends State<LoopBack> {
   Future<void> disposeAudioSource() async {
     if (audioSource == null) return;
 
-    await soloud.disposeSource(audioSource!);
+    if (soloud.isInitialized) {
+      await soloud.disposeSource(audioSource!);
+    }
     audioSource = null;
   }
 
@@ -261,6 +273,10 @@ class _LoopBackState extends State<LoopBack> {
 
     /// Initialize the player and the recorder.
     await disposeAudioSource();
+    if (soloud.isInitialized) {
+      await soloud.deinitAsync();
+    }
+
     await soloud.init(
       bufferSize: 1024,
       channels: Channels.mono,
@@ -271,6 +287,11 @@ class _LoopBackState extends State<LoopBack> {
       format: recorderFormat,
       sampleRate: sampleRate,
       channels: recorderChannels,
+      androidInputPreset:
+          androidInputPreset, // <-- prevails over audio session preset (if not null)
+      iosInputPreset:
+          iosInputPreset, // <-- prevails over audio session preset (if not null)
+      webInputPreset: webInputPreset,
     );
 
     recorder
@@ -302,15 +323,16 @@ class _LoopBackState extends State<LoopBack> {
         // Start / Stop
         Row(
           mainAxisSize: MainAxisSize.min,
+          spacing: 8,
           children: [
             OutlinedButton(
               onPressed: () async {
                 await init();
               },
-              child: const Text('Init loopback'),
+              child: const Text('Init recorder'),
             ),
             OutlinedButton(
-              onPressed: () {
+              onPressed: () async {
                 _soloudMixerSubscription?.cancel();
                 _soloudMixerSubscription = null;
                 if (soloud.isMixerOutputStreamRunning) {
@@ -320,8 +342,11 @@ class _LoopBackState extends State<LoopBack> {
                 recorder
                   ..stopStreamingData()
                   ..deinit();
-                soloud.deinit();
-                audioSource = null;
+                await disposeAudioSource();
+                await soloud.deinitAsync();
+                if (context.mounted) {
+                  setState(() {});
+                }
               },
               child: const Text('Stop'),
             ),
@@ -385,6 +410,102 @@ class _LoopBackState extends State<LoopBack> {
             ),
           ],
         ),
+
+        if (kIsWeb) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade400),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Web preset (applied on init): ',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                DropdownButton<WebInputPreset>(
+                  value: webInputPreset,
+                  items: WebInputPreset.values
+                      .map(
+                        (p) => DropdownMenuItem(value: p, child: Text(p.name)),
+                      )
+                      .toList(),
+                  onChanged: (v) {
+                    if (v == null) return;
+                    setState(() => webInputPreset = v);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+
+        if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade400),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Android preset (applied on init): ',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                DropdownButton<AndroidInputPreset>(
+                  value: androidInputPreset,
+                  items: AndroidInputPreset.values
+                      .map(
+                        (p) => DropdownMenuItem(value: p, child: Text(p.name)),
+                      )
+                      .toList(),
+                  onChanged: (v) {
+                    if (v == null) return;
+                    setState(() => androidInputPreset = v);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+
+        if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade400),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'iOS preset (applied on init): ',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                DropdownButton<IosInputPreset>(
+                  value: iosInputPreset,
+                  items: IosInputPreset.values
+                      .map(
+                        (p) => DropdownMenuItem(value: p, child: Text(p.name)),
+                      )
+                      .toList(),
+                  onChanged: (v) {
+                    if (v == null) return;
+                    setState(() => iosInputPreset = v);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
 
         if (autoGain) AutoGainSliders(),
 

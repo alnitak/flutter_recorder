@@ -31,6 +31,12 @@ abstract class RecorderImpl {
   /// Android input preset used to initialize the device.
   AndroidInputPreset? androidInputPreset;
 
+  /// iOS input preset used to initialize the device.
+  IosInputPreset? iosInputPreset;
+
+  /// Web input preset used to initialize the device.
+  WebInputPreset? webInputPreset;
+
   /// Controller to listen to silence changed event.
   late final StreamController<SilenceState> silenceChangedEventController =
       StreamController.broadcast();
@@ -58,6 +64,12 @@ abstract class RecorderImpl {
   /// Set Dart functions to call when an event occurs.
   @mustBeOverridden
   Future<void> setDartEventCallbacks();
+
+  /// Dispose native callables created for this isolate.
+  void disposeNativeCallables() {}
+
+  /// Clear all native callback registrations.
+  void clearDartCallbackRegistrations() {}
 
   /// Enable or disable silence detection.
   ///
@@ -117,18 +129,22 @@ abstract class RecorderImpl {
   /// device found with [deviceID] id.
   @mustBeOverridden
   @mustCallSuper
-  void init({
+  FutureOr<void> init({
     required int deviceID,
     required PCMFormat format,
     required int sampleRate,
     required RecorderChannels channels,
     required AndroidInputPreset? androidInputPreset,
+    required IosInputPreset? iosInputPreset,
+    required WebInputPreset? webInputPreset,
   }) {
     this.deviceID = deviceID;
     this.format = format;
     this.sampleRate = sampleRate;
     this.channels = channels;
     this.androidInputPreset = androidInputPreset;
+    this.iosInputPreset = iosInputPreset;
+    this.webInputPreset = webInputPreset;
   }
 
   /// Dispose capture device.
@@ -140,6 +156,8 @@ abstract class RecorderImpl {
     sampleRate = null;
     channels = null;
     androidInputPreset = null;
+    iosInputPreset = null;
+    webInputPreset = null;
   }
 
   /// Whether the device is initialized.

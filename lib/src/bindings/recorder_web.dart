@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 import 'dart:typed_data' show Float32List, Uint8List;
@@ -28,9 +29,149 @@ class RecorderController {
 /// Use this class to _capture_ audio (such as from a microphone).
 @internal
 class RecorderWeb extends RecorderImpl {
+  RecorderWeb() {
+    _hookGetUserMedia();
+  }
+
   SilenceCallback? _silenceCallback;
   void Function(AudioVisualizationData data)? _visualizationCallback;
   bool _wasmVisualizationCallbackSetUp = false;
+
+  /// Calls `flutter_recorder_init`. In the multi-threaded (AudioWorklet)
+  /// build this can reach `emscripten_sleep` (miniaudio spin-waits while the
+  /// worklet thread starts up), and the ASYNCIFY build requires them to be
+  /// called with `{async: true}`. The single-threaded build has no ASYNCIFY,
+  /// so there it is a plain synchronous call.
+  Future<int> _callEngineAsync(String fn, List<int> args) async {
+    await _ensureModuleReady();
+    if (flutterRecorderHasAsyncify != true) {
+      if (fn == 'flutter_recorder_init') {
+        return wasmInit(
+          args[0],
+          args[1],
+          args[2],
+          args[3],
+          args.length > 4 ? args[4] : 0,
+          args.length > 5 ? args[5] : 0,
+        );
+      }
+      throw UnimplementedError('Unknown async function: $fn');
+    }
+    final promise = wasmCcallAsync(
+      fn.toJS,
+      'number'.toJS,
+      List.filled(args.length, 'number'.toJS).toJS,
+      args.map((a) => a.toJS).toList().toJS,
+      <String, Object>{'async': true}.jsify()! as JSObject,
+    );
+    final ret = (await promise.toDart).toDartInt;
+    return ret;
+  }
+
+  bool _getUserMediaHooked = false;
+
+  void _hookGetUserMedia() {
+    if (_getUserMediaHooked) return;
+    _getUserMediaHooked = true;
+    try {
+      final nav = globalContext.getProperty<JSObject?>('navigator'.toJS);
+      final mediaDevices = nav?.getProperty<JSObject?>('mediaDevices'.toJS);
+      if (mediaDevices == null) return;
+
+      final origGetUserMedia = mediaDevices.getProperty<JSFunction?>(
+        'getUserMedia'.toJS,
+      );
+      if (origGetUserMedia == null) return;
+
+      JSPromise customGetUserMedia(JSObject? rawConstraints) {
+        final constraints = rawConstraints ?? JSObject();
+        final stored = globalContext.getProperty<JSObject?>(
+          '_flutterRecorderWebAudioConstraints'.toJS,
+        );
+
+        if (stored != null) {
+          final audioProp = constraints.getProperty<JSAny?>('audio'.toJS);
+          if (audioProp != null && audioProp.isA<JSBoolean>()) {
+            constraints.setProperty('audio'.toJS, stored);
+          } else if (audioProp != null && audioProp.isA<JSObject>()) {
+            final audioObj = audioProp as JSObject;
+            final echo = stored.getProperty<JSBoolean?>(
+              'echoCancellation'.toJS,
+            );
+            final agc = stored.getProperty<JSBoolean?>('autoGainControl'.toJS);
+            final noise = stored.getProperty<JSBoolean?>(
+              'noiseSuppression'.toJS,
+            );
+            if (echo != null) {
+              audioObj.setProperty('echoCancellation'.toJS, echo);
+            }
+            if (agc != null) {
+              audioObj.setProperty('autoGainControl'.toJS, agc);
+            }
+            if (noise != null) {
+              audioObj.setProperty('noiseSuppression'.toJS, noise);
+            }
+          } else if (audioProp == null) {
+            constraints.setProperty('audio'.toJS, stored);
+          }
+        }
+
+        final promise =
+            (origGetUserMedia.callAsFunction(mediaDevices, constraints)
+                as JSPromise?)!;
+
+        return promise.toDart.then((stream) {
+          if (stream != null) {
+            globalContext.setProperty(
+              '_flutterRecorderActiveMediaStream'.toJS,
+              stream as JSObject,
+            );
+          }
+          return stream;
+        }).toJS;
+      }
+
+      mediaDevices.setProperty('getUserMedia'.toJS, customGetUserMedia.toJS);
+    } catch (_) {
+      // Ignore if navigator.mediaDevices is not available or restricted
+    }
+  }
+
+  /// Waits for the WASM module to finish loading. `Recorder.init()` can be
+  /// called by the app while `init_recorder_module.dart.js` is still
+  /// instantiating the module; without this the first bindings call would hit
+  /// a not-yet-defined `RecorderModule`.
+  Future<void> _ensureModuleReady() async {
+    _hookGetUserMedia();
+    if (_isModuleInstantiated()) return;
+    final ready = flutterRecorderReady;
+    if (ready != null) {
+      await ready.toDart.timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => throw TimeoutException(
+          'flutter_recorder: the WASM module did not finish initializing in '
+          '15 seconds. If you serve the app with COOP/COEP headers, make '
+          'sure they are not duplicated or conflicting, which blocks the '
+          'worker threads the module needs.',
+        ),
+      );
+      return;
+    }
+    for (var i = 0; i < 100 && !_isModuleInstantiated(); i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      final r = flutterRecorderReady;
+      if (r != null) {
+        await r.toDart;
+        return;
+      }
+    }
+  }
+
+  /// Whether `self.RecorderModule` is the fully instantiated WASM module.
+  bool _isModuleInstantiated() {
+    final instance = moduleRecorderInstance;
+    return instance != null && !instance.isA<JSFunction>();
+  }
 
   void _setupWasmVisualizationCallback() {
     if (_wasmVisualizationCallbackSetUp) return;
@@ -49,52 +190,55 @@ class RecorderWeb extends RecorderImpl {
       final fftPtr = fftDataPerChannelPtr.toDartInt;
       final fSamples = fftSamples.toDartInt;
 
-      final waveList = <Float32List>[];
-      if (wSamples > 0 && wavePtr != 0) {
-        for (var c = 0; c < cCount; c++) {
-          final channelPtr = wasmGetI32Value(wavePtr + (c * 4), 'i32');
-          if (channelPtr != 0) {
-            final startIndex = channelPtr >> 2;
-            final endIndex = startIndex + wSamples;
-            waveList.add(
-              Float32List.fromList(
-                wasmHeapF32.toDart.sublist(startIndex, endIndex),
-              ),
-            );
+      try {
+        final heap = wasmHeapF32.toDart;
+        final heapLen = heap.length;
+
+        final waveList = <Float32List>[];
+        if (wSamples > 0 && wavePtr != 0) {
+          for (var c = 0; c < cCount; c++) {
+            final channelPtr = wasmGetI32Value(wavePtr + (c * 4), 'i32');
+            if (channelPtr != 0) {
+              final startIndex = channelPtr >> 2;
+              final endIndex = startIndex + wSamples;
+              if (startIndex >= 0 && endIndex <= heapLen) {
+                waveList.add(heap.sublist(startIndex, endIndex));
+              }
+            }
           }
         }
-      }
 
-      final fftList = <Float32List>[];
-      if (fSamples > 0 && fftPtr != 0) {
-        for (var c = 0; c < cCount; c++) {
-          final channelPtr = wasmGetI32Value(fftPtr + (c * 4), 'i32');
-          if (channelPtr != 0) {
-            final startIndex = channelPtr >> 2;
-            final endIndex = startIndex + fSamples;
-            fftList.add(
-              Float32List.fromList(
-                wasmHeapF32.toDart.sublist(startIndex, endIndex),
-              ),
-            );
+        final fftList = <Float32List>[];
+        if (fSamples > 0 && fftPtr != 0) {
+          for (var c = 0; c < cCount; c++) {
+            final channelPtr = wasmGetI32Value(fftPtr + (c * 4), 'i32');
+            if (channelPtr != 0) {
+              final startIndex = channelPtr >> 2;
+              final endIndex = startIndex + fSamples;
+              if (startIndex >= 0 && endIndex <= heapLen) {
+                fftList.add(heap.sublist(startIndex, endIndex));
+              }
+            }
           }
         }
-      }
 
-      final packet = AudioVisualizationData(
-        channelCount: cCount,
-        wave: waveList,
-        fft: fftList,
-      );
+        final packet = AudioVisualizationData(
+          channelCount: cCount,
+          wave: waveList,
+          fft: fftList,
+        );
 
-      _visualizationCallback?.call(packet);
-      if (audioVisualizationEventsController.hasListener) {
-        audioVisualizationEventsController.add(packet);
+        _visualizationCallback?.call(packet);
+        if (audioVisualizationEventsController.hasListener) {
+          audioVisualizationEventsController.add(packet);
+        }
+      } catch (_) {
+        // Ignore stale frames during WASM heap growth or reinitialization
       }
     }
 
     globalContext.setProperty(
-      '_wasmVisualizationCallback'.toJS,
+      '_wasmRecorderVisualizationCallback'.toJS,
       webVisualizationCallback.toJS,
     );
   }
@@ -103,6 +247,8 @@ class RecorderWeb extends RecorderImpl {
   /// from `web/worker.dart.js`
   @override
   Future<void> setDartEventCallbacks() async {
+    await _ensureModuleReady();
+
     // This calls the native WASM `createWorkerInWasm()` in `bindings.cpp`.
     // The latter creates a web Worker using `EM_ASM` inlining JS code to
     // create the worker in the WASM `Module`.
@@ -127,7 +273,7 @@ class RecorderWeb extends RecorderImpl {
           }
 
           if (event['message'] == 'streamDataCallback') {
-            final audioData = Uint8List.fromList(event['data'] as Uint8List);
+            final audioData = event['data'] as Uint8List;
             uint8ListController.add(AudioDataContainer(audioData));
           }
       }
@@ -208,14 +354,25 @@ class RecorderWeb extends RecorderImpl {
   }
 
   @override
-  void init({
+  Future<void> init({
     required int deviceID,
     required PCMFormat format,
     required int sampleRate,
     required RecorderChannels channels,
     required AndroidInputPreset? androidInputPreset,
-  }) {
-    final error = wasmInit(deviceID, format.value, sampleRate, channels.count);
+    required IosInputPreset? iosInputPreset,
+    required WebInputPreset? webInputPreset,
+  }) async {
+    _applyWebInputPreset(webInputPreset ?? WebInputPreset.unprocessed);
+    await _ensureModuleReady();
+    final error = await _callEngineAsync('flutter_recorder_init', [
+      deviceID,
+      format.value,
+      sampleRate,
+      channels.count,
+      androidInputPreset?.value ?? 0,
+      iosInputPreset?.value ?? 0,
+    ]);
     if (CaptureErrors.fromValue(error) != CaptureErrors.captureNoError) {
       throw RecorderCppException.fromRecorderError(
         CaptureErrors.fromValue(error),
@@ -227,12 +384,31 @@ class RecorderWeb extends RecorderImpl {
       sampleRate: sampleRate,
       channels: channels,
       androidInputPreset: androidInputPreset,
+      iosInputPreset: iosInputPreset,
+      webInputPreset: webInputPreset,
     );
   }
 
   @override
   void deinit() {
     _silenceCallback = null;
+    final activeStream = globalContext.getProperty<JSObject?>(
+      '_flutterRecorderActiveMediaStream'.toJS,
+    );
+    if (activeStream != null) {
+      try {
+        final getTracks = activeStream.getProperty<JSFunction>(
+          'getTracks'.toJS,
+        );
+        final tracks =
+            getTracks.callAsFunction(activeStream)! as JSArray<JSObject>;
+        for (var i = 0; i < tracks.length; i++) {
+          final track = tracks[i];
+          track.getProperty<JSFunction>('stop'.toJS).callAsFunction(track);
+        }
+      } catch (_) {}
+      globalContext.setProperty('_flutterRecorderActiveMediaStream'.toJS, null);
+    }
     wasmDeinit();
     super.deinit();
   }
@@ -394,12 +570,12 @@ class RecorderWeb extends RecorderImpl {
 
   @override
   void setLoopback({required bool enable}) {
-    // Web implementation
+    wasmSetLoopback(enable);
   }
 
   @override
   bool isLoopbackEnabled() {
-    return false;
+    return wasmIsLoopbackEnabled() == 1;
   }
 
   @override
@@ -424,5 +600,49 @@ class RecorderWeb extends RecorderImpl {
     required RecorderChannels channels,
   }) {
     // Web implementation
+  }
+
+  void _applyWebInputPreset(WebInputPreset preset) {
+    _hookGetUserMedia();
+
+    final bool echoCancellation;
+    final bool autoGainControl;
+    final bool noiseSuppression;
+
+    switch (preset) {
+      case WebInputPreset.unprocessed:
+        echoCancellation = false;
+        autoGainControl = false;
+        noiseSuppression = false;
+      case WebInputPreset.voiceCommunication:
+        echoCancellation = true;
+        autoGainControl = true;
+        noiseSuppression = true;
+      case WebInputPreset.voiceRecognition:
+        echoCancellation = false;
+        autoGainControl = true;
+        noiseSuppression = true;
+      case WebInputPreset.noiseSuppression:
+        echoCancellation = false;
+        autoGainControl = false;
+        noiseSuppression = true;
+      case WebInputPreset.echoCancellation:
+        echoCancellation = true;
+        autoGainControl = false;
+        noiseSuppression = false;
+    }
+
+    final constraints =
+        <String, Object>{
+              'echoCancellation': echoCancellation,
+              'autoGainControl': autoGainControl,
+              'noiseSuppression': noiseSuppression,
+            }.jsify()!
+            as JSObject;
+
+    globalContext.setProperty(
+      '_flutterRecorderWebAudioConstraints'.toJS,
+      constraints,
+    );
   }
 }

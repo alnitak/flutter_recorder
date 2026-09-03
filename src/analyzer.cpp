@@ -7,6 +7,11 @@
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
+#include <pthread.h>
+#ifdef MA_ENABLE_AUDIO_WORKLETS
+#include <emscripten/threading.h>
+#include <emscripten/webaudio.h>
+#endif
 #endif
 
 #ifndef M_PI
@@ -38,8 +43,20 @@ void Analyzer::setSmoothing(float smooth) {
   m_fftSmoothing.store(smooth, std::memory_order_relaxed);
 }
 
-void Analyzer::setDataCallback(dartVisualizationCallback_t callback) {
+void Analyzer::setDataCallbackForEngine(dartVisualizationCallback_t callback, int64_t engine_id) {
+  if (callback == nullptr) {
+    m_callbackGeneration.store(dart_callbacks::kNoGeneration, std::memory_order_release);
+    m_callback.store(nullptr, std::memory_order_release);
+    return;
+  }
+  dart_callbacks::Registration registration;
+  uint64_t gen = registration.claim(engine_id);
+  m_callbackGeneration.store(gen, std::memory_order_release);
   m_callback.store(callback, std::memory_order_release);
+}
+
+void Analyzer::setDataCallback(dartVisualizationCallback_t callback) {
+  setDataCallbackForEngine(callback, dart_callbacks::kNoEngineId);
 }
 
 CaptureErrors Analyzer::setVisualizationEnabled(
@@ -412,6 +429,17 @@ void Analyzer::computeFftMagnitudes(int channelIdx, int pingPong) {
   }
 }
 
+#ifdef __EMSCRIPTEN__
+static void dispatchVisualizationMainThread(int activeChannels, int wavePtrs, int waveSamples, int fftPtrs, int fftSamples) {
+  EM_ASM({
+    if (typeof _wasmRecorderVisualizationCallback === 'function') {
+      _wasmRecorderVisualizationCallback($0, $1, $2, $3, $4);
+    }
+  }, activeChannels, wavePtrs, waveSamples, fftPtrs, fftSamples);
+  Analyzer::instance().clearDispatchInFlight();
+}
+#endif
+
 void Analyzer::dispatchToDart(int pingPong) {
   for (int c = 0; c < m_activeChannels; c++) {
     m_wavePtrsExport[c] =
@@ -424,13 +452,23 @@ void Analyzer::dispatchToDart(int pingPong) {
   const int fftSamples = (m_kind != VISUALIZATION_WAVE) ? (m_windowSize / 2) : 0;
 
 #ifdef __EMSCRIPTEN__
-  EM_ASM({
-    if (typeof _wasmVisualizationCallback === 'function') {
-      _wasmVisualizationCallback($0, $1, $2, $3, $4);
-    }
-  }, m_activeChannels, m_wavePtrsExport, waveSamples, m_fftPtrsExport, fftSamples);
-  clearDispatchInFlight();
+#ifdef MA_ENABLE_AUDIO_WORKLETS
+  if (!emscripten_is_main_browser_thread()) {
+    emscripten_audio_worklet_post_function_sig(
+        EMSCRIPTEN_AUDIO_MAIN_THREAD, (void *)dispatchVisualizationMainThread, "iiiii",
+        m_activeChannels, (int)(uintptr_t)m_wavePtrsExport, waveSamples,
+        (int)(uintptr_t)m_fftPtrsExport, fftSamples);
+    return;
+  }
+#endif
+  dispatchVisualizationMainThread(m_activeChannels, (int)(uintptr_t)m_wavePtrsExport, waveSamples,
+                                  (int)(uintptr_t)m_fftPtrsExport, fftSamples);
 #else
+  dart_callbacks::InvocationPass pass;
+  const uint64_t gen = m_callbackGeneration.load(std::memory_order_acquire);
+  if (!pass.isLive(gen)) {
+    return;
+  }
   const auto cb = m_callback.load(std::memory_order_acquire);
   if (cb == nullptr) {
     return;

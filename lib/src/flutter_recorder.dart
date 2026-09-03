@@ -111,6 +111,9 @@ interface class Recorder {
   /// Currently used recorder configuration.
   PCMFormat _recorderFormat = PCMFormat.s16le;
 
+  /// The PCM format currently used by the recorder.
+  PCMFormat get recorderFormat => _recorderFormat;
+
   /// Listening to silence state changes.
   Stream<SilenceState> get silenceChangedEvents =>
       _recorder.impl.silenceChangedEvents;
@@ -213,10 +216,27 @@ interface class Recorder {
   /// [format] PCM format. Default to [PCMFormat.s16le].
   /// [sampleRate] sample rate in Hz. Default to 22050.
   /// [channels] number of channels. Default to [RecorderChannels.mono].
-  /// [androidInputPreset] Android capture input preset. If null, the platform
-  /// default is used. Ignored on non-Android platforms.
+  /// [androidInputPreset] Android hardware capture preset. Configures device
+  /// DSP and hardware filters (e.g. [AndroidInputPreset.voiceCommunication] for
+  /// hardware AEC/AGC, [AndroidInputPreset.unprocessed] for raw audio). If
+  /// null, the platform default is used. Ignored on non-Android platforms.
+  /// [iosInputPreset] iOS system `AVAudioSession` preset. Configures Apple
+  /// hardware voice processing (e.g. [IosInputPreset.voiceCommunication] for
+  /// hardware AEC/AGC, [IosInputPreset.unprocessed] for clean raw audio). If
+  /// null, the active `AVAudioSession` configuration is left untouched. Ignored
+  /// on non-iOS platforms.
+  /// [webInputPreset] Web Audio preprocessing constraints (`echoCancellation`,
+  /// `autoGainControl`, `noiseSuppression`) configured on `getUserMedia`.
+  /// Defaults to [WebInputPreset.unprocessed] (raw audio without browser AGC
+  /// pumping). Ignored on non-Web platforms.
   ///
-  /// Thows [RecorderInitializeFailedException] if something goes wrong, ie. no
+  /// > **Note on macOS:**
+  /// > On macOS, CoreAudio HAL captures raw, unprocessed audio from the
+  /// > selected input device by default. System-wide "Voice Isolation" and
+  /// > "Wide Spectrum" Mic Modes in macOS Sonoma/Sequoia can be selected by
+  /// > the user in the macOS menu bar / Control Center.
+  ///
+  /// Throws [RecorderInitializeFailedException] if something goes wrong, ie. no
   /// device found with [deviceID] id.
   Future<void> init({
     int deviceID = -1,
@@ -224,11 +244,11 @@ interface class Recorder {
     int sampleRate = 22050,
     RecorderChannels channels = RecorderChannels.mono,
     AndroidInputPreset? androidInputPreset,
+    IosInputPreset? iosInputPreset,
+    WebInputPreset? webInputPreset,
   }) async {
-    await _recorder.impl.setDartEventCallbacks();
-
     // Sets the [_isInitialized].
-    // Usefult when the consumer use the hot restart and that flag
+    // Useful when the consumer uses hot restart and that flag
     // has been reset.
     isDeviceInitialized();
 
@@ -240,16 +260,22 @@ interface class Recorder {
         'a bug in your code. You may have neglected to deinit() Recorder '
         'during the current lifetime of the app.',
       );
+      _recorder.impl.clearDartCallbackRegistrations();
       deinit();
     }
 
-    _recorder.impl.init(
+    await _recorder.impl.init(
       deviceID: deviceID,
       format: format,
       sampleRate: sampleRate,
       channels: channels,
       androidInputPreset: androidInputPreset,
+      iosInputPreset: iosInputPreset,
+      webInputPreset: webInputPreset,
     );
+
+    await _recorder.impl.setDartEventCallbacks();
+
     _recorderFormat = format;
     _isInitialized = true;
   }

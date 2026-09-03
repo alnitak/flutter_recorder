@@ -124,27 +124,159 @@ enum PCMFormat {
 
 /// Android capture input presets.
 ///
+/// Maps to Android `AAUDIO_INPUT_PRESET_*` / `OpenSL ES` hardware recording
+/// presets to configure device DSP and hardware audio preprocessors.
+///
 /// This is only applied on Android. Other platforms accept the value but
 /// ignore it.
 enum AndroidInputPreset {
-  /// Android generic capture preset.
+  /// Standard Android generic capture preset (`AAUDIO_INPUT_PRESET_GENERIC`).
+  ///
+  /// - **Hardware Filters:** Standard OEM audio processing.
   generic(1),
 
-  /// Android camcorder capture preset.
+  /// Camcorder capture preset (`AAUDIO_INPUT_PRESET_CAMCORDER`).
+  ///
+  /// - **Hardware Filters:** Tuned for video recording directionality and
+  ///   ambient sound balance.
   camcorder(2),
 
-  /// Android voice recognition capture preset.
+  /// Voice recognition preset (`AAUDIO_INPUT_PRESET_VOICE_RECOGNITION`).
+  ///
+  /// - **Hardware Filters:** Tuned for automatic speech recognition (ASR) with
+  ///   minimal AGC and high-pass filtering.
+  /// - **Best for:** Speech-to-text, voice assistants.
   voiceRecognition(3),
 
-  /// Android voice communication capture preset.
+  /// Voice communication preset (`AAUDIO_INPUT_PRESET_VOICE_COMMUNICATION`).
+  ///
+  /// - **Hardware Filters:** Enables hardware **Acoustic Echo Cancellation
+  ///   (AEC)**, **Automatic Gain Control (AGC)**, and **Noise Suppression
+  ///   (NS)** handled by the device OEM audio HAL.
+  /// - **Best for:** VoIP, voice calls, two-way communication.
   voiceCommunication(4),
 
-  /// Android unprocessed capture preset.
+  /// Unprocessed capture preset (`AAUDIO_INPUT_PRESET_UNPROCESSED`).
+  ///
+  /// - **Hardware Filters:** **Completely disables** all OEM DSP, noise
+  ///   suppressors, and AGC to deliver clean, uncolored, raw PCM audio data.
+  /// - **Best for:** Custom DSP filters (e.g. `AutoGainFilter`,
+  ///   `EchoCancellationFilter`), audio measurement, music recording.
   unprocessed(5);
 
   const AndroidInputPreset(this.value);
 
   /// Internal value passed to the native recorder.
+  final int value;
+}
+
+/// iOS capture input presets.
+///
+/// Configures the iOS system `AVAudioSession` category and mode to enable or
+/// disable hardware-level audio processing (such as Apple's hardware Voice
+/// Processing Acoustic Echo Cancellation, Automatic Gain Control, and
+/// measurement mode) without requiring external audio session management.
+///
+/// This is only applied on iOS. Other platforms accept the value but ignore it.
+enum IosInputPreset {
+  /// Standard iOS capture preset (`AVAudioSessionModeDefault`).
+  ///
+  /// - **Hardware Filters:** Standard Apple system voice processing.
+  generic(1),
+
+  /// Voice communication preset (`AVAudioSessionModeVoiceChat`).
+  ///
+  /// - **Hardware Filters:** Enables Apple's hardware **Acoustic Echo
+  ///   Cancellation (AEC)**, **Automatic Gain Control (AGC)**, and voice EQ
+  ///   processing.
+  /// - **Best for:** VoIP, video calls, two-way voice chat.
+  voiceCommunication(2),
+
+  /// Video chat preset (`AVAudioSessionModeVideoChat`).
+  ///
+  /// - **Hardware Filters:** Enables Apple's hardware **Acoustic Echo
+  ///   Cancellation (AEC)** optimized for video chat and loudspeaker output.
+  /// - **Best for:** Video conferencing, camera-based recording.
+  videoChat(3),
+
+  /// Speech recognition preset (`AVAudioSessionModeSpokenAudio`).
+  ///
+  /// - **Hardware Filters:** Tuned for speech recognition and spoken audio with
+  ///   minimal aggressive filtering.
+  /// - **Best for:** ASR, dictation, voice commands.
+  speechRecognition(4),
+
+  /// Unprocessed / measurement preset (`AVAudioSessionModeMeasurement`).
+  ///
+  /// - **Hardware Filters:** **Completely disables** AGC, high-pass filtering,
+  ///   and preprocessing to provide clean, raw, uncolored audio data.
+  /// - **Best for:** Custom DSP filters, acoustic measurement, audio analysis.
+  unprocessed(5);
+
+  const IosInputPreset(this.value);
+
+  /// Internal value passed to the native recorder.
+  final int value;
+}
+
+/// Web Audio capture input presets for browser-level audio preprocessing.
+///
+/// Configures browser `MediaTrackConstraints` (`echoCancellation`,
+/// `autoGainControl`, `noiseSuppression`) at stream initialization time
+/// (`getUserMedia`).
+///
+/// This is only applied on Web. Other platforms accept the value but ignore it.
+enum WebInputPreset {
+  /// Raw, unprocessed microphone capture.
+  ///
+  /// - **Browser Filters:**
+  ///   - `echoCancellation: false`
+  ///   - `autoGainControl: false`
+  ///   - `noiseSuppression: false`
+  /// - **Best for:** Custom software DSP filters (such as `flutter_recorder`'s
+  ///   `AutoGainFilter` and `EchoCancellationFilter`), audio analysis,
+  ///   music, and loopback setups where browser AGC pumping must be avoided.
+  unprocessed(0),
+
+  /// Full voice communication preset.
+  ///
+  /// - **Browser Filters:**
+  ///   - `echoCancellation: true`
+  ///   - `autoGainControl: true`
+  ///   - `noiseSuppression: true`
+  /// - **Best for:** Voice chat, VoIP, video conferencing.
+  voiceCommunication(1),
+
+  /// Speech recognition preset.
+  ///
+  /// - **Browser Filters:**
+  ///   - `echoCancellation: false`
+  ///   - `autoGainControl: true`
+  ///   - `noiseSuppression: true`
+  /// - **Best for:** Voice search, speech-to-text, dictation.
+  voiceRecognition(2),
+
+  /// Noise suppression only.
+  ///
+  /// - **Browser Filters:**
+  ///   - `echoCancellation: false`
+  ///   - `autoGainControl: false`
+  ///   - `noiseSuppression: true`
+  /// - **Best for:** Removing stationary fan/background noise without AGC.
+  noiseSuppression(3),
+
+  /// Acoustic echo cancellation only.
+  ///
+  /// - **Browser Filters:**
+  ///   - `echoCancellation: true`
+  ///   - `autoGainControl: false`
+  ///   - `noiseSuppression: false`
+  /// - **Best for:** Preventing speaker feedback loop without dynamic AGC.
+  echoCancellation(4);
+
+  const WebInputPreset(this.value);
+
+  /// Internal value.
   final int value;
 }
 

@@ -5,9 +5,9 @@
 #include <speex/speex_echo.h>
 #include <speex/speex_preprocess.h>
 
+#include "../fast_mutex.h"
 #include <vector>
 #include <unordered_map>
-#include <mutex>
 #include <string>
 
 class EchoCancellation : public GenericFilter
@@ -60,7 +60,7 @@ private:
     std::unordered_map<Params, ParamInfo> mParams;
     std::vector<float> mValues;
 
-    std::mutex mMutex;
+    FastMutex mMutex;
 
     std::vector<spx_int16_t> mMicFifo;
     std::vector<spx_int16_t> mRefFifo;

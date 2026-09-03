@@ -61,6 +61,8 @@ class _MyAppState extends State<MyApp> {
   var silenceDuration = 2.0;
   var secondsOfAudioToWriteBefore = 0.0;
   var androidInputPresetValue = 0;
+  var iosInputPresetValue = 0;
+  var webInputPresetValue = 0;
 
   File? file;
 
@@ -81,6 +83,40 @@ class _MyAppState extends State<MyApp> {
     4 => 'Voice communication',
     5 => 'Unprocessed',
     _ => 'System default',
+  };
+
+  IosInputPreset? get selectedIosInputPreset => switch (iosInputPresetValue) {
+    1 => IosInputPreset.generic,
+    2 => IosInputPreset.voiceCommunication,
+    3 => IosInputPreset.videoChat,
+    4 => IosInputPreset.speechRecognition,
+    5 => IosInputPreset.unprocessed,
+    _ => null,
+  };
+
+  String iosInputPresetLabel(int value) => switch (value) {
+    1 => 'Generic',
+    2 => 'Voice communication (AEC/AGC)',
+    3 => 'Video chat (AEC)',
+    4 => 'Speech recognition',
+    5 => 'Unprocessed (Measurement)',
+    _ => 'System default',
+  };
+
+  WebInputPreset get selectedWebInputPreset => switch (webInputPresetValue) {
+    1 => WebInputPreset.voiceCommunication,
+    2 => WebInputPreset.voiceRecognition,
+    3 => WebInputPreset.noiseSuppression,
+    4 => WebInputPreset.echoCancellation,
+    _ => WebInputPreset.unprocessed,
+  };
+
+  String webInputPresetLabel(int value) => switch (value) {
+    1 => 'Voice communication (AEC/AGC/NS)',
+    2 => 'Voice recognition (AGC/NS)',
+    3 => 'Noise suppression only',
+    4 => 'Echo cancellation only',
+    _ => 'Unprocessed (Raw audio)',
   };
 
   late final AppLifecycleListener _lifecycleListener;
@@ -145,7 +181,7 @@ class _MyAppState extends State<MyApp> {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Android input preset: '),
+                      const Text('Android preset: '),
                       DropdownButton<int>(
                         value: androidInputPresetValue,
                         items: List<DropdownMenuItem<int>>.generate(
@@ -156,12 +192,50 @@ class _MyAppState extends State<MyApp> {
                           ),
                         ),
                         onChanged: (value) {
-                          if (value == null) {
-                            return;
-                          }
-                          setState(() {
-                            androidInputPresetValue = value;
-                          });
+                          if (value == null) return;
+                          setState(() => androidInputPresetValue = value);
+                        },
+                      ),
+                    ],
+                  ),
+                if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('iOS preset: '),
+                      DropdownButton<int>(
+                        value: iosInputPresetValue,
+                        items: List<DropdownMenuItem<int>>.generate(
+                          IosInputPreset.values.length + 1,
+                          (index) => DropdownMenuItem<int>(
+                            value: index,
+                            child: Text(iosInputPresetLabel(index)),
+                          ),
+                        ),
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setState(() => iosInputPresetValue = value);
+                        },
+                      ),
+                    ],
+                  ),
+                if (kIsWeb)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('Web preset: '),
+                      DropdownButton<int>(
+                        value: webInputPresetValue,
+                        items: List<DropdownMenuItem<int>>.generate(
+                          WebInputPreset.values.length,
+                          (index) => DropdownMenuItem<int>(
+                            value: index,
+                            child: Text(webInputPresetLabel(index)),
+                          ),
+                        ),
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setState(() => webInputPresetValue = value);
                         },
                       ),
                     ],
@@ -180,6 +254,8 @@ class _MyAppState extends State<MyApp> {
                         sampleRate: sampleRate,
                         channels: channels,
                         androidInputPreset: selectedAndroidInputPreset,
+                        iosInputPreset: selectedIosInputPreset,
+                        webInputPreset: selectedWebInputPreset,
                       );
                     } on Exception catch (e) {
                       debugPrint('-------------- init() error: $e\n');
