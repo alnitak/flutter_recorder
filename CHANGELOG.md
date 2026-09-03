@@ -1,4 +1,11 @@
-## 2.0.0
+## 2.0.1
+- Added agent skills:
+  ```bash
+  # Install or update the skills in your project by running:
+  dart run flutter_recorder:skills
+  # To check whether installed skills are up to date without modifying any files:
+  dart run flutter_recorder:skills --check
+  ```
 - **breaking change: audio visualization overhaul**: Replaced legacy FFT engine with SIMD-accelerated PFFFT, Blackman windowing, and miniaudio channel converter downmixing.
 - Real-time audio visualization is now delivered via `Recorder.instance.audioVisualizationEvents` stream yielding `AudioVisualizationData` with mono (merged) and multi-channel support.
 - Added `setVisualizationEnabled`, `getVisualizationEnabled`, `setFftSmoothing`, `VisualizationKind`, and `VisualizationChannel`. Replaced legacy `getFft`, `getWave`, `getTexture`, and `getTexture2D` polling methods.
