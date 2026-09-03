@@ -142,6 +142,22 @@ Recorder.instance.setWebAudioConstraints(
 - [`GStreamer`](https://gstreamer.freedesktop.org/documentation/installing/index.html?gi-language=c) is installed by default on most distributions, but if not, please [install it](https://gstreamer.freedesktop.org/documentation/installing/on-linux.html?gi-language=c) through your distribution's package manager.
 - Installing Flutter using `snap` could cause compilation problems with native plugins. The only solution is to uninstall it with `sudo snap remove flutter` and install it the [official way](https://flutter-ko.dev/get-started/install/linux).
 
+## 🤖 AI Agent Skills
+
+`flutter_recorder` includes bundled **Agent Skills** (`SKILL.md` instruction files) to help AI coding agents (Claude, Cursor, Gemini, GitHub Copilot, Cline, Codex, OpenCode, etc.) generate correct, high-performance code for all features of this audio recorder plugin.
+
+Install or update the skills in your project by running:
+
+```bash
+dart run flutter_recorder:skills
+```
+
+To check whether installed skills are up to date without modifying any files:
+
+```bash
+dart run flutter_recorder:skills --check
+```
+
 ## 🛠️ Usage Example
 ```dart
 import 'package:permission_handler/permission_handler.dart';
