@@ -1,3 +1,6 @@
+## 2.0.2
+- Rename agent skills to hyphenated names for Zed compatibility. Thanks to @Kunstderfug #60
+
 ## 2.0.1
 - Added agent skills:
   ```bash
