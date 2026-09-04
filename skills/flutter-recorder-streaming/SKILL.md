@@ -1,5 +1,5 @@
 ---
-name: flutter_recorder-streaming
+name: flutter-recorder-streaming
 version: 1
 description: Teaches how to stream real-time audio data (PCM samples or Opus packets), convert sample formats with AudioDataContainer, handle the zero-copy buffer reuse constraint, and stream audio to network backends or speech-to-text models. Use when the user asks to stream microphone data, send audio over WebSockets/WebRTC, process raw PCM bytes, encode live Opus packets, or convert audio formats.
 ---

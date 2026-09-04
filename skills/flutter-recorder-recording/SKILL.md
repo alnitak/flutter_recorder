@@ -1,5 +1,5 @@
 ---
-name: flutter_recorder-recording
+name: flutter-recorder-recording
 version: 1
 description: Teaches how to record audio to WAV and Ogg Opus files on disk, pause and resume recording, stop recordings, manage output directories across platforms, and handle Web file downloads. Use when a user asks to record microphone audio to a file, save WAV or Opus audio, implement pause/resume recording, or retrieve recorded audio files.
 ---

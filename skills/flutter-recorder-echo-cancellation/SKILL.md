@@ -1,5 +1,5 @@
 ---
-name: flutter_recorder-echo-cancellation
+name: flutter-recorder-echo-cancellation
 version: 1
 description: Teaches how to use SpeexDSP Acoustic Echo Cancellation (AEC) and native duplex loopback in flutter_recorder, tune filter length and denoise suppression, configure low-latency sidetone/karaoke monitoring, coordinate system audio sessions with package:audio_session, and feed far-end speaker reference audio from flutter_soloud or VoIP streams. Use when the user asks to eliminate speaker echo, cancel acoustic feedback, implement mic loopback/sidetone, build karaoke apps, or implement voice chat/VoIP.
 ---

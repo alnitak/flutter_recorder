@@ -8,14 +8,14 @@ void main() {
   late Uri skillsRoot;
 
   const expectedSkills = [
-    'flutter_recorder-autogain',
-    'flutter_recorder-echo-cancellation',
-    'flutter_recorder-idioms',
-    'flutter_recorder-recording',
-    'flutter_recorder-setup',
-    'flutter_recorder-silence-detection',
-    'flutter_recorder-streaming',
-    'flutter_recorder-visualization',
+    'flutter-recorder-autogain',
+    'flutter-recorder-echo-cancellation',
+    'flutter-recorder-idioms',
+    'flutter-recorder-recording',
+    'flutter-recorder-setup',
+    'flutter-recorder-silence-detection',
+    'flutter-recorder-streaming',
+    'flutter-recorder-visualization',
   ];
 
   setUp(() {
@@ -41,14 +41,14 @@ void main() {
       expect(plan.skillNames.length, 8);
       expect(plan.installCount, 8);
       expect(plan.updateCount, 0);
-      expect(plan.skillNames, contains('flutter_recorder-setup'));
-      expect(plan.skillNames, contains('flutter_recorder-recording'));
-      expect(plan.skillNames, contains('flutter_recorder-streaming'));
-      expect(plan.skillNames, contains('flutter_recorder-silence-detection'));
-      expect(plan.skillNames, contains('flutter_recorder-visualization'));
-      expect(plan.skillNames, contains('flutter_recorder-autogain'));
-      expect(plan.skillNames, contains('flutter_recorder-echo-cancellation'));
-      expect(plan.skillNames, contains('flutter_recorder-idioms'));
+      expect(plan.skillNames, contains('flutter-recorder-setup'));
+      expect(plan.skillNames, contains('flutter-recorder-recording'));
+      expect(plan.skillNames, contains('flutter-recorder-streaming'));
+      expect(plan.skillNames, contains('flutter-recorder-silence-detection'));
+      expect(plan.skillNames, contains('flutter-recorder-visualization'));
+      expect(plan.skillNames, contains('flutter-recorder-autogain'));
+      expect(plan.skillNames, contains('flutter-recorder-echo-cancellation'));
+      expect(plan.skillNames, contains('flutter-recorder-idioms'));
     });
 
     test(
@@ -80,14 +80,14 @@ void main() {
         // References should also be copied
         final webRef = File.fromUri(
           tempDir.uri.resolve(
-            '.agents/skills/flutter_recorder-setup/references/web.md',
+            '.agents/skills/flutter-recorder-setup/references/web.md',
           ),
         );
         expect(webRef.existsSync(), isTrue);
 
         final permsRef = File.fromUri(
           tempDir.uri.resolve(
-            '.agents/skills/flutter_recorder-setup/references/platform-permissions.md',
+            '.agents/skills/flutter-recorder-setup/references/platform-permissions.md',
           ),
         );
         expect(permsRef.existsSync(), isTrue);
@@ -118,10 +118,10 @@ void main() {
       await installSkills(projectRoot: tempDir, skillsRoot: skillsRoot);
 
       final claudeSkill = File.fromUri(
-        tempDir.uri.resolve('.claude/skills/flutter_recorder-setup/SKILL.md'),
+        tempDir.uri.resolve('.claude/skills/flutter-recorder-setup/SKILL.md'),
       );
       final cursorSkill = File.fromUri(
-        tempDir.uri.resolve('.cursor/skills/flutter_recorder-setup/SKILL.md'),
+        tempDir.uri.resolve('.cursor/skills/flutter-recorder-setup/SKILL.md'),
       );
       expect(claudeSkill.existsSync(), isTrue);
       expect(cursorSkill.existsSync(), isTrue);
@@ -136,7 +136,7 @@ void main() {
 
       // Modify one installed skill to have version: 0
       final file = File.fromUri(
-        tempDir.uri.resolve('.agents/skills/flutter_recorder-idioms/SKILL.md'),
+        tempDir.uri.resolve('.agents/skills/flutter-recorder-idioms/SKILL.md'),
       );
       final content = file.readAsStringSync().replaceFirst(
         'version: 1',

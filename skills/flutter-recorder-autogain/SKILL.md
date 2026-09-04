@@ -1,5 +1,5 @@
 ---
-name: flutter_recorder-autogain
+name: flutter-recorder-autogain
 version: 1
 description: Teaches how to use flutter_recorder's AutoGain DSP audio filter, tune target RMS loudness, attack and release times, gain limits, noise floor threshold, and headroom, and inspect live metrics like limiter clips and current gain. Use when the user asks to normalize microphone volume, add automatic gain control (AGC), prevent audio clipping, or boost quiet voices.
 ---

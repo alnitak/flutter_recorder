@@ -1,5 +1,5 @@
 ---
-name: flutter_recorder-idioms
+name: flutter-recorder-idioms
 version: 1
 description: Teaches robust architecture and design patterns for flutter_recorder, including service facades, ChangeNotifier/Riverpod state controllers, widget lifecycle management with AppLifecycleListener, audio session coordination with package:audio_session, and integration with flutter_soloud. Use when the user asks how to structure recording state, handle app backgrounding/lifecycle, integrate with flutter_soloud, coordinate audio_session, or write clean, bug-free audio recording code.
 ---
