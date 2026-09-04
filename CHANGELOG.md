@@ -1,3 +1,6 @@
+## 2.0.3
+- removed ".github" for the possible location to install skills
+
 ## 2.0.2
 - Rename agent skills to hyphenated names for Zed compatibility. Thanks to @Kunstderfug #60
 
