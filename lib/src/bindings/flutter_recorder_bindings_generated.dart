@@ -202,6 +202,12 @@ external int flutter_recorder_isVisualizationEnabled();
 @ffi.Native<ffi.Void Function(ffi.Float)>()
 external void flutter_recorder_setFftSmoothing(double smooth);
 
+@ffi.Native<ffi.Void Function(ffi.Float, ffi.Float)>()
+external void flutter_recorder_setFftDecibelRange(
+  double minDecibels,
+  double maxDecibels,
+);
+
 @ffi.Native<ffi.Void Function(ffi.Bool)>()
 external void flutter_recorder_setLoopback(bool enable);
 

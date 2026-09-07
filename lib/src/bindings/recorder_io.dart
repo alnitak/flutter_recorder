@@ -523,6 +523,11 @@ class RecorderFfi extends RecorderImpl {
   }
 
   @override
+  void setFftDecibelRange(double minDecibels, double maxDecibels) {
+    bindings.flutter_recorder_setFftDecibelRange(minDecibels, maxDecibels);
+  }
+
+  @override
   void setVisualizationEnabled(
     bool enabled, {
     int windowSize = 256,

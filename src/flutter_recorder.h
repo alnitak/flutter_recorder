@@ -108,6 +108,8 @@ extern "C"
 
     FFI_PLUGIN_EXPORT void flutter_recorder_setFftSmoothing(float smooth);
 
+    FFI_PLUGIN_EXPORT void flutter_recorder_setFftDecibelRange(float minDecibels, float maxDecibels);
+
     FFI_PLUGIN_EXPORT void flutter_recorder_setLoopback(bool enable);
 
     FFI_PLUGIN_EXPORT int flutter_recorder_isLoopbackEnabled();

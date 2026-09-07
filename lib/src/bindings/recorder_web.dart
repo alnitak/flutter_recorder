@@ -488,6 +488,11 @@ class RecorderWeb extends RecorderImpl {
   }
 
   @override
+  void setFftDecibelRange(double minDecibels, double maxDecibels) {
+    wasmSetFftDecibelRange(minDecibels, maxDecibels);
+  }
+
+  @override
   void setVisualizationEnabled(
     bool enabled, {
     int windowSize = 256,
