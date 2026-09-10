@@ -1,3 +1,7 @@
+## 2.0.4
+- Implemented the algorithm according to the W3C Web Audio API Specification to compute FFT
+- added `setFftDecibelRange` to set the decibel range for FFT magnitude normalization
+
 ## 2.0.3
 - removed ".github" for the possible location to install skills
 
