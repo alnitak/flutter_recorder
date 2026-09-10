@@ -564,6 +564,11 @@ FFI_PLUGIN_EXPORT void flutter_recorder_setFftSmoothing(float smooth)
     Analyzer::instance().setSmoothing(smooth);
 }
 
+FFI_PLUGIN_EXPORT void flutter_recorder_setFftDecibelRange(float minDecibels, float maxDecibels)
+{
+    Analyzer::instance().setMinMaxDecibels(minDecibels, maxDecibels);
+}
+
 FFI_PLUGIN_EXPORT void flutter_recorder_setLoopback(bool enable)
 {
     capture.setLoopback(enable);

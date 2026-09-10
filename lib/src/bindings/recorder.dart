@@ -224,6 +224,10 @@ abstract class RecorderImpl {
   @mustBeOverridden
   void setFftSmoothing(double smooth);
 
+  /// Sets the decibel range for FFT magnitude normalization.
+  @mustBeOverridden
+  void setFftDecibelRange(double minDecibels, double maxDecibels);
+
   /// Enable or disable real-time audio visualization.
   ///
   /// [enabled] whether to enable or disable audio visualization.

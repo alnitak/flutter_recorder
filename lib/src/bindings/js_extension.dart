@@ -177,6 +177,9 @@ external void wasmStopRecording();
 @JS('RecorderModule._flutter_recorder_setFftSmoothing')
 external void wasmSetFftSmoothing(double smooth);
 
+@JS('RecorderModule._flutter_recorder_setFftDecibelRange')
+external void wasmSetFftDecibelRange(double minDecibels, double maxDecibels);
+
 @JS('RecorderModule._flutter_recorder_setLoopback')
 external void wasmSetLoopback(bool enable);
 
