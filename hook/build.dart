@@ -45,10 +45,14 @@ void main(List<String> args) async {
     final flags = <String>[
       if (os != OS.windows) '-fvisibility=hidden',
       if (isApple) ...[
-        '-framework', 'Foundation',
-        '-framework', 'AudioToolbox',
-        '-framework', 'AVFAudio',
-        '-framework', 'CoreAudio',
+        '-framework',
+        'Foundation',
+        '-framework',
+        'AudioToolbox',
+        '-framework',
+        'AVFAudio',
+        '-framework',
+        'CoreAudio',
       ],
       // For debugging:
       if (os == OS.windows) ...['/Od', '/Zi', '/EHsc'] else ...['-O0', '-g'],
