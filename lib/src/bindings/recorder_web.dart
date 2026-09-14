@@ -170,7 +170,15 @@ class RecorderWeb extends RecorderImpl {
   /// Whether `self.RecorderModule` is the fully instantiated WASM module.
   bool _isModuleInstantiated() {
     final instance = moduleRecorderInstance;
-    return instance != null && !instance.isA<JSFunction>();
+    if (instance == null || instance.isA<JSFunction>()) return false;
+    try {
+      return instance.getProperty<JSFunction?>(
+            '_flutter_recorder_isInited'.toJS,
+          ) !=
+          null;
+    } catch (_) {
+      return false;
+    }
   }
 
   void _setupWasmVisualizationCallback() {
@@ -328,6 +336,8 @@ class RecorderWeb extends RecorderImpl {
 
   @override
   List<CaptureDevice> listCaptureDevices() {
+    if (!_isModuleInstantiated()) return [];
+
     /// allocate 50 device strings
     final namesPtr = wasmMalloc(50 * 255);
     final deviceIdPtr = wasmMalloc(50 * 4);
@@ -419,17 +429,21 @@ class RecorderWeb extends RecorderImpl {
       } catch (_) {}
       globalContext.setProperty('_flutterRecorderActiveMediaStream'.toJS, null);
     }
-    wasmDeinit();
+    if (_isModuleInstantiated()) {
+      wasmDeinit();
+    }
     super.deinit();
   }
 
   @override
   bool isDeviceInitialized() {
+    if (!_isModuleInstantiated()) return false;
     return wasmIsDeviceInitialized() == 1;
   }
 
   @override
   bool isDeviceStarted() {
+    if (!_isModuleInstantiated()) return false;
     return wasmIsDeviceStarted() == 1;
   }
 
