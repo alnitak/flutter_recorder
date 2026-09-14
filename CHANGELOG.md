@@ -1,7 +1,5 @@
-## 2.0.5
-- fix web: guard synchronous getters against uninstantiated WASM module #63
-
 ## 2.0.4
+- fix web: guard synchronous getters against uninstantiated WASM module #63
 - Implemented the algorithm according to the W3C Web Audio API Specification to compute FFT
 - added `setFftDecibelRange` to set the decibel range for FFT magnitude normalization
 
