@@ -128,6 +128,24 @@ void main(List<String> args) async {
     for (final asset in xiph.bundledAssets) {
       output.assets.code.add(asset);
     }
+    if (os == OS.windows) {
+      // The shipped fr_ogg.lib imports ogg.dll, although the corresponding
+      // binary is named fr_ogg.dll. Bundle an alias so the Windows loader can
+      // resolve that dependency without an application-level workaround.
+      // Keep fr_ogg.dll as well for import libraries rebuilt with that name.
+      final oggAlias = input.outputDirectory.resolve('ogg.dll');
+      await File.fromUri(
+        input.packageRoot.resolve('windows/libs/fr_ogg.dll'),
+      ).copy(oggAlias.toFilePath());
+      output.assets.code.add(
+        CodeAsset(
+          package: input.packageName,
+          name: 'xiph/ogg.dll',
+          linkMode: DynamicLoadingBundled(),
+          file: oggAlias,
+        ),
+      );
+    }
     for (final dependency in xiph.dependencies) {
       output.dependencies.add(dependency);
     }
