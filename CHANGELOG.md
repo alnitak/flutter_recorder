@@ -1,3 +1,6 @@
+## 2.0.5
+- fix windows: bundle ogg.dll required by the recorder import library
+
 ## 2.0.4
 - fix web: guard synchronous getters against uninstantiated WASM module #63
 - Implemented the algorithm according to the W3C Web Audio API Specification to compute FFT
