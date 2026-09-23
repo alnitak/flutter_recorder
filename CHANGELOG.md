@@ -1,5 +1,5 @@
 ## 2.0.5
-- fix windows: bundle ogg.dll required by the recorder import library
+- fix windows: bundle ogg.dll required by the recorder import library. Thanks to @realdev-fr #64
 
 ## 2.0.4
 - fix web: guard synchronous getters against uninstantiated WASM module #63
