@@ -1,3 +1,6 @@
+## 2.0.6
+- fix windows: rebuild vendored ogg with export name `fr_ogg.dll` and remove `ogg.dll` alias to avoid Native Assets collision with `flutter_soloud` #66
+
 ## 2.0.5
 - fix windows: bundle ogg.dll required by the recorder import library. Thanks to @realdev-fr #64
 

@@ -53,6 +53,9 @@ if not exist "%SPEEXDSP_DIR%" (
 )
 copy /Y "%BASE_DIR%\speexdsp_CMakeLists.txt" "%SPEEXDSP_DIR%\CMakeLists.txt"
 
+:: Patch OGG def file to export fr_ogg instead of ogg
+powershell -NoProfile -Command "if (Test-Path '%OGG_DIR%\win32\ogg.def') { (Get-Content '%OGG_DIR%\win32\ogg.def') -replace 'LIBRARY ogg', 'LIBRARY fr_ogg' | Set-Content '%OGG_DIR%\win32\ogg.def' }"
+
 :: Create directories if they don't exist
 if not exist "%BUILD_DIR%" mkdir "%BUILD_DIR%"
 if not exist "%LIBS_DIR%" mkdir "%LIBS_DIR%"
@@ -72,8 +75,8 @@ cmake -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE:STRING=Release -DBUILD_SHARE
 cmake --build . --config Release
 :: Step 2: Copy OGG .lib, .dll and include files
 echo Copying OGG files...
-copy /Y ".\Release\*.lib" "%LIBS_DIR%"
-copy /Y ".\Release\*.dll" "%LIBS_DIR%"
+copy /Y ".\Release\fr_*.lib" "%LIBS_DIR%"
+copy /Y ".\Release\fr_*.dll" "%LIBS_DIR%"
 xcopy /Y /S "%OGG_DIR%\include\ogg" "%INCLUDE_DIR%\ogg\"
 
 cd "%BASE_DIR%"
@@ -87,8 +90,8 @@ cmake -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE:STRING=Release -DBUILD_SHARE
 cmake --build . --config Release
 :: Step 4: Copy OPUS .lib, .dll and include files
 echo Copying OPUS files...
-copy /Y ".\Release\*.lib" "%LIBS_DIR%"
-copy /Y ".\Release\*.dll" "%LIBS_DIR%"
+copy /Y ".\Release\fr_*.lib" "%LIBS_DIR%"
+copy /Y ".\Release\fr_*.dll" "%LIBS_DIR%"
 xcopy /Y /S "%OPUS_DIR%\include" "%INCLUDE_DIR%\opus\"
 
 cd "%BASE_DIR%"
@@ -102,8 +105,8 @@ cmake -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE:STRING=Release -DBUILD_SHARE
 cmake --build . --config Release
 :: Step 6: Copy SPEEXDSP .lib, .dll and include files
 echo Copying SPEEXDSP files...
-copy /Y ".\\Release\\*.lib" "%LIBS_DIR%"
-copy /Y ".\\Release\\*.dll" "%LIBS_DIR%"
+copy /Y ".\Release\fr_*.lib" "%LIBS_DIR%"
+copy /Y ".\Release\fr_*.dll" "%LIBS_DIR%"
 xcopy /Y /S "%SPEEXDSP_DIR%\\include\\speex" "%INCLUDE_DIR%\\speex\"
 
 cd "%BASE_DIR%"
