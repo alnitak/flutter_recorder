@@ -377,6 +377,9 @@ FFI_PLUGIN_EXPORT void flutter_recorder_listCaptureDevices(
     int numDevices = 0;
     for (int i = 0; i < (int)d.size(); i++)
     {
+        // The length first: the scan below reads the first 5 chars.
+        if (strlen(d[i].name) <= 5)
+            continue;
         bool hasSpecialChar = false;
         /// check if the device name has some strange chars (happens on Linux)
         for (int n = 0; n < 5; n++)
@@ -384,7 +387,7 @@ FFI_PLUGIN_EXPORT void flutter_recorder_listCaptureDevices(
             if (d[i].name[n] < 0x20 && d[i].name[n] >= 0)
                 hasSpecialChar = true;
         }
-        if (strlen(d[i].name) <= 5 || hasSpecialChar)
+        if (hasSpecialChar)
             continue;
 
         devicesName[numDevices] = strdup(d[i].name);
@@ -395,6 +398,8 @@ FFI_PLUGIN_EXPORT void flutter_recorder_listCaptureDevices(
 
         numDevices++;
     }
+    for (auto &device : d)
+        free(device.name);
     *n_devices = numDevices;
 }
 
@@ -571,7 +576,13 @@ FFI_PLUGIN_EXPORT void flutter_recorder_setFftDecibelRange(float minDecibels, fl
 
 FFI_PLUGIN_EXPORT void flutter_recorder_setLoopback(bool enable)
 {
+    if (capture.isLoopback() == enable)
+        return;
     capture.setLoopback(enable);
+    // The device is duplex only while looping back (Capture::init): open it
+    // again as the other kind.
+    if (capture.isInited())
+        capture.reinitDevice();
 }
 
 FFI_PLUGIN_EXPORT int flutter_recorder_isLoopbackEnabled()
@@ -589,22 +600,12 @@ FFI_PLUGIN_EXPORT int flutter_recorder_isFilterActive(enum RecorderFilterType fi
 
 FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_addFilter(enum RecorderFilterType filterType)
 {
-    CaptureErrors err = mFilters.get()->addFilter(filterType);
-    if (err == captureNoError && filterType == RecorderFilterType::echoCancellation && capture.isInited())
-    {
-        capture.reinitDevice();
-    }
-    return err;
+    return mFilters.get()->addFilter(filterType);
 }
 
 FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_removeFilter(enum RecorderFilterType filterType)
 {
-    CaptureErrors err = mFilters.get()->removeFilter(filterType);
-    if (err == captureNoError && filterType == RecorderFilterType::echoCancellation && capture.isInited())
-    {
-        capture.reinitDevice();
-    }
-    return err;
+    return mFilters.get()->removeFilter(filterType);
 }
 
 FFI_PLUGIN_EXPORT void flutter_recorder_getFilterParamNames(enum RecorderFilterType filterType, char **names, int *paramsCount)
