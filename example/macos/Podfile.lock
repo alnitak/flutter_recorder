@@ -1,41 +1,16 @@
 PODS:
-  - audio_session (0.0.1):
-    - FlutterMacOS
-  - flutter_recorder (0.0.1):
-    - FlutterMacOS
-  - flutter_soloud (0.0.1):
-    - FlutterMacOS
   - FlutterMacOS (1.0.0)
-  - path_provider_foundation (0.0.1):
-    - Flutter
-    - FlutterMacOS
 
 DEPENDENCIES:
-  - audio_session (from `Flutter/ephemeral/.symlinks/plugins/audio_session/macos`)
-  - flutter_recorder (from `Flutter/ephemeral/.symlinks/plugins/flutter_recorder/macos`)
-  - flutter_soloud (from `Flutter/ephemeral/.symlinks/plugins/flutter_soloud/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
-  - path_provider_foundation (from `Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin`)
 
 EXTERNAL SOURCES:
-  audio_session:
-    :path: Flutter/ephemeral/.symlinks/plugins/audio_session/macos
-  flutter_recorder:
-    :path: Flutter/ephemeral/.symlinks/plugins/flutter_recorder/macos
-  flutter_soloud:
-    :path: Flutter/ephemeral/.symlinks/plugins/flutter_soloud/macos
   FlutterMacOS:
     :path: Flutter/ephemeral
-  path_provider_foundation:
-    :path: Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin
 
 SPEC CHECKSUMS:
-  audio_session: eaca2512cf2b39212d724f35d11f46180ad3a33e
-  flutter_recorder: ed261037ea05c0509e83e4df807bdcee1314c1ba
-  flutter_soloud: fd7e85d03f0511c834c4cfd32c8888cf92712152
   FlutterMacOS: c232990155153907050900a2e175c7773903ba4e
-  path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
 
 PODFILE CHECKSUM: f0c21717cb7ee9112f915044c74bfceb5b12e02a
 
-COCOAPODS: 1.16.2
+COCOAPODS: 1.17.0

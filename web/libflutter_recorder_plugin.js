@@ -9,8 +9,7 @@ var RecorderModule = (() => {
   // In EXPORT_ES6 mode we can just use 'import.meta.url'.
   var _scriptName = globalThis.document?.currentScript?.src;
   return async function(moduleArg = {}) {
-    var moduleRtn;
-
+    var Module = moduleArg;
 // include: shell.js
 // include: minimum_runtime_check.js
 (function() {
@@ -28,9 +27,13 @@ var RecorderModule = (() => {
   var TARGET_NOT_SUPPORTED = 2147483647;
   // Note: We use a typeof check here instead of optional chaining using
   // globalThis because older browsers might not have globalThis defined.
-  var currentNodeVersion = typeof process !== "undefined" && process.versions?.node ? humanReadableVersionToPacked(process.versions.node) : TARGET_NOT_SUPPORTED;
-  if (currentNodeVersion < 16e4) {
-    throw new Error(`This emscripten-generated code requires node v${packedVersionToHumanReadable(16e4)} (detected v${packedVersionToHumanReadable(currentNodeVersion)})`);
+  // We skip the node version checking when running on Bun/Deno since the node
+  // version they report doesn't seem to be useful.
+  if (typeof process !== "undefined" && !process.versions?.bun && typeof Deno == "undefined") {
+    var currentNodeVersion = process.versions?.node ? humanReadableVersionToPacked(process.versions.node) : TARGET_NOT_SUPPORTED;
+    if (currentNodeVersion < 180300) {
+      throw new Error(`This emscripten-generated code requires node v${packedVersionToHumanReadable(180300)} (detected v${packedVersionToHumanReadable(currentNodeVersion)})`);
+    }
   }
   var userAgent = typeof navigator !== "undefined" && navigator.userAgent;
   if (!userAgent) {
@@ -64,8 +67,6 @@ var RecorderModule = (() => {
 // after the generated code, you will need to define   var Module = {};
 // before the code. Then that object will be used in the code, and you
 // can continue to use Module afterwards as well.
-var Module = moduleArg;
-
 // Determine the runtime environment we are in. You can customize this by
 // setting the ENVIRONMENT setting at compile time (see settings.js).
 // Attempt to auto-detect the environment
@@ -81,7 +82,7 @@ var ENVIRONMENT_IS_SHELL = !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_NODE && !ENVIR
 
 // --pre-jses are emitted after the Module integration code, so that they can
 // refer to Module (if they choose; they can also define Module)
-var arguments_ = [];
+var programArgs = [];
 
 var thisProgram = "./this.program";
 
@@ -114,7 +115,7 @@ if (ENVIRONMENT_IS_NODE) {
   if (!isNode) throw new Error("not compiled for this environment (did you build to HTML and try to run it not on the web, or set ENVIRONMENT to something - like node - and run it someplace else - like on the web?)");
   // These modules will usually be used on Node.js. Load them eagerly to avoid
   // the complexity of lazy-loading.
-  var fs = require("fs");
+  var fs = require("node:fs");
   scriptDirectory = __dirname + "/";
   // include: node_shell_read.js
   readBinary = filename => {
@@ -135,7 +136,7 @@ if (ENVIRONMENT_IS_NODE) {
   if (process.argv.length > 1) {
     thisProgram = process.argv[1].replace(/\\/g, "/");
   }
-  arguments_ = process.argv.slice(2);
+  programArgs = process.argv.slice(2);
   quit_ = (status, toThrow) => {
     process.exitCode = status;
     throw toThrow;
@@ -216,7 +217,7 @@ var NODEFS = "NODEFS is no longer included by default; build with -lnodefs.js";
 
 // perform assertions in shell.js after we set up out() and err(), as otherwise
 // if an assertion fails it cannot print the message
-assert(!ENVIRONMENT_IS_SHELL, "shell environment detected but not enabled at build time.  Add `shell` to `-sENVIRONMENT` to enable.");
+assert(!ENVIRONMENT_IS_SHELL, "shell environment detected but not enabled at build time (add `shell` to `-sENVIRONMENT` to enable)");
 
 // end include: shell.js
 // include: preamble.js
@@ -243,7 +244,7 @@ if (!globalThis.WebAssembly) {
 var ABORT = false;
 
 // set by exit() and abort().  Passed to 'onExit' handler.
-// NOTE: This is also used as the process return code code in shell environments
+// NOTE: This is also used as the process return code in shell environments
 // but only when noExitRuntime is false.
 var EXITSTATUS;
 
@@ -265,40 +266,12 @@ var EXITSTATUS;
  */ var isFileURI = filename => filename.startsWith("file://");
 
 // include: runtime_common.js
-// include: runtime_stack_check.js
-// Initializes the stack cookie. Called at the startup of main and at the startup of each thread in pthreads mode.
-function writeStackCookie() {
-  var max = _emscripten_stack_get_end();
-  assert((max & 3) == 0);
-  // If the stack ends at address zero we write our cookies 4 bytes into the
-  // stack.  This prevents interference with SAFE_HEAP and ASAN which also
-  // monitor writes to address zero.
-  if (max == 0) {
-    max += 4;
-  }
-  // The stack grow downwards towards _emscripten_stack_get_end.
-  // We write cookies to the final two words in the stack and detect if they are
-  // ever overwritten.
-  HEAPU32[SAFE_HEAP_INDEX(HEAPU32, ((max) >> 2), "storing")] = 34821223;
-  HEAPU32[SAFE_HEAP_INDEX(HEAPU32, (((max) + (4)) >> 2), "storing")] = 2310721022;
-}
-
-function checkStackCookie() {
-  if (ABORT) return;
-  var max = _emscripten_stack_get_end();
-  // See writeStackCookie().
-  if (max == 0) {
-    max += 4;
-  }
-  var cookie1 = HEAPU32[SAFE_HEAP_INDEX(HEAPU32, ((max) >> 2), "loading")];
-  var cookie2 = HEAPU32[SAFE_HEAP_INDEX(HEAPU32, (((max) + (4)) >> 2), "loading")];
-  if (cookie1 != 34821223 || cookie2 != 2310721022) {
-    abort(`Stack overflow! Stack cookie has been overwritten at ${ptrToString(max)}, expected hex dwords 0x89BACDFE and 0x2135467, but received ${ptrToString(cookie2)} ${ptrToString(cookie1)}`);
-  }
-}
-
-// end include: runtime_stack_check.js
 // include: runtime_exceptions.js
+// Base Emscripten EH error class
+class EmscriptenEH {}
+
+class EmscriptenSjLj extends EmscriptenEH {}
+
 // end include: runtime_exceptions.js
 // include: runtime_debug.js
 var runtimeDebug = true;
@@ -321,14 +294,33 @@ function dbg(...args) {
 })();
 
 function consumedModuleProp(prop) {
-  if (!Object.getOwnPropertyDescriptor(Module, prop)) {
-    Object.defineProperty(Module, prop, {
-      configurable: true,
-      set() {
-        abort(`Attempt to set \`Module.${prop}\` after it has already been processed.  This can happen, for example, when code is injected via '--post-js' rather than '--pre-js'`);
+  var value = Module[prop];
+  var msg = `Attempt to modify \`Module.${prop}\` after it has already been processed.  This can happen, for example, when code is injected via '--post-js' rather than '--pre-js'`;
+  if (Array.isArray(value)) {
+    value = new Proxy(value, {
+      set(target, key, val) {
+        abort(msg);
+        return false;
+      },
+      defineProperty(target, key, descriptor) {
+        abort(msg);
+        return false;
+      },
+      deleteProperty(target, key) {
+        abort(msg);
+        return false;
       }
     });
   }
+  Object.defineProperty(Module, prop, {
+    configurable: true,
+    get() {
+      return value;
+    },
+    set() {
+      abort(msg);
+    }
+  });
 }
 
 function makeInvalidEarlyAccess(name) {
@@ -369,6 +361,47 @@ function unexportedRuntimeSymbol(sym) {
 }
 
 // end include: runtime_debug.js
+// include: runtime_stack_check.js
+const stackCookie1 = 34821223;
+
+const stackCookie2 = 2310721022;
+
+// Initializes the stack cookie. Called at the startup of main and at the startup of each thread in pthreads mode.
+function writeStackCookie() {
+  var max = _emscripten_stack_get_end();
+  assert((max & 3) == 0);
+  // If the stack ends at address zero we write our cookies 4 bytes into the
+  // stack.  This prevents interference with SAFE_HEAP and ASAN which also
+  // monitor writes to address zero.
+  if (max == 0) {
+    max += 4;
+  }
+  // The stack grow downwards towards _emscripten_stack_get_end.
+  // We write cookies to the final two words in the stack and detect if they are
+  // ever overwritten.
+  HEAPU32[SAFE_HEAP_INDEX(HEAPU32, ((max) >> 2), "storing")] = stackCookie1;
+  HEAPU32[SAFE_HEAP_INDEX(HEAPU32, (((max) + (4)) >> 2), "storing")] = stackCookie2;
+}
+
+function u32ToHexString(num) {
+  return "0x" + (num >>> 0).toString(16).padStart(8, "0");
+}
+
+function checkStackCookie() {
+  if (ABORT) return;
+  var max = _emscripten_stack_get_end();
+  // See writeStackCookie().
+  if (max == 0) {
+    max += 4;
+  }
+  var val1 = HEAPU32[SAFE_HEAP_INDEX(HEAPU32, ((max) >> 2), "loading")];
+  var val2 = HEAPU32[SAFE_HEAP_INDEX(HEAPU32, (((max) + (4)) >> 2), "loading")];
+  if (val1 != stackCookie1 || val2 != stackCookie2) {
+    abort(`Stack overflow! Stack cookie has been overwritten at ${ptrToString(max)}, expected hex dwords ${u32ToHexString(stackCookie2)} and ${u32ToHexString(stackCookie1)}, but received ${u32ToHexString(val2)} ${u32ToHexString(val1)}`);
+  }
+}
+
+// end include: runtime_stack_check.js
 // include: runtime_safe_heap.js
 function SAFE_HEAP_INDEX(arr, idx, action) {
   const bytes = arr.BYTES_PER_ELEMENT;
@@ -393,19 +426,20 @@ function alignfault() {
 }
 
 // end include: runtime_safe_heap.js
-var readyPromiseResolve, readyPromiseReject;
-
 // Memory management
-var /** @type {!Int8Array} */ HEAP8, /** @type {!Uint8Array} */ HEAPU8, /** @type {!Int16Array} */ HEAP16, /** @type {!Uint16Array} */ HEAPU16, /** @type {!Int32Array} */ HEAP32, /** @type {!Uint32Array} */ HEAPU32, /** @type {!Float32Array} */ HEAPF32, /** @type {!Float64Array} */ HEAPF64;
-
-// BigInt64Array type is not correctly defined in closure
-var /** not-@type {!BigInt64Array} */ HEAP64, /* BigUint64Array type is not correctly defined in closure
-/** not-@type {!BigUint64Array} */ HEAPU64;
-
 var runtimeInitialized = false;
 
+// When ALLOW_MEMORY_GROWTH is enabled, the conversion from Wasm
+// memory to ArrayBuffer requires some additional logic.
+function getMemoryBuffer() {
+  return wasmMemory.buffer;
+}
+
 function updateMemoryViews() {
-  var b = wasmMemory.buffer;
+  // If we already have a heap that is resizeable/growable buffer we don't
+  // need to do anything in updateMemoryViews.
+  if (HEAP8?.buffer?.resizable) return;
+  var b = getMemoryBuffer();
   Module["HEAP8"] = HEAP8 = new Int8Array(b);
   Module["HEAP16"] = HEAP16 = new Int16Array(b);
   Module["HEAPU8"] = HEAPU8 = new Uint8Array(b);
@@ -424,11 +458,10 @@ function updateMemoryViews() {
 assert(globalThis.Int32Array && globalThis.Float64Array && Int32Array.prototype.subarray && Int32Array.prototype.set, "JS engine does not provide full typed array support");
 
 function preRun() {
-  if (Module["preRun"]) {
-    if (typeof Module["preRun"] == "function") Module["preRun"] = [ Module["preRun"] ];
-    while (Module["preRun"].length) {
-      addOnPreRun(Module["preRun"].shift());
-    }
+  var preRun = Module["preRun"];
+  if (preRun) {
+    if (typeof preRun == "function") preRun = [ preRun ];
+    onPreRuns.push(...preRun);
   }
   consumedModuleProp("preRun");
   // Begin ATPRERUNS hooks
@@ -441,25 +474,27 @@ function initRuntime() {
   checkStackCookie();
   // No ATINITS hooks
   wasmExports["__wasm_call_ctors"]();
+  // No ATPOSTCTORS hooks
+  checkStackCookie();
 }
 
 function postRun() {
   checkStackCookie();
-  // PThreads reuse the runtime from the main thread.
-  if (Module["postRun"]) {
-    if (typeof Module["postRun"] == "function") Module["postRun"] = [ Module["postRun"] ];
-    while (Module["postRun"].length) {
-      addOnPostRun(Module["postRun"].shift());
-    }
+  var postRun = Module["postRun"];
+  if (postRun) {
+    if (typeof postRun == "function") postRun = [ postRun ];
+    onPostRuns.push(...postRun);
   }
   consumedModuleProp("postRun");
   // Begin ATPOSTRUNS hooks
   callRuntimeCallbacks(onPostRuns);
 }
 
-/** @param {string|number=} what */ function abort(what) {
+/**
+ * @param {string|number=} what
+ */ function abort(what) {
   Module["onAbort"]?.(what);
-  what = "Aborted(" + what + ")";
+  what = `Aborted(${what})`;
   // TODO(sbc): Should we remove printing and leave it up to whoever
   // catches the exception?
   err(what);
@@ -477,7 +512,6 @@ function postRun() {
   // though it can.
   // TODO(https://github.com/google/closure-compiler/pull/3913): Remove if/when upstream closure gets fixed.
   /** @suppress {checkTypes} */ var e = new WebAssembly.RuntimeError(what);
-  readyPromiseReject?.(e);
   // Throw the error whether or not MODULARIZE is set because abort is used
   // in code paths apart from instantiation where an exception is expected
   // to be thrown when abort is called.
@@ -485,47 +519,29 @@ function postRun() {
 }
 
 // show errors on likely calls to FS when it was not included
+function fsMissing() {
+  abort("Filesystem support (FS) was not included. The problem is that you are using files from JS, but files were not used from C/C++, so filesystem support was not auto-included. You can force-include filesystem support with -sFORCE_FILESYSTEM");
+}
+
 var FS = {
-  error() {
-    abort("Filesystem support (FS) was not included. The problem is that you are using files from JS, but files were not used from C/C++, so filesystem support was not auto-included. You can force-include filesystem support with -sFORCE_FILESYSTEM");
-  },
-  init() {
-    FS.error();
-  },
-  createDataFile() {
-    FS.error();
-  },
-  createPreloadedFile() {
-    FS.error();
-  },
-  createLazyFile() {
-    FS.error();
-  },
-  open() {
-    FS.error();
-  },
-  mkdev() {
-    FS.error();
-  },
-  registerDevice() {
-    FS.error();
-  },
-  analyzePath() {
-    FS.error();
-  },
-  ErrnoError() {
-    FS.error();
-  }
+  init: fsMissing,
+  createDataFile: fsMissing,
+  createPreloadedFile: fsMissing,
+  createLazyFile: fsMissing,
+  open: fsMissing,
+  mkdev: fsMissing,
+  registerDevice: fsMissing,
+  analyzePath: fsMissing,
+  ErrnoError: fsMissing
 };
 
-function createExportWrapper(name, nargs) {
+function createExportWrapper(name, func, nargs) {
+  assert(func);
   return (...args) => {
     assert(runtimeInitialized, `native function \`${name}\` called before runtime initialization`);
-    var f = wasmExports[name];
-    assert(f, `exported native function \`${name}\` not found`);
     // Only assert for too many arguments. Too few can be valid since the missing arguments will be zero filled.
     assert(args.length <= nargs, `native function \`${name}\` called with ${args.length} args but expects ${nargs}`);
-    return f(...args);
+    return func(...args);
   };
 }
 
@@ -536,13 +552,10 @@ function findWasmBinary() {
 }
 
 function getBinarySync(file) {
-  if (file == wasmBinaryFile && wasmBinary) {
-    return new Uint8Array(wasmBinary);
-  }
   if (readBinary) {
     return readBinary(file);
   }
-  // Throwing a plain string here, even though it not normally adviables since
+  // Throwing a plain string here, even though it not normally advisable since
   // this gets turning into an `abort` in instantiateArrayBuffer.
   throw "both async and sync fetching of the wasm failed";
 }
@@ -608,7 +621,7 @@ async function createWasm() {
   // Load the wasm module and create an instance of using native support in the JS engine.
   // handle a generated wasm instance, receiving its exports and
   // performing other necessary setup
-  /** @param {WebAssembly.Module=} module*/ function receiveInstance(instance, module) {
+  function receiveInstance(instance) {
     wasmExports = instance.exports;
     assignWasmExports(wasmExports);
     updateMemoryViews();
@@ -635,15 +648,14 @@ async function createWasm() {
   // performing.
   // Also pthreads and wasm workers initialize the wasm instance through this
   // path.
-  if (Module["instantiateWasm"]) {
-    return new Promise((resolve, reject) => {
+  var instantiateWasm = Module["instantiateWasm"];
+  if (instantiateWasm) {
+    return new Promise(resolve => {
       try {
-        Module["instantiateWasm"](info, (inst, mod) => {
-          resolve(receiveInstance(inst, mod));
-        });
+        instantiateWasm(info, inst => resolve(receiveInstance(inst)));
       } catch (e) {
         err(`Module.instantiateWasm callback failed with error: ${e}`);
-        reject(e);
+        throw e;
       }
     });
   }
@@ -663,6 +675,26 @@ class ExitStatus {
   }
 }
 
+/** @type {!Int16Array} */ var HEAP16;
+
+/** @type {!Int32Array} */ var HEAP32;
+
+/** not-@type {!BigInt64Array} */ var HEAP64;
+
+/** @type {!Int8Array} */ var HEAP8;
+
+/** @type {!Float32Array} */ var HEAPF32;
+
+/** @type {!Float64Array} */ var HEAPF64;
+
+/** @type {!Uint16Array} */ var HEAPU16;
+
+/** @type {!Uint32Array} */ var HEAPU32;
+
+/** not-@type {!BigUint64Array} */ var HEAPU64;
+
+/** @type {!Uint8Array} */ var HEAPU8;
+
 var callRuntimeCallbacks = callbacks => {
   while (callbacks.length > 0) {
     // Pass the module as the first argument.
@@ -679,9 +711,9 @@ var onPreRuns = [];
 var addOnPreRun = cb => onPreRuns.push(cb);
 
 /**
-     * @param {number} ptr
-     * @param {string} type
-     */ function getValue(ptr, type = "i8") {
+   * @param {number} ptr
+   * @param {string} type
+   */ function getValue(ptr, type = "i8") {
   if (type.endsWith("*")) type = "*";
   switch (type) {
    case "i1":
@@ -715,18 +747,18 @@ var addOnPreRun = cb => onPreRuns.push(cb);
 
 var noExitRuntime = true;
 
-var ptrToString = ptr => {
+function ptrToString(ptr) {
   assert(typeof ptr === "number", `ptrToString expects a number, got ${typeof ptr}`);
   // Convert to 32-bit unsigned value
   ptr >>>= 0;
   return "0x" + ptr.toString(16).padStart(8, "0");
-};
+}
 
 /**
-     * @param {number} ptr
-     * @param {number} value
-     * @param {string} type
-     */ function setValue(ptr, value, type = "i8") {
+   * @param {number} ptr
+   * @param {number} value
+   * @param {string} type
+   */ function setValue(ptr, value, type = "i8") {
   if (type.endsWith("*")) type = "*";
   switch (type) {
    case "i1":
@@ -781,7 +813,13 @@ var warnOnce = text => {
 
 var UTF8Decoder = globalThis.TextDecoder && new TextDecoder;
 
-var findStringEnd = (heapOrArray, idx, maxBytesToRead, ignoreNul) => {
+/**
+   * heapOrArray is either a regular array, or a JavaScript typed array view.
+   * @param {number} idx
+   * @param {number=} maxBytesToRead
+   * @param {boolean=} ignoreNul
+   * @return {number}
+   */ var findStringEnd = (heapOrArray, idx, maxBytesToRead, ignoreNul) => {
   var maxIdx = idx + maxBytesToRead;
   if (ignoreNul) return maxIdx;
   // TextDecoder needs to know the byte length in advance, it doesn't stop on
@@ -793,15 +831,15 @@ var findStringEnd = (heapOrArray, idx, maxBytesToRead, ignoreNul) => {
 };
 
 /**
-     * Given a pointer 'idx' to a null-terminated UTF8-encoded string in the given
-     * array that contains uint8 values, returns a copy of that string as a
-     * Javascript String object.
-     * heapOrArray is either a regular array, or a JavaScript typed array view.
-     * @param {number=} idx
-     * @param {number=} maxBytesToRead
-     * @param {boolean=} ignoreNul - If true, the function will not stop on a NUL character.
-     * @return {string}
-     */ var UTF8ArrayToString = (heapOrArray, idx = 0, maxBytesToRead, ignoreNul) => {
+   * Given a pointer 'idx' to a null-terminated UTF8-encoded string in the given
+   * array that contains uint8 values, returns a copy of that string as a
+   * Javascript String object.
+   * heapOrArray is either a regular array, or a JavaScript typed array view.
+   * @param {number=} idx
+   * @param {number=} maxBytesToRead
+   * @param {boolean=} ignoreNul - If true, the function will not stop on a NUL character.
+   * @return {string}
+   */ var UTF8ArrayToString = (heapOrArray, idx = 0, maxBytesToRead, ignoreNul) => {
   var endPtr = findStringEnd(heapOrArray, idx, maxBytesToRead, ignoreNul);
   // When using conditional TextDecoder, skip it for short strings as the overhead of the native call is not worth it.
   if (endPtr - idx > 16 && heapOrArray.buffer && UTF8Decoder) {
@@ -827,7 +865,7 @@ var findStringEnd = (heapOrArray, idx, maxBytesToRead, ignoreNul) => {
     if ((u0 & 240) == 224) {
       u0 = ((u0 & 15) << 12) | (u1 << 6) | u2;
     } else {
-      if ((u0 & 248) != 240) warnOnce("Invalid UTF-8 leading byte " + ptrToString(u0) + " encountered when deserializing a UTF-8 string in wasm memory to a JS string!");
+      if ((u0 & 248) != 240) warnOnce(`Invalid UTF-8 leading byte ${ptrToString(u0)} encountered when deserializing a UTF-8 string in wasm memory to a JS string!`);
       u0 = ((u0 & 7) << 18) | (u1 << 12) | (u2 << 6) | (heapOrArray[idx++] & 63);
     }
     if (u0 < 65536) {
@@ -841,18 +879,18 @@ var findStringEnd = (heapOrArray, idx, maxBytesToRead, ignoreNul) => {
 };
 
 /**
-     * Given a pointer 'ptr' to a null-terminated UTF8-encoded string in the
-     * emscripten HEAP, returns a copy of that string as a Javascript String object.
-     *
-     * @param {number} ptr
-     * @param {number=} maxBytesToRead - An optional length that specifies the
-     *   maximum number of bytes to read. You can omit this parameter to scan the
-     *   string until the first 0 byte. If maxBytesToRead is passed, and the string
-     *   at [ptr, ptr+maxBytesToReadr[ contains a null byte in the middle, then the
-     *   string will cut short at that byte index.
-     * @param {boolean=} ignoreNul - If true, the function will not stop on a NUL character.
-     * @return {string}
-     */ var UTF8ToString = (ptr, maxBytesToRead, ignoreNul) => {
+   * Given a pointer 'ptr' to a null-terminated UTF8-encoded string in the
+   * emscripten HEAP, returns a copy of that string as a Javascript String object.
+   *
+   * @param {number} ptr
+   * @param {number=} maxBytesToRead - An optional length that specifies the
+   *   maximum number of bytes to read. You can omit this parameter to scan the
+   *   string until the first 0 byte. If maxBytesToRead is passed, and the string
+   *   at [ptr, ptr+maxBytesToReadr[ contains a null byte in the middle, then the
+   *   string will cut short at that byte index.
+   * @param {boolean=} ignoreNul - If true, the function will not stop on a NUL character.
+   * @return {string}
+   */ var UTF8ToString = (ptr, maxBytesToRead, ignoreNul) => {
   assert(typeof ptr == "number", `UTF8ToString expects a number (got ${typeof ptr})`);
   return ptr ? UTF8ArrayToString(HEAPU8, ptr, maxBytesToRead, ignoreNul) : "";
 };
@@ -905,17 +943,18 @@ class ExceptionInfo {
   }
 }
 
-var exceptionLast = 0;
-
 var uncaughtExceptionCount = 0;
+
+var __Unwind_RaiseException = ex => {
+  assert(false, "Exception thrown, but exception catching is not enabled. Compile with -sNO_DISABLE_EXCEPTION_CATCHING or -sEXCEPTION_CATCHING_ALLOWED=[..] to catch.");
+};
 
 var ___cxa_throw = (ptr, type, destructor) => {
   var info = new ExceptionInfo(ptr);
   // Initialize ExceptionInfo content after it was allocated in __cxa_allocate_exception.
   info.init(type, destructor);
-  exceptionLast = ptr;
   uncaughtExceptionCount++;
-  assert(false, "Exception thrown, but exception catching is not enabled. Compile with -sNO_DISABLE_EXCEPTION_CATCHING or -sEXCEPTION_CATCHING_ALLOWED=[..] to catch.");
+  __Unwind_RaiseException(ptr);
 };
 
 var __abort_js = () => abort("native code called abort()");
@@ -1083,7 +1122,6 @@ var _proc_exit = code => {
   // if exit() was called explicitly, warn the user if the runtime isn't actually being shut down
   if (keepRuntimeAlive() && !implicit) {
     var msg = `program exited (with status: ${status}), but keepRuntimeAlive() is set (counter=${runtimeKeepaliveCounter}) due to an async operation, so halting execution but not exiting the runtime or preventing further async execution (you can use emscripten_force_exit, if you want to force a true shutdown)`;
-    readyPromiseReject?.(msg);
     err(msg);
   }
   _proc_exit(status);
@@ -1113,7 +1151,7 @@ var printCharBuffers = [ null, [], [] ];
 var printChar = (stream, curr) => {
   var buffer = printCharBuffers[stream];
   assert(buffer);
-  if (curr === 0 || curr === 10) {
+  if (!curr || curr === 10) {
     (stream === 1 ? out : err)(UTF8ArrayToString(buffer));
     buffer.length = 0;
   } else {
@@ -1147,7 +1185,7 @@ var _fd_write = (fd, iov, iovcnt, pnum) => {
 var getCFunc = ident => {
   var func = Module["_" + ident];
   // closure exported function
-  assert(func, "Cannot call unknown function " + ident + ", make sure it is exported");
+  assert(func, `Cannot call unknown function ${ident}, make sure it is exported`);
   return func;
 };
 
@@ -1206,7 +1244,7 @@ var stringToUTF8Array = (str, heap, outIdx, maxBytesToWrite) => {
       heap[outIdx++] = 128 | (u & 63);
     } else {
       if (outIdx + 3 >= endIdx) break;
-      if (u > 1114111) warnOnce("Invalid Unicode code point " + ptrToString(u) + " encountered when serializing a JS string to a UTF-8 string in wasm memory! (Valid unicode code points should be in range 0-0x10FFFF).");
+      if (u > 1114111) warnOnce(`Invalid Unicode code point ${ptrToString(u)} encountered when serializing a JS string to a UTF-8 string in wasm memory! (Valid unicode code points should be in range 0-0x10FFFF).`);
       heap[outIdx++] = 240 | (u >> 18);
       heap[outIdx++] = 128 | ((u >> 12) & 63);
       heap[outIdx++] = 128 | ((u >> 6) & 63);
@@ -1222,7 +1260,7 @@ var stringToUTF8Array = (str, heap, outIdx, maxBytesToWrite) => {
 };
 
 var stringToUTF8 = (str, outPtr, maxBytesToWrite) => {
-  assert(typeof maxBytesToWrite == "number", "stringToUTF8(str, outPtr, maxBytesToWrite) is missing the third parameter that specifies the length of the output buffer!");
+  assert(typeof maxBytesToWrite == "number", "stringToUTF8 requires a third parameter that specifies the length of the output buffer");
   return stringToUTF8Array(str, HEAPU8, outPtr, maxBytesToWrite);
 };
 
@@ -1236,11 +1274,11 @@ var stringToUTF8OnStack = str => {
 };
 
 /**
-     * @param {string|null=} returnType
-     * @param {Array=} argTypes
-     * @param {Array=} args
-     * @param {Object=} opts
-     */ var ccall = (ident, returnType, argTypes, args, opts) => {
+   * @param {string|null=} returnType
+   * @param {Array=} argTypes
+   * @param {Array=} args
+   * @param {Object=} opts
+   */ var ccall = (ident, returnType, argTypes, args, opts) => {
   // For fast lookup of conversion functions
   var toC = {
     "string": str => {
@@ -1267,12 +1305,12 @@ var stringToUTF8OnStack = str => {
   var func = getCFunc(ident);
   var cArgs = [];
   var stack = 0;
-  assert(returnType !== "array", 'Return type should not be "array".');
+  assert(returnType !== "array", 'return type should not be "array"');
   if (args) {
     for (var i = 0; i < args.length; i++) {
       var converter = toC[argTypes[i]];
       if (converter) {
-        if (stack === 0) stack = stackSave();
+        if (!stack) stack = stackSave();
         cArgs[i] = converter(args[i]);
       } else {
         cArgs[i] = args[i];
@@ -1281,7 +1319,7 @@ var stringToUTF8OnStack = str => {
   }
   var ret = func(...cArgs);
   function onDone(ret) {
-    if (stack !== 0) stackRestore(stack);
+    if (stack) stackRestore(stack);
     return convertReturnValue(ret);
   }
   ret = onDone(ret);
@@ -1289,10 +1327,10 @@ var stringToUTF8OnStack = str => {
 };
 
 /**
-     * @param {string=} returnType
-     * @param {Array=} argTypes
-     * @param {Object=} opts
-     */ var cwrap = (ident, returnType, argTypes, opts) => (...args) => ccall(ident, returnType, argTypes, args, opts);
+   * @param {string=} returnType
+   * @param {Array=} argTypes
+   * @param {Object=} opts
+   */ var cwrap = (ident, returnType, argTypes, opts) => (...args) => ccall(ident, returnType, argTypes, args, opts);
 
 // End JS library code
 // include: postlibrary.js
@@ -1303,12 +1341,11 @@ var stringToUTF8OnStack = str => {
   if (Module["noExitRuntime"]) noExitRuntime = Module["noExitRuntime"];
   if (Module["print"]) out = Module["print"];
   if (Module["printErr"]) err = Module["printErr"];
-  if (Module["wasmBinary"]) wasmBinary = Module["wasmBinary"];
   Module["FS_createDataFile"] = FS.createDataFile;
   Module["FS_createPreloadedFile"] = FS.createPreloadedFile;
   // End ATMODULES hooks
   checkIncomingModuleAPI();
-  if (Module["arguments"]) arguments_ = Module["arguments"];
+  if (Module["arguments"]) programArgs = Module["arguments"];
   if (Module["thisProgram"]) thisProgram = Module["thisProgram"];
   // Assertions on removed incoming Module JS APIs.
   assert(typeof Module["memoryInitializerPrefixURL"] == "undefined", "Module.memoryInitializerPrefixURL option was removed, use Module.locateFile instead");
@@ -1325,10 +1362,13 @@ var stringToUTF8OnStack = str => {
   // If memory is defined in wasm, the user can't provide it, or set INITIAL_MEMORY
   assert(typeof Module["wasmMemory"] == "undefined", "Use of `wasmMemory` detected.  Use -sIMPORTED_MEMORY to define wasmMemory externally");
   assert(typeof Module["INITIAL_MEMORY"] == "undefined", "Detected runtime INITIAL_MEMORY setting.  Use -sIMPORTED_MEMORY to define wasmMemory dynamically");
-  if (Module["preInit"]) {
-    if (typeof Module["preInit"] == "function") Module["preInit"] = [ Module["preInit"] ];
-    while (Module["preInit"].length > 0) {
-      Module["preInit"].shift()();
+  var preInit = Module["preInit"];
+  if (preInit) {
+    if (typeof preInit == "function") Module["preInit"] = preInit = [ preInit ];
+    // Written as a loop so that preInit functions that themselves add more
+    // preInit functions.  Is this actually needed?
+    while (preInit.length > 0) {
+      preInit.shift()();
     }
   }
   consumedModuleProp("preInit");
@@ -1348,6 +1388,26 @@ Module["UTF8ToString"] = UTF8ToString;
 // End runtime exports
 // Begin JS library exports
 Module["ExitStatus"] = ExitStatus;
+
+Module["HEAP16"] = HEAP16;
+
+Module["HEAP32"] = HEAP32;
+
+Module["HEAP64"] = HEAP64;
+
+Module["HEAP8"] = HEAP8;
+
+Module["HEAPF32"] = HEAPF32;
+
+Module["HEAPF64"] = HEAPF64;
+
+Module["HEAPU16"] = HEAPU16;
+
+Module["HEAPU32"] = HEAPU32;
+
+Module["HEAPU64"] = HEAPU64;
+
+Module["HEAPU8"] = HEAPU8;
 
 Module["addOnPostRun"] = addOnPostRun;
 
@@ -1387,9 +1447,9 @@ Module["___cxa_throw"] = ___cxa_throw;
 
 Module["ExceptionInfo"] = ExceptionInfo;
 
-Module["exceptionLast"] = exceptionLast;
-
 Module["uncaughtExceptionCount"] = uncaughtExceptionCount;
+
+Module["__Unwind_RaiseException"] = __Unwind_RaiseException;
 
 Module["__abort_js"] = __abort_js;
 
@@ -1471,15 +1531,41 @@ Module["cwrap"] = cwrap;
 // end include: postlibrary.js
 function checkIncomingModuleAPI() {
   ignoredModuleProp("fetchSettings");
+  ignoredModuleProp("logReadFiles");
+  ignoredModuleProp("loadSplitModule");
+  ignoredModuleProp("onMalloc");
+  ignoredModuleProp("onRealloc");
+  ignoredModuleProp("onFree");
+  ignoredModuleProp("onSbrkGrow");
+  ignoredModuleProp("onCOSCacheHit");
+  ignoredModuleProp("onCOSCacheMiss");
+  ignoredModuleProp("onCOSStore");
+  ignoredModuleProp("GL_MAX_TEXTURE_IMAGE_UNITS");
+  ignoredModuleProp("SDL_canPlayWithWebAudio");
+  ignoredModuleProp("SDL_numSimultaneouslyQueuedBuffers");
+  ignoredModuleProp("freePreloadedMediaOnUse");
+  ignoredModuleProp("preinitializedWebGLContext");
+  ignoredModuleProp("keyboardListeningElement");
+  ignoredModuleProp("doNotCaptureKeyboard");
+  ignoredModuleProp("extraStackTrace");
+  ignoredModuleProp("preloadPlugins");
+  ignoredModuleProp("preMainLoop");
+  ignoredModuleProp("postMainLoop");
+  ignoredModuleProp("forcedAspectRatio");
+  ignoredModuleProp("mainScriptUrlOrBlob");
+  ignoredModuleProp("onFullScreen");
+  ignoredModuleProp("INITIAL_MEMORY");
+  ignoredModuleProp("wasmMemory");
+  ignoredModuleProp("wasmBinary");
 }
 
 var ASM_CONSTS = {
-  85892: ($0, $1, $2, $3, $4) => {
+  87504: ($0, $1, $2, $3, $4) => {
     if (typeof _wasmRecorderVisualizationCallback === "function") {
       _wasmRecorderVisualizationCallback($0, $1, $2, $3, $4);
     }
   },
-  86018: ($0, $1, $2) => {
+  87630: ($0, $1, $2) => {
     const data = new Uint8Array(HEAPU8.subarray($0, $0 + $1));
     const blob = new Blob([ data ], {
       type: "audio/wav"
@@ -1504,7 +1590,7 @@ var ASM_CONSTS = {
       URL.revokeObjectURL(url);
     }
   },
-  86688: () => {
+  88300: () => {
     if (!RecorderModule.wasmWorker) {
       var workerUri = "assets/packages/flutter_recorder/web/worker.dart.js";
       RecorderModule.wasmWorker = new Worker(workerUri);
@@ -1513,7 +1599,7 @@ var ASM_CONSTS = {
       console.log("EM_ASM web worker already created!");
     }
   },
-  87002: ($0, $1, $2) => {
+  88614: ($0, $1, $2) => {
     if (RecorderModule.wasmWorker) {
       RecorderModule.wasmWorker.postMessage({
         message: UTF8ToString($0),
@@ -1524,7 +1610,7 @@ var ASM_CONSTS = {
       console.error("Worker not found.");
     }
   },
-  87188: ($0, $1, $2) => {
+  88800: ($0, $1, $2) => {
     if (RecorderModule.wasmWorker) {
       const audioDataArray = new Uint8Array(RecorderModule.HEAPU8.subarray($1, $1 + $2));
       RecorderModule.wasmWorker.postMessage({
@@ -1535,7 +1621,17 @@ var ASM_CONSTS = {
       console.error("Worker not found.");
     }
   },
-  87451: ($0, $1, $2, $3, $4) => {
+  89063: ($0, $1) => {
+    if (RecorderModule.wasmWorker) {
+      RecorderModule.wasmWorker.postMessage({
+        message: UTF8ToString($0),
+        type: $1
+      });
+    } else {
+      console.error("Worker not found.");
+    }
+  },
+  89230: ($0, $1, $2, $3, $4) => {
     if (typeof window === "undefined" || (window.AudioContext || window.webkitAudioContext) === undefined) {
       return 0;
     }
@@ -1607,7 +1703,7 @@ var ASM_CONSTS = {
     window.miniaudio.referenceCount += 1;
     return 1;
   },
-  89629: () => {
+  91408: () => {
     if (typeof (window.miniaudio) !== "undefined") {
       window.miniaudio.unlock_event_types.map(function(event_type) {
         document.removeEventListener(event_type, window.miniaudio.unlock, true);
@@ -1618,8 +1714,8 @@ var ASM_CONSTS = {
       }
     }
   },
-  89933: () => (navigator.mediaDevices !== undefined && navigator.mediaDevices.getUserMedia !== undefined),
-  90037: () => {
+  91712: () => (navigator.mediaDevices !== undefined && navigator.mediaDevices.getUserMedia !== undefined),
+  91816: () => {
     try {
       var temp = new (window.AudioContext || window.webkitAudioContext);
       var sampleRate = temp.sampleRate;
@@ -1629,7 +1725,7 @@ var ASM_CONSTS = {
       return 0;
     }
   },
-  90208: ($0, $1, $2, $3, $4, $5) => {
+  91987: ($0, $1, $2, $3, $4, $5) => {
     var deviceType = $0;
     var channels = $1;
     var sampleRate = $2;
@@ -1700,8 +1796,8 @@ var ASM_CONSTS = {
     device.pDevice = pDevice;
     return window.miniaudio.track_device(device);
   },
-  93085: $0 => window.miniaudio.get_device_by_index($0).webaudio.sampleRate,
-  93158: $0 => {
+  94864: $0 => window.miniaudio.get_device_by_index($0).webaudio.sampleRate,
+  94937: $0 => {
     var device = window.miniaudio.get_device_by_index($0);
     if (device.scriptNode !== undefined) {
       device.scriptNode.onaudioprocess = function(e) {};
@@ -1716,20 +1812,20 @@ var ASM_CONSTS = {
     device.webaudio = undefined;
     device.pDevice = undefined;
   },
-  93558: $0 => {
+  95337: $0 => {
     window.miniaudio.untrack_device_by_index($0);
   },
-  93608: $0 => {
+  95387: $0 => {
     var device = window.miniaudio.get_device_by_index($0);
     device.webaudio.resume();
     device.state = window.miniaudio.device_state.started;
   },
-  93747: $0 => {
+  95526: $0 => {
     var device = window.miniaudio.get_device_by_index($0);
     device.webaudio.suspend();
     device.state = window.miniaudio.device_state.stopped;
   },
-  93887: ($0, $1, $2) => {
+  95666: ($0, $1, $2) => {
     const data = new Uint8Array(HEAPU8.subarray($0, $0 + $1));
     const blob = new Blob([ data ], {
       type: "audio/ogg"
@@ -1756,15 +1852,23 @@ var ASM_CONSTS = {
 };
 
 // Imports from the Wasm binary.
+var _free = Module["_free"] = makeInvalidEarlyAccess("_free");
+
 var _flutter_recorder_createWorkerInWasm = Module["_flutter_recorder_createWorkerInWasm"] = makeInvalidEarlyAccess("_flutter_recorder_createWorkerInWasm");
 
 var __Z41flutter_recorder_sendSilenceEventToWorkerPKcbf = Module["__Z41flutter_recorder_sendSilenceEventToWorkerPKcbf"] = makeInvalidEarlyAccess("__Z41flutter_recorder_sendSilenceEventToWorkerPKcbf");
 
 var __Z35flutter_recorder_sendStreamToWorkerPKcPKhi = Module["__Z35flutter_recorder_sendStreamToWorkerPKcPKhi"] = makeInvalidEarlyAccess("__Z35flutter_recorder_sendStreamToWorkerPKcPKhi");
 
+var __Z41flutter_recorder_sendNotificationToWorkerPKci = Module["__Z41flutter_recorder_sendNotificationToWorkerPKci"] = makeInvalidEarlyAccess("__Z41flutter_recorder_sendNotificationToWorkerPKci");
+
 var _flutter_recorder_setDartEventCallbackForEngine = Module["_flutter_recorder_setDartEventCallbackForEngine"] = makeInvalidEarlyAccess("_flutter_recorder_setDartEventCallbackForEngine");
 
 var _flutter_recorder_setDartEventCallback = Module["_flutter_recorder_setDartEventCallback"] = makeInvalidEarlyAccess("_flutter_recorder_setDartEventCallback");
+
+var _flutter_recorder_setDartDeviceNotificationCallbackForEngine = Module["_flutter_recorder_setDartDeviceNotificationCallbackForEngine"] = makeInvalidEarlyAccess("_flutter_recorder_setDartDeviceNotificationCallbackForEngine");
+
+var _flutter_recorder_setDartDeviceNotificationCallback = Module["_flutter_recorder_setDartDeviceNotificationCallback"] = makeInvalidEarlyAccess("_flutter_recorder_setDartDeviceNotificationCallback");
 
 var _flutter_recorder_setDartVisualizationCallbackForEngine = Module["_flutter_recorder_setDartVisualizationCallbackForEngine"] = makeInvalidEarlyAccess("_flutter_recorder_setDartVisualizationCallbackForEngine");
 
@@ -1785,8 +1889,6 @@ var _flutter_recorder_requestEngineTeardownForEngine = Module["_flutter_recorder
 var _flutter_recorder_retireDartCallbacksFinalizer = Module["_flutter_recorder_retireDartCallbacksFinalizer"] = makeInvalidEarlyAccess("_flutter_recorder_retireDartCallbacksFinalizer");
 
 var _flutter_recorder_nativeFree = Module["_flutter_recorder_nativeFree"] = makeInvalidEarlyAccess("_flutter_recorder_nativeFree");
-
-var _free = Module["_free"] = makeInvalidEarlyAccess("_free");
 
 var _flutter_recorder_listCaptureDevices = Module["_flutter_recorder_listCaptureDevices"] = makeInvalidEarlyAccess("_flutter_recorder_listCaptureDevices");
 
@@ -1831,6 +1933,8 @@ var _flutter_recorder_setVisualizationEnabled = Module["_flutter_recorder_setVis
 var _flutter_recorder_isVisualizationEnabled = Module["_flutter_recorder_isVisualizationEnabled"] = makeInvalidEarlyAccess("_flutter_recorder_isVisualizationEnabled");
 
 var _flutter_recorder_setFftSmoothing = Module["_flutter_recorder_setFftSmoothing"] = makeInvalidEarlyAccess("_flutter_recorder_setFftSmoothing");
+
+var _flutter_recorder_setFftDecibelRange = Module["_flutter_recorder_setFftDecibelRange"] = makeInvalidEarlyAccess("_flutter_recorder_setFftDecibelRange");
 
 var _flutter_recorder_setLoopback = Module["_flutter_recorder_setLoopback"] = makeInvalidEarlyAccess("_flutter_recorder_setLoopback");
 
@@ -1893,11 +1997,15 @@ var __indirect_function_table = Module["__indirect_function_table"] = makeInvali
 var wasmMemory = Module["wasmMemory"] = makeInvalidEarlyAccess("wasmMemory");
 
 function assignWasmExports(wasmExports) {
+  assert(typeof wasmExports["free"] != "undefined", "missing Wasm export: free");
   assert(typeof wasmExports["flutter_recorder_createWorkerInWasm"] != "undefined", "missing Wasm export: flutter_recorder_createWorkerInWasm");
   assert(typeof wasmExports["_Z41flutter_recorder_sendSilenceEventToWorkerPKcbf"] != "undefined", "missing Wasm export: _Z41flutter_recorder_sendSilenceEventToWorkerPKcbf");
   assert(typeof wasmExports["_Z35flutter_recorder_sendStreamToWorkerPKcPKhi"] != "undefined", "missing Wasm export: _Z35flutter_recorder_sendStreamToWorkerPKcPKhi");
+  assert(typeof wasmExports["_Z41flutter_recorder_sendNotificationToWorkerPKci"] != "undefined", "missing Wasm export: _Z41flutter_recorder_sendNotificationToWorkerPKci");
   assert(typeof wasmExports["flutter_recorder_setDartEventCallbackForEngine"] != "undefined", "missing Wasm export: flutter_recorder_setDartEventCallbackForEngine");
   assert(typeof wasmExports["flutter_recorder_setDartEventCallback"] != "undefined", "missing Wasm export: flutter_recorder_setDartEventCallback");
+  assert(typeof wasmExports["flutter_recorder_setDartDeviceNotificationCallbackForEngine"] != "undefined", "missing Wasm export: flutter_recorder_setDartDeviceNotificationCallbackForEngine");
+  assert(typeof wasmExports["flutter_recorder_setDartDeviceNotificationCallback"] != "undefined", "missing Wasm export: flutter_recorder_setDartDeviceNotificationCallback");
   assert(typeof wasmExports["flutter_recorder_setDartVisualizationCallbackForEngine"] != "undefined", "missing Wasm export: flutter_recorder_setDartVisualizationCallbackForEngine");
   assert(typeof wasmExports["flutter_recorder_setDartVisualizationCallback"] != "undefined", "missing Wasm export: flutter_recorder_setDartVisualizationCallback");
   assert(typeof wasmExports["flutter_recorder_prepareEngineInit"] != "undefined", "missing Wasm export: flutter_recorder_prepareEngineInit");
@@ -1908,7 +2016,6 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports["flutter_recorder_requestEngineTeardownForEngine"] != "undefined", "missing Wasm export: flutter_recorder_requestEngineTeardownForEngine");
   assert(typeof wasmExports["flutter_recorder_retireDartCallbacksFinalizer"] != "undefined", "missing Wasm export: flutter_recorder_retireDartCallbacksFinalizer");
   assert(typeof wasmExports["flutter_recorder_nativeFree"] != "undefined", "missing Wasm export: flutter_recorder_nativeFree");
-  assert(typeof wasmExports["free"] != "undefined", "missing Wasm export: free");
   assert(typeof wasmExports["flutter_recorder_listCaptureDevices"] != "undefined", "missing Wasm export: flutter_recorder_listCaptureDevices");
   assert(typeof wasmExports["malloc"] != "undefined", "missing Wasm export: malloc");
   assert(typeof wasmExports["flutter_recorder_freeListCaptureDevices"] != "undefined", "missing Wasm export: flutter_recorder_freeListCaptureDevices");
@@ -1931,6 +2038,7 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports["flutter_recorder_setVisualizationEnabled"] != "undefined", "missing Wasm export: flutter_recorder_setVisualizationEnabled");
   assert(typeof wasmExports["flutter_recorder_isVisualizationEnabled"] != "undefined", "missing Wasm export: flutter_recorder_isVisualizationEnabled");
   assert(typeof wasmExports["flutter_recorder_setFftSmoothing"] != "undefined", "missing Wasm export: flutter_recorder_setFftSmoothing");
+  assert(typeof wasmExports["flutter_recorder_setFftDecibelRange"] != "undefined", "missing Wasm export: flutter_recorder_setFftDecibelRange");
   assert(typeof wasmExports["flutter_recorder_setLoopback"] != "undefined", "missing Wasm export: flutter_recorder_setLoopback");
   assert(typeof wasmExports["flutter_recorder_isLoopbackEnabled"] != "undefined", "missing Wasm export: flutter_recorder_isLoopbackEnabled");
   assert(typeof wasmExports["flutter_recorder_isFilterActive"] != "undefined", "missing Wasm export: flutter_recorder_isFilterActive");
@@ -1960,65 +2068,69 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports["emscripten_stack_get_current"] != "undefined", "missing Wasm export: emscripten_stack_get_current");
   assert(typeof wasmExports["memory"] != "undefined", "missing Wasm export: memory");
   assert(typeof wasmExports["__indirect_function_table"] != "undefined", "missing Wasm export: __indirect_function_table");
-  _flutter_recorder_createWorkerInWasm = Module["_flutter_recorder_createWorkerInWasm"] = createExportWrapper("flutter_recorder_createWorkerInWasm", 0);
-  __Z41flutter_recorder_sendSilenceEventToWorkerPKcbf = Module["__Z41flutter_recorder_sendSilenceEventToWorkerPKcbf"] = createExportWrapper("_Z41flutter_recorder_sendSilenceEventToWorkerPKcbf", 3);
-  __Z35flutter_recorder_sendStreamToWorkerPKcPKhi = Module["__Z35flutter_recorder_sendStreamToWorkerPKcPKhi"] = createExportWrapper("_Z35flutter_recorder_sendStreamToWorkerPKcPKhi", 3);
-  _flutter_recorder_setDartEventCallbackForEngine = Module["_flutter_recorder_setDartEventCallbackForEngine"] = createExportWrapper("flutter_recorder_setDartEventCallbackForEngine", 3);
-  _flutter_recorder_setDartEventCallback = Module["_flutter_recorder_setDartEventCallback"] = createExportWrapper("flutter_recorder_setDartEventCallback", 2);
-  _flutter_recorder_setDartVisualizationCallbackForEngine = Module["_flutter_recorder_setDartVisualizationCallbackForEngine"] = createExportWrapper("flutter_recorder_setDartVisualizationCallbackForEngine", 2);
-  _flutter_recorder_setDartVisualizationCallback = Module["_flutter_recorder_setDartVisualizationCallback"] = createExportWrapper("flutter_recorder_setDartVisualizationCallback", 1);
-  _flutter_recorder_prepareEngineInit = Module["_flutter_recorder_prepareEngineInit"] = createExportWrapper("flutter_recorder_prepareEngineInit", 1);
-  _flutter_recorder_currentEngineShutdownEpoch = Module["_flutter_recorder_currentEngineShutdownEpoch"] = createExportWrapper("flutter_recorder_currentEngineShutdownEpoch", 0);
-  _flutter_recorder_prepareEngineInitForRequest = Module["_flutter_recorder_prepareEngineInitForRequest"] = createExportWrapper("flutter_recorder_prepareEngineInitForRequest", 2);
-  _flutter_recorder_clearDartCallbackRegistrationsForEngine = Module["_flutter_recorder_clearDartCallbackRegistrationsForEngine"] = createExportWrapper("flutter_recorder_clearDartCallbackRegistrationsForEngine", 1);
-  _flutter_recorder_clearDartCallbackRegistrations = Module["_flutter_recorder_clearDartCallbackRegistrations"] = createExportWrapper("flutter_recorder_clearDartCallbackRegistrations", 0);
-  _flutter_recorder_requestEngineTeardownForEngine = Module["_flutter_recorder_requestEngineTeardownForEngine"] = createExportWrapper("flutter_recorder_requestEngineTeardownForEngine", 1);
-  _flutter_recorder_retireDartCallbacksFinalizer = Module["_flutter_recorder_retireDartCallbacksFinalizer"] = createExportWrapper("flutter_recorder_retireDartCallbacksFinalizer", 1);
-  _flutter_recorder_nativeFree = Module["_flutter_recorder_nativeFree"] = createExportWrapper("flutter_recorder_nativeFree", 1);
-  _free = Module["_free"] = createExportWrapper("free", 1);
-  _flutter_recorder_listCaptureDevices = Module["_flutter_recorder_listCaptureDevices"] = createExportWrapper("flutter_recorder_listCaptureDevices", 4);
-  _malloc = Module["_malloc"] = createExportWrapper("malloc", 1);
-  _flutter_recorder_freeListCaptureDevices = Module["_flutter_recorder_freeListCaptureDevices"] = createExportWrapper("flutter_recorder_freeListCaptureDevices", 4);
-  _flutter_recorder_init = Module["_flutter_recorder_init"] = createExportWrapper("flutter_recorder_init", 6);
-  _flutter_recorder_deinit = Module["_flutter_recorder_deinit"] = createExportWrapper("flutter_recorder_deinit", 0);
-  _flutter_recorder_isInited = Module["_flutter_recorder_isInited"] = createExportWrapper("flutter_recorder_isInited", 0);
-  _flutter_recorder_isDeviceStarted = Module["_flutter_recorder_isDeviceStarted"] = createExportWrapper("flutter_recorder_isDeviceStarted", 0);
-  _flutter_recorder_start = Module["_flutter_recorder_start"] = createExportWrapper("flutter_recorder_start", 0);
-  _flutter_recorder_stop = Module["_flutter_recorder_stop"] = createExportWrapper("flutter_recorder_stop", 0);
-  _flutter_recorder_startStreamingData = Module["_flutter_recorder_startStreamingData"] = createExportWrapper("flutter_recorder_startStreamingData", 1);
-  _flutter_recorder_stopStreamingData = Module["_flutter_recorder_stopStreamingData"] = createExportWrapper("flutter_recorder_stopStreamingData", 0);
-  _flutter_recorder_setSilenceDetection = Module["_flutter_recorder_setSilenceDetection"] = createExportWrapper("flutter_recorder_setSilenceDetection", 1);
-  _flutter_recorder_setSilenceThresholdDb = Module["_flutter_recorder_setSilenceThresholdDb"] = createExportWrapper("flutter_recorder_setSilenceThresholdDb", 1);
-  _flutter_recorder_setSilenceDuration = Module["_flutter_recorder_setSilenceDuration"] = createExportWrapper("flutter_recorder_setSilenceDuration", 1);
-  _flutter_recorder_setSecondsOfAudioToWriteBefore = Module["_flutter_recorder_setSecondsOfAudioToWriteBefore"] = createExportWrapper("flutter_recorder_setSecondsOfAudioToWriteBefore", 1);
-  _flutter_recorder_startRecording = Module["_flutter_recorder_startRecording"] = createExportWrapper("flutter_recorder_startRecording", 2);
-  _flutter_recorder_setPauseRecording = Module["_flutter_recorder_setPauseRecording"] = createExportWrapper("flutter_recorder_setPauseRecording", 1);
-  _flutter_recorder_stopRecording = Module["_flutter_recorder_stopRecording"] = createExportWrapper("flutter_recorder_stopRecording", 0);
-  _flutter_recorder_getVolumeDb = Module["_flutter_recorder_getVolumeDb"] = createExportWrapper("flutter_recorder_getVolumeDb", 1);
-  _flutter_recorder_setVisualizationEnabled = Module["_flutter_recorder_setVisualizationEnabled"] = createExportWrapper("flutter_recorder_setVisualizationEnabled", 4);
-  _flutter_recorder_isVisualizationEnabled = Module["_flutter_recorder_isVisualizationEnabled"] = createExportWrapper("flutter_recorder_isVisualizationEnabled", 0);
-  _flutter_recorder_setFftSmoothing = Module["_flutter_recorder_setFftSmoothing"] = createExportWrapper("flutter_recorder_setFftSmoothing", 1);
-  _flutter_recorder_setLoopback = Module["_flutter_recorder_setLoopback"] = createExportWrapper("flutter_recorder_setLoopback", 1);
-  _flutter_recorder_isLoopbackEnabled = Module["_flutter_recorder_isLoopbackEnabled"] = createExportWrapper("flutter_recorder_isLoopbackEnabled", 0);
-  _flutter_recorder_isFilterActive = Module["_flutter_recorder_isFilterActive"] = createExportWrapper("flutter_recorder_isFilterActive", 1);
-  _flutter_recorder_addFilter = Module["_flutter_recorder_addFilter"] = createExportWrapper("flutter_recorder_addFilter", 1);
-  _flutter_recorder_removeFilter = Module["_flutter_recorder_removeFilter"] = createExportWrapper("flutter_recorder_removeFilter", 1);
-  _flutter_recorder_getFilterParamNames = Module["_flutter_recorder_getFilterParamNames"] = createExportWrapper("flutter_recorder_getFilterParamNames", 3);
-  _flutter_recorder_setFilterParams = Module["_flutter_recorder_setFilterParams"] = createExportWrapper("flutter_recorder_setFilterParams", 3);
-  _flutter_recorder_getFilterParams = Module["_flutter_recorder_getFilterParams"] = createExportWrapper("flutter_recorder_getFilterParams", 2);
-  _flutter_recorder_feedPlaybackData = Module["_flutter_recorder_feedPlaybackData"] = createExportWrapper("flutter_recorder_feedPlaybackData", 4);
-  _ma_device__on_notification_unlocked = Module["_ma_device__on_notification_unlocked"] = createExportWrapper("ma_device__on_notification_unlocked", 1);
-  _ma_malloc_emscripten = Module["_ma_malloc_emscripten"] = createExportWrapper("ma_malloc_emscripten", 2);
-  _ma_free_emscripten = Module["_ma_free_emscripten"] = createExportWrapper("ma_free_emscripten", 2);
-  _ma_device_process_pcm_frames_capture__webaudio = Module["_ma_device_process_pcm_frames_capture__webaudio"] = createExportWrapper("ma_device_process_pcm_frames_capture__webaudio", 3);
-  _ma_device_process_pcm_frames_playback__webaudio = Module["_ma_device_process_pcm_frames_playback__webaudio"] = createExportWrapper("ma_device_process_pcm_frames_playback__webaudio", 3);
-  _memcpy = Module["_memcpy"] = createExportWrapper("memcpy", 3);
-  _memset = Module["_memset"] = createExportWrapper("memset", 3);
-  _fflush = Module["_fflush"] = createExportWrapper("fflush", 1);
-  _strerror = Module["_strerror"] = createExportWrapper("strerror", 1);
+  _free = Module["_free"] = createExportWrapper("free", wasmExports["free"], 1);
+  _flutter_recorder_createWorkerInWasm = Module["_flutter_recorder_createWorkerInWasm"] = createExportWrapper("flutter_recorder_createWorkerInWasm", wasmExports["flutter_recorder_createWorkerInWasm"], 0);
+  __Z41flutter_recorder_sendSilenceEventToWorkerPKcbf = Module["__Z41flutter_recorder_sendSilenceEventToWorkerPKcbf"] = createExportWrapper("_Z41flutter_recorder_sendSilenceEventToWorkerPKcbf", wasmExports["_Z41flutter_recorder_sendSilenceEventToWorkerPKcbf"], 3);
+  __Z35flutter_recorder_sendStreamToWorkerPKcPKhi = Module["__Z35flutter_recorder_sendStreamToWorkerPKcPKhi"] = createExportWrapper("_Z35flutter_recorder_sendStreamToWorkerPKcPKhi", wasmExports["_Z35flutter_recorder_sendStreamToWorkerPKcPKhi"], 3);
+  __Z41flutter_recorder_sendNotificationToWorkerPKci = Module["__Z41flutter_recorder_sendNotificationToWorkerPKci"] = createExportWrapper("_Z41flutter_recorder_sendNotificationToWorkerPKci", wasmExports["_Z41flutter_recorder_sendNotificationToWorkerPKci"], 2);
+  _flutter_recorder_setDartEventCallbackForEngine = Module["_flutter_recorder_setDartEventCallbackForEngine"] = createExportWrapper("flutter_recorder_setDartEventCallbackForEngine", wasmExports["flutter_recorder_setDartEventCallbackForEngine"], 3);
+  _flutter_recorder_setDartEventCallback = Module["_flutter_recorder_setDartEventCallback"] = createExportWrapper("flutter_recorder_setDartEventCallback", wasmExports["flutter_recorder_setDartEventCallback"], 2);
+  _flutter_recorder_setDartDeviceNotificationCallbackForEngine = Module["_flutter_recorder_setDartDeviceNotificationCallbackForEngine"] = createExportWrapper("flutter_recorder_setDartDeviceNotificationCallbackForEngine", wasmExports["flutter_recorder_setDartDeviceNotificationCallbackForEngine"], 2);
+  _flutter_recorder_setDartDeviceNotificationCallback = Module["_flutter_recorder_setDartDeviceNotificationCallback"] = createExportWrapper("flutter_recorder_setDartDeviceNotificationCallback", wasmExports["flutter_recorder_setDartDeviceNotificationCallback"], 1);
+  _flutter_recorder_setDartVisualizationCallbackForEngine = Module["_flutter_recorder_setDartVisualizationCallbackForEngine"] = createExportWrapper("flutter_recorder_setDartVisualizationCallbackForEngine", wasmExports["flutter_recorder_setDartVisualizationCallbackForEngine"], 2);
+  _flutter_recorder_setDartVisualizationCallback = Module["_flutter_recorder_setDartVisualizationCallback"] = createExportWrapper("flutter_recorder_setDartVisualizationCallback", wasmExports["flutter_recorder_setDartVisualizationCallback"], 1);
+  _flutter_recorder_prepareEngineInit = Module["_flutter_recorder_prepareEngineInit"] = createExportWrapper("flutter_recorder_prepareEngineInit", wasmExports["flutter_recorder_prepareEngineInit"], 1);
+  _flutter_recorder_currentEngineShutdownEpoch = Module["_flutter_recorder_currentEngineShutdownEpoch"] = createExportWrapper("flutter_recorder_currentEngineShutdownEpoch", wasmExports["flutter_recorder_currentEngineShutdownEpoch"], 0);
+  _flutter_recorder_prepareEngineInitForRequest = Module["_flutter_recorder_prepareEngineInitForRequest"] = createExportWrapper("flutter_recorder_prepareEngineInitForRequest", wasmExports["flutter_recorder_prepareEngineInitForRequest"], 2);
+  _flutter_recorder_clearDartCallbackRegistrationsForEngine = Module["_flutter_recorder_clearDartCallbackRegistrationsForEngine"] = createExportWrapper("flutter_recorder_clearDartCallbackRegistrationsForEngine", wasmExports["flutter_recorder_clearDartCallbackRegistrationsForEngine"], 1);
+  _flutter_recorder_clearDartCallbackRegistrations = Module["_flutter_recorder_clearDartCallbackRegistrations"] = createExportWrapper("flutter_recorder_clearDartCallbackRegistrations", wasmExports["flutter_recorder_clearDartCallbackRegistrations"], 0);
+  _flutter_recorder_requestEngineTeardownForEngine = Module["_flutter_recorder_requestEngineTeardownForEngine"] = createExportWrapper("flutter_recorder_requestEngineTeardownForEngine", wasmExports["flutter_recorder_requestEngineTeardownForEngine"], 1);
+  _flutter_recorder_retireDartCallbacksFinalizer = Module["_flutter_recorder_retireDartCallbacksFinalizer"] = createExportWrapper("flutter_recorder_retireDartCallbacksFinalizer", wasmExports["flutter_recorder_retireDartCallbacksFinalizer"], 1);
+  _flutter_recorder_nativeFree = Module["_flutter_recorder_nativeFree"] = createExportWrapper("flutter_recorder_nativeFree", wasmExports["flutter_recorder_nativeFree"], 1);
+  _flutter_recorder_listCaptureDevices = Module["_flutter_recorder_listCaptureDevices"] = createExportWrapper("flutter_recorder_listCaptureDevices", wasmExports["flutter_recorder_listCaptureDevices"], 4);
+  _malloc = Module["_malloc"] = createExportWrapper("malloc", wasmExports["malloc"], 1);
+  _flutter_recorder_freeListCaptureDevices = Module["_flutter_recorder_freeListCaptureDevices"] = createExportWrapper("flutter_recorder_freeListCaptureDevices", wasmExports["flutter_recorder_freeListCaptureDevices"], 4);
+  _flutter_recorder_init = Module["_flutter_recorder_init"] = createExportWrapper("flutter_recorder_init", wasmExports["flutter_recorder_init"], 6);
+  _flutter_recorder_deinit = Module["_flutter_recorder_deinit"] = createExportWrapper("flutter_recorder_deinit", wasmExports["flutter_recorder_deinit"], 0);
+  _flutter_recorder_isInited = Module["_flutter_recorder_isInited"] = createExportWrapper("flutter_recorder_isInited", wasmExports["flutter_recorder_isInited"], 0);
+  _flutter_recorder_isDeviceStarted = Module["_flutter_recorder_isDeviceStarted"] = createExportWrapper("flutter_recorder_isDeviceStarted", wasmExports["flutter_recorder_isDeviceStarted"], 0);
+  _flutter_recorder_start = Module["_flutter_recorder_start"] = createExportWrapper("flutter_recorder_start", wasmExports["flutter_recorder_start"], 0);
+  _flutter_recorder_stop = Module["_flutter_recorder_stop"] = createExportWrapper("flutter_recorder_stop", wasmExports["flutter_recorder_stop"], 0);
+  _flutter_recorder_startStreamingData = Module["_flutter_recorder_startStreamingData"] = createExportWrapper("flutter_recorder_startStreamingData", wasmExports["flutter_recorder_startStreamingData"], 1);
+  _flutter_recorder_stopStreamingData = Module["_flutter_recorder_stopStreamingData"] = createExportWrapper("flutter_recorder_stopStreamingData", wasmExports["flutter_recorder_stopStreamingData"], 0);
+  _flutter_recorder_setSilenceDetection = Module["_flutter_recorder_setSilenceDetection"] = createExportWrapper("flutter_recorder_setSilenceDetection", wasmExports["flutter_recorder_setSilenceDetection"], 1);
+  _flutter_recorder_setSilenceThresholdDb = Module["_flutter_recorder_setSilenceThresholdDb"] = createExportWrapper("flutter_recorder_setSilenceThresholdDb", wasmExports["flutter_recorder_setSilenceThresholdDb"], 1);
+  _flutter_recorder_setSilenceDuration = Module["_flutter_recorder_setSilenceDuration"] = createExportWrapper("flutter_recorder_setSilenceDuration", wasmExports["flutter_recorder_setSilenceDuration"], 1);
+  _flutter_recorder_setSecondsOfAudioToWriteBefore = Module["_flutter_recorder_setSecondsOfAudioToWriteBefore"] = createExportWrapper("flutter_recorder_setSecondsOfAudioToWriteBefore", wasmExports["flutter_recorder_setSecondsOfAudioToWriteBefore"], 1);
+  _flutter_recorder_startRecording = Module["_flutter_recorder_startRecording"] = createExportWrapper("flutter_recorder_startRecording", wasmExports["flutter_recorder_startRecording"], 2);
+  _flutter_recorder_setPauseRecording = Module["_flutter_recorder_setPauseRecording"] = createExportWrapper("flutter_recorder_setPauseRecording", wasmExports["flutter_recorder_setPauseRecording"], 1);
+  _flutter_recorder_stopRecording = Module["_flutter_recorder_stopRecording"] = createExportWrapper("flutter_recorder_stopRecording", wasmExports["flutter_recorder_stopRecording"], 0);
+  _flutter_recorder_getVolumeDb = Module["_flutter_recorder_getVolumeDb"] = createExportWrapper("flutter_recorder_getVolumeDb", wasmExports["flutter_recorder_getVolumeDb"], 1);
+  _flutter_recorder_setVisualizationEnabled = Module["_flutter_recorder_setVisualizationEnabled"] = createExportWrapper("flutter_recorder_setVisualizationEnabled", wasmExports["flutter_recorder_setVisualizationEnabled"], 4);
+  _flutter_recorder_isVisualizationEnabled = Module["_flutter_recorder_isVisualizationEnabled"] = createExportWrapper("flutter_recorder_isVisualizationEnabled", wasmExports["flutter_recorder_isVisualizationEnabled"], 0);
+  _flutter_recorder_setFftSmoothing = Module["_flutter_recorder_setFftSmoothing"] = createExportWrapper("flutter_recorder_setFftSmoothing", wasmExports["flutter_recorder_setFftSmoothing"], 1);
+  _flutter_recorder_setFftDecibelRange = Module["_flutter_recorder_setFftDecibelRange"] = createExportWrapper("flutter_recorder_setFftDecibelRange", wasmExports["flutter_recorder_setFftDecibelRange"], 2);
+  _flutter_recorder_setLoopback = Module["_flutter_recorder_setLoopback"] = createExportWrapper("flutter_recorder_setLoopback", wasmExports["flutter_recorder_setLoopback"], 1);
+  _flutter_recorder_isLoopbackEnabled = Module["_flutter_recorder_isLoopbackEnabled"] = createExportWrapper("flutter_recorder_isLoopbackEnabled", wasmExports["flutter_recorder_isLoopbackEnabled"], 0);
+  _flutter_recorder_isFilterActive = Module["_flutter_recorder_isFilterActive"] = createExportWrapper("flutter_recorder_isFilterActive", wasmExports["flutter_recorder_isFilterActive"], 1);
+  _flutter_recorder_addFilter = Module["_flutter_recorder_addFilter"] = createExportWrapper("flutter_recorder_addFilter", wasmExports["flutter_recorder_addFilter"], 1);
+  _flutter_recorder_removeFilter = Module["_flutter_recorder_removeFilter"] = createExportWrapper("flutter_recorder_removeFilter", wasmExports["flutter_recorder_removeFilter"], 1);
+  _flutter_recorder_getFilterParamNames = Module["_flutter_recorder_getFilterParamNames"] = createExportWrapper("flutter_recorder_getFilterParamNames", wasmExports["flutter_recorder_getFilterParamNames"], 3);
+  _flutter_recorder_setFilterParams = Module["_flutter_recorder_setFilterParams"] = createExportWrapper("flutter_recorder_setFilterParams", wasmExports["flutter_recorder_setFilterParams"], 3);
+  _flutter_recorder_getFilterParams = Module["_flutter_recorder_getFilterParams"] = createExportWrapper("flutter_recorder_getFilterParams", wasmExports["flutter_recorder_getFilterParams"], 2);
+  _flutter_recorder_feedPlaybackData = Module["_flutter_recorder_feedPlaybackData"] = createExportWrapper("flutter_recorder_feedPlaybackData", wasmExports["flutter_recorder_feedPlaybackData"], 4);
+  _ma_device__on_notification_unlocked = Module["_ma_device__on_notification_unlocked"] = createExportWrapper("ma_device__on_notification_unlocked", wasmExports["ma_device__on_notification_unlocked"], 1);
+  _ma_malloc_emscripten = Module["_ma_malloc_emscripten"] = createExportWrapper("ma_malloc_emscripten", wasmExports["ma_malloc_emscripten"], 2);
+  _ma_free_emscripten = Module["_ma_free_emscripten"] = createExportWrapper("ma_free_emscripten", wasmExports["ma_free_emscripten"], 2);
+  _ma_device_process_pcm_frames_capture__webaudio = Module["_ma_device_process_pcm_frames_capture__webaudio"] = createExportWrapper("ma_device_process_pcm_frames_capture__webaudio", wasmExports["ma_device_process_pcm_frames_capture__webaudio"], 3);
+  _ma_device_process_pcm_frames_playback__webaudio = Module["_ma_device_process_pcm_frames_playback__webaudio"] = createExportWrapper("ma_device_process_pcm_frames_playback__webaudio", wasmExports["ma_device_process_pcm_frames_playback__webaudio"], 3);
+  _memcpy = Module["_memcpy"] = createExportWrapper("memcpy", wasmExports["memcpy"], 3);
+  _memset = Module["_memset"] = createExportWrapper("memset", wasmExports["memset"], 3);
+  _fflush = Module["_fflush"] = createExportWrapper("fflush", wasmExports["fflush"], 1);
+  _strerror = Module["_strerror"] = createExportWrapper("strerror", wasmExports["strerror"], 1);
   _emscripten_stack_get_end = Module["_emscripten_stack_get_end"] = wasmExports["emscripten_stack_get_end"];
   _emscripten_stack_get_base = Module["_emscripten_stack_get_base"] = wasmExports["emscripten_stack_get_base"];
-  _sbrk = Module["_sbrk"] = createExportWrapper("sbrk", 1);
+  _sbrk = Module["_sbrk"] = createExportWrapper("sbrk", wasmExports["sbrk"], 1);
   _emscripten_get_sbrk_ptr = Module["_emscripten_get_sbrk_ptr"] = wasmExports["emscripten_get_sbrk_ptr"];
   _emscripten_stack_init = Module["_emscripten_stack_init"] = wasmExports["emscripten_stack_init"];
   _emscripten_stack_get_free = Module["_emscripten_stack_get_free"] = wasmExports["emscripten_stack_get_free"];
@@ -2059,33 +2171,25 @@ function stackCheckInit() {
   writeStackCookie();
 }
 
-function run() {
+async function run() {
+  assert(!calledRun);
+  calledRun = true;
   stackCheckInit();
   preRun();
-  function doRun() {
-    // run may have just been called through dependencies being fulfilled just in this very frame,
-    // or while the async setStatus time below was happening
-    assert(!calledRun);
-    calledRun = true;
-    Module["calledRun"] = true;
-    if (ABORT) return;
-    initRuntime();
-    readyPromiseResolve?.(Module);
-    Module["onRuntimeInitialized"]?.();
-    consumedModuleProp("onRuntimeInitialized");
-    assert(!Module["_main"], 'compiled without a main, but one is present. if you added it from JS, use Module["onRuntimeInitialized"]');
-    postRun();
+  var setStatus = Module["setStatus"];
+  if (setStatus) {
+    setStatus("Running...");
+    // Yield to the event loop to allow the browser to paint "Running..."
+    await new Promise(resolve => setTimeout(resolve, 1));
+    // Then we want to clear the status text, but only after the rest of this function runs.
+    setTimeout(setStatus, 1, "");
   }
-  if (Module["setStatus"]) {
-    Module["setStatus"]("Running...");
-    setTimeout(() => {
-      setTimeout(() => Module["setStatus"](""), 1);
-      doRun();
-    }, 1);
-  } else {
-    doRun();
-  }
-  checkStackCookie();
+  if (ABORT) return;
+  initRuntime();
+  Module["onRuntimeInitialized"]?.();
+  consumedModuleProp("onRuntimeInitialized");
+  assert(!Module["_main"], 'compiled without a main, but one is present. if you added it from JS, use Module["onRuntimeInitialized"]');
+  postRun();
 }
 
 function checkUnflushedContent() {
@@ -2122,26 +2226,14 @@ var wasmExports;
 
 // In modularize mode the generated code is within a factory function so we
 // can use await here (since it's not top-level-await).
-wasmExports = await (createWasm());
+wasmExports = await createWasm();
 
-run();
+await run();
 
 // end include: postamble.js
 // include: postamble_modularize.js
 // In MODULARIZE mode we wrap the generated code in a factory function
 // and return either the Module itself, or a promise of the module.
-// We assign to the `moduleRtn` global here and configure closure to see
-// this as and extern so it won't get minified.
-if (runtimeInitialized) {
-  moduleRtn = Module;
-} else {
-  // Set up the promise that indicates the Module is initialized
-  moduleRtn = new Promise((resolve, reject) => {
-    readyPromiseResolve = resolve;
-    readyPromiseReject = reject;
-  });
-}
-
 // Assertion for attempting to access module properties on the incoming
 // moduleArg.  In the past we used this object as the prototype of the module
 // and assigned properties to it, but now we return a distinct object.  This
@@ -2159,7 +2251,7 @@ for (const prop of Object.keys(Module)) {
 }
 
 
-    return moduleRtn;
+    return Module;
   };
 })();
 

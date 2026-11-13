@@ -9,8 +9,7 @@ var RecorderModule = (() => {
   // In EXPORT_ES6 mode we can just use 'import.meta.url'.
   var _scriptName = globalThis.document?.currentScript?.src;
   return async function(moduleArg = {}) {
-    var moduleRtn;
-
+    var Module = moduleArg;
 // include: shell.js
 // include: minimum_runtime_check.js
 (function() {
@@ -28,9 +27,13 @@ var RecorderModule = (() => {
   var TARGET_NOT_SUPPORTED = 2147483647;
   // Note: We use a typeof check here instead of optional chaining using
   // globalThis because older browsers might not have globalThis defined.
-  var currentNodeVersion = typeof process !== "undefined" && process.versions?.node ? humanReadableVersionToPacked(process.versions.node) : TARGET_NOT_SUPPORTED;
-  if (currentNodeVersion < 160400) {
-    throw new Error(`This emscripten-generated code requires node v${packedVersionToHumanReadable(160400)} (detected v${packedVersionToHumanReadable(currentNodeVersion)})`);
+  // We skip the node version checking when running on Bun/Deno since the node
+  // version they report doesn't seem to be useful.
+  if (typeof process !== "undefined" && !process.versions?.bun && typeof Deno == "undefined") {
+    var currentNodeVersion = process.versions?.node ? humanReadableVersionToPacked(process.versions.node) : TARGET_NOT_SUPPORTED;
+    if (currentNodeVersion < 180300) {
+      throw new Error(`This emscripten-generated code requires node v${packedVersionToHumanReadable(180300)} (detected v${packedVersionToHumanReadable(currentNodeVersion)})`);
+    }
   }
   var userAgent = typeof navigator !== "undefined" && navigator.userAgent;
   if (!userAgent) {
@@ -64,11 +67,9 @@ var RecorderModule = (() => {
 // after the generated code, you will need to define   var Module = {};
 // before the code. Then that object will be used in the code, and you
 // can continue to use Module afterwards as well.
-var Module = moduleArg;
-
 // The way we signal to a worker that it is hosting a pthread is to construct
 // it with a specific name.
-var ENVIRONMENT_IS_WASM_WORKER = globalThis.name == "em-ww";
+var ENVIRONMENT_IS_WASM_WORKER = globalThis.name?.startsWith("em-ww");
 
 var ENVIRONMENT_IS_AUDIO_WORKLET = !!globalThis.AudioWorkletGlobalScope;
 
@@ -94,7 +95,7 @@ var ENVIRONMENT_IS_SHELL = !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_NODE && !ENVIR
 // 3) We could be an application pthread running in a worker. (ENVIRONMENT_IS_WORKER == true and ENVIRONMENT_IS_PTHREAD == true)
 // The way we signal to a worker that it is hosting a pthread is to construct
 // it with a specific name.
-var ENVIRONMENT_IS_PTHREAD = ENVIRONMENT_IS_WORKER && self.name?.startsWith("em-pthread");
+var ENVIRONMENT_IS_PTHREAD = ENVIRONMENT_IS_WORKER && globalThis.name?.startsWith("em-pthread");
 
 if (ENVIRONMENT_IS_PTHREAD) {
   assert(!globalThis.moduleLoaded, "module should only be loaded once on each pthread worker");
@@ -102,18 +103,18 @@ if (ENVIRONMENT_IS_PTHREAD) {
 }
 
 if (ENVIRONMENT_IS_NODE) {
-  var worker_threads = require("worker_threads");
-  global.Worker = worker_threads.Worker;
+  var worker_threads = require("node:worker_threads");
+  globalThis.Worker = worker_threads.Worker;
   ENVIRONMENT_IS_WORKER = !worker_threads.isMainThread;
   // Under node we set `workerData` to `em-pthread` to signal that the worker
   // is hosting a pthread.
-  ENVIRONMENT_IS_PTHREAD = ENVIRONMENT_IS_WORKER && worker_threads["workerData"] == "em-pthread";
-  ENVIRONMENT_IS_WASM_WORKER = ENVIRONMENT_IS_WORKER && worker_threads["workerData"] == "em-ww";
+  ENVIRONMENT_IS_PTHREAD = ENVIRONMENT_IS_WORKER && worker_threads.workerData == "em-pthread";
+  ENVIRONMENT_IS_WASM_WORKER = ENVIRONMENT_IS_WORKER && worker_threads.workerData == "em-ww";
 }
 
 // --pre-jses are emitted after the Module integration code, so that they can
 // refer to Module (if they choose; they can also define Module)
-var arguments_ = [];
+var programArgs = [];
 
 var thisProgram = "./this.program";
 
@@ -146,7 +147,7 @@ if (ENVIRONMENT_IS_NODE) {
   if (!isNode) throw new Error("not compiled for this environment (did you build to HTML and try to run it not on the web, or set ENVIRONMENT to something - like node - and run it someplace else - like on the web?)");
   // These modules will usually be used on Node.js. Load them eagerly to avoid
   // the complexity of lazy-loading.
-  var fs = require("fs");
+  var fs = require("node:fs");
   scriptDirectory = __dirname + "/";
   // include: node_shell_read.js
   readBinary = filename => {
@@ -167,7 +168,7 @@ if (ENVIRONMENT_IS_NODE) {
   if (process.argv.length > 1) {
     thisProgram = process.argv[1].replace(/\\/g, "/");
   }
-  arguments_ = process.argv.slice(2);
+  programArgs = process.argv.slice(2);
   quit_ = (status, toThrow) => {
     process.exitCode = status;
     throw toThrow;
@@ -239,7 +240,7 @@ var defaultPrint = console.log.bind(console);
 var defaultPrintErr = console.error.bind(console);
 
 if (ENVIRONMENT_IS_NODE) {
-  var utils = require("util");
+  var utils = require("node:util");
   var stringify = a => typeof a == "object" ? utils.inspect(a) : a;
   defaultPrint = (...args) => fs.writeSync(1, args.map(stringify).join(" ") + "\n");
   defaultPrintErr = (...args) => fs.writeSync(2, args.map(stringify).join(" ") + "\n");
@@ -267,9 +268,9 @@ var NODEFS = "NODEFS is no longer included by default; build with -lnodefs.js";
 
 // perform assertions in shell.js after we set up out() and err(), as otherwise
 // if an assertion fails it cannot print the message
-assert(ENVIRONMENT_IS_AUDIO_WORKLET || ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER || ENVIRONMENT_IS_NODE, "Pthreads do not work in this environment yet (need Web Workers, or an alternative to them)");
+assert(ENVIRONMENT_IS_AUDIO_WORKLET || ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER || ENVIRONMENT_IS_NODE, "pthreads do not work in this environment yet (need Web Workers, or an alternative to them)");
 
-assert(!ENVIRONMENT_IS_SHELL, "shell environment detected but not enabled at build time.  Add `shell` to `-sENVIRONMENT` to enable.");
+assert(!ENVIRONMENT_IS_SHELL, "shell environment detected but not enabled at build time (add `shell` to `-sENVIRONMENT` to enable)");
 
 // end include: shell.js
 // include: preamble.js
@@ -299,7 +300,7 @@ var wasmModule;
 var ABORT = false;
 
 // set by exit() and abort().  Passed to 'onExit' handler.
-// NOTE: This is also used as the process return code code in shell environments
+// NOTE: This is also used as the process return code in shell environments
 // but only when noExitRuntime is false.
 var EXITSTATUS;
 
@@ -321,46 +322,12 @@ var EXITSTATUS;
  */ var isFileURI = filename => filename.startsWith("file://");
 
 // include: runtime_common.js
-// include: runtime_stack_check.js
-// Initializes the stack cookie. Called at the startup of main and at the startup of each thread in pthreads mode.
-function writeStackCookie() {
-  var max = _emscripten_stack_get_end();
-  assert((max & 3) == 0);
-  // If the stack ends at address zero we write our cookies 4 bytes into the
-  // stack.  This prevents interference with SAFE_HEAP and ASAN which also
-  // monitor writes to address zero.
-  if (max == 0) {
-    max += 4;
-  }
-  // The stack grow downwards towards _emscripten_stack_get_end.
-  // We write cookies to the final two words in the stack and detect if they are
-  // ever overwritten.
-  (growMemViews(), HEAPU32)[((max) >> 2)] = 34821223;
-  (growMemViews(), HEAPU32)[(((max) + (4)) >> 2)] = 2310721022;
-  // Also test the global address 0 for integrity.
-  (growMemViews(), HEAPU32)[((0) >> 2)] = 1668509029;
-}
-
-function checkStackCookie() {
-  if (ABORT) return;
-  var max = _emscripten_stack_get_end();
-  // See writeStackCookie().
-  if (max == 0) {
-    max += 4;
-  }
-  var cookie1 = (growMemViews(), HEAPU32)[((max) >> 2)];
-  var cookie2 = (growMemViews(), HEAPU32)[(((max) + (4)) >> 2)];
-  if (cookie1 != 34821223 || cookie2 != 2310721022) {
-    abort(`Stack overflow! Stack cookie has been overwritten at ${ptrToString(max)}, expected hex dwords 0x89BACDFE and 0x2135467, but received ${ptrToString(cookie2)} ${ptrToString(cookie1)}`);
-  }
-  // Also test the global address 0 for integrity.
-  if ((growMemViews(), HEAPU32)[((0) >> 2)] != 1668509029) {
-    abort("Runtime error: The application has corrupted its heap memory area (address zero)!");
-  }
-}
-
-// end include: runtime_stack_check.js
 // include: runtime_exceptions.js
+// Base Emscripten EH error class
+class EmscriptenEH {}
+
+class EmscriptenSjLj extends EmscriptenEH {}
+
 // end include: runtime_exceptions.js
 // include: runtime_debug.js
 var runtimeDebug = true;
@@ -373,8 +340,8 @@ function dbg(...args) {
   // See https://github.com/emscripten-core/emscripten/issues/14804
   if (ENVIRONMENT_IS_NODE) {
     // TODO(sbc): Unify with err/out implementation in shell.sh.
-    var fs = require("fs");
-    var utils = require("util");
+    var fs = require("node:fs");
+    var utils = require("node:util");
     function stringify(a) {
       switch (typeof a) {
        case "object":
@@ -400,14 +367,33 @@ function dbg(...args) {
 })();
 
 function consumedModuleProp(prop) {
-  if (!Object.getOwnPropertyDescriptor(Module, prop)) {
-    Object.defineProperty(Module, prop, {
-      configurable: true,
-      set() {
-        abort(`Attempt to set \`Module.${prop}\` after it has already been processed.  This can happen, for example, when code is injected via '--post-js' rather than '--pre-js'`);
+  var value = Module[prop];
+  var msg = `Attempt to modify \`Module.${prop}\` after it has already been processed.  This can happen, for example, when code is injected via '--post-js' rather than '--pre-js'`;
+  if (Array.isArray(value)) {
+    value = new Proxy(value, {
+      set(target, key, val) {
+        abort(msg);
+        return false;
+      },
+      defineProperty(target, key, descriptor) {
+        abort(msg);
+        return false;
+      },
+      deleteProperty(target, key) {
+        abort(msg);
+        return false;
       }
     });
   }
+  Object.defineProperty(Module, prop, {
+    configurable: true,
+    get() {
+      return value;
+    },
+    set() {
+      abort(msg);
+    }
+  });
 }
 
 function makeInvalidEarlyAccess(name) {
@@ -471,6 +457,53 @@ function unexportedRuntimeSymbol(sym) {
 initWorkerLogging();
 
 // end include: runtime_debug.js
+// include: runtime_stack_check.js
+const stackCookie1 = 34821223;
+
+const stackCookie2 = 2310721022;
+
+// Initializes the stack cookie. Called at the startup of main and at the startup of each thread in pthreads mode.
+function writeStackCookie() {
+  var max = _emscripten_stack_get_end();
+  assert((max & 3) == 0);
+  // If the stack ends at address zero we write our cookies 4 bytes into the
+  // stack.  This prevents interference with SAFE_HEAP and ASAN which also
+  // monitor writes to address zero.
+  if (max == 0) {
+    max += 4;
+  }
+  // The stack grow downwards towards _emscripten_stack_get_end.
+  // We write cookies to the final two words in the stack and detect if they are
+  // ever overwritten.
+  (growMemViews(), HEAPU32)[((max) >> 2)] = stackCookie1;
+  (growMemViews(), HEAPU32)[(((max) + (4)) >> 2)] = stackCookie2;
+  // Also test the global address 0 for integrity.
+  (growMemViews(), HEAPU32)[((0) >> 2)] = 1668509029;
+}
+
+function u32ToHexString(num) {
+  return "0x" + (num >>> 0).toString(16).padStart(8, "0");
+}
+
+function checkStackCookie() {
+  if (ABORT) return;
+  var max = _emscripten_stack_get_end();
+  // See writeStackCookie().
+  if (max == 0) {
+    max += 4;
+  }
+  var val1 = (growMemViews(), HEAPU32)[((max) >> 2)];
+  var val2 = (growMemViews(), HEAPU32)[(((max) + (4)) >> 2)];
+  if (val1 != stackCookie1 || val2 != stackCookie2) {
+    abort(`Stack overflow! Stack cookie has been overwritten at ${ptrToString(max)}, expected hex dwords ${u32ToHexString(stackCookie2)} and ${u32ToHexString(stackCookie1)}, but received ${u32ToHexString(val2)} ${u32ToHexString(val1)}`);
+  }
+  // Also test the global address 0 for integrity.
+  if ((growMemViews(), HEAPU32)[((0) >> 2)] != 1668509029) {
+    abort("Runtime error: The application has corrupted its heap memory area (address zero)!");
+  }
+}
+
+// end include: runtime_stack_check.js
 // Support for growable heap + pthreads, where the buffer may change, so JS views
 // must be updated.
 function growMemViews() {
@@ -480,18 +513,19 @@ function growMemViews() {
   }
 }
 
-var readyPromiseResolve, readyPromiseReject;
-
 if (ENVIRONMENT_IS_NODE && (ENVIRONMENT_IS_PTHREAD || ENVIRONMENT_IS_WASM_WORKER)) {
   // Create as web-worker-like an environment as we can.
-  var parentPort = worker_threads["parentPort"];
-  parentPort.on("message", msg => global.onmessage?.({
-    data: msg
-  }));
-  Object.assign(globalThis, {
-    self: global,
-    postMessage: msg => parentPort["postMessage"](msg)
-  });
+  globalThis.self = globalThis;
+  var parentPort = worker_threads.parentPort;
+  // Deno and Bun already have `postMessage` defined on the global scope and
+  // deliver messages to `globalThis.onmessage`, so we must not duplicate that
+  // behavior here if `postMessage` is already present.
+  if (!globalThis.postMessage) {
+    parentPort.on("message", msg => globalThis.onmessage?.({
+      data: msg
+    }));
+    globalThis.postMessage = msg => parentPort.postMessage(msg);
+  }
   // Node.js Workers do not pass postMessage()s and uncaught exception events to the parent
   // thread necessarily in the same order where they were generated in sequential program order.
   // See https://github.com/nodejs/node/issues/59617
@@ -499,7 +533,7 @@ if (ENVIRONMENT_IS_NODE && (ENVIRONMENT_IS_PTHREAD || ENVIRONMENT_IS_WASM_WORKER
   // to the same postMessage pipe that other messages use.
   process.on("uncaughtException", err => {
     postMessage({
-      cmd: "uncaughtException",
+      cmd: 8,
       error: err
     });
     // Also shut down the Worker to match the same semantics as if this uncaughtException
@@ -529,10 +563,10 @@ if (ENVIRONMENT_IS_PTHREAD) {
   };
   function handleMessage(e) {
     try {
-      var msgData = e["data"];
+      var msgData = e.data;
       //dbg('msgData: ' + Object.keys(msgData));
       var cmd = msgData.cmd;
-      if (cmd === "load") {
+      if (cmd == 1) {
         // Preload command that is called once per worker to parse and load the Emscripten code.
         workerID = msgData.workerID;
         // Until we initialize the runtime, queue up any further incoming messages.
@@ -542,7 +576,7 @@ if (ENVIRONMENT_IS_PTHREAD) {
         startWorker = () => {
           // Notify the main thread that this thread has loaded.
           postMessage({
-            cmd: "loaded"
+            cmd: 3
           });
           // Process any messages that were queued before the thread was ready.
           for (let msg of messageQueue) {
@@ -554,13 +588,13 @@ if (ENVIRONMENT_IS_PTHREAD) {
         // Use `const` here to ensure that the variable is scoped only to
         // that iteration, allowing safe reference from a closure.
         for (const handler of msgData.handlers) {
-          // The the main module has a handler for a certain even, but no
+          // If the main module has a handler for a certain event, but no
           // handler exists on the pthread worker, then proxy that handler
           // back to the main thread.
           if (!Module[handler] || Module[handler].proxy) {
             Module[handler] = (...args) => {
               postMessage({
-                cmd: "callHandler",
+                cmd: 9,
                 handler,
                 args
               });
@@ -575,8 +609,10 @@ if (ENVIRONMENT_IS_PTHREAD) {
         wasmModule = msgData.wasmModule;
         createWasm();
         run();
-      } else if (cmd === "run") {
+        startWorker();
+      } else if (cmd == 2) {
         assert(msgData.pthread_ptr);
+        assert(wasmMemory, "CMD_RUN received before CMD_LOAD");
         // Call inside JS module to set up the stack frame for this pthread in JS module scope.
         // This needs to be the first thing that we do, as we cannot call to any C/C++ functions
         // until the thread stack is initialized.
@@ -600,7 +636,7 @@ if (ENVIRONMENT_IS_PTHREAD) {
             throw ex;
           }
         }
-      } else if (msgData.target === "setimmediate") {} else if (cmd === "checkMailbox") {
+      } else if (cmd == 4) {
         if (initializedJS) {
           checkMailbox();
         }
@@ -614,7 +650,7 @@ if (ENVIRONMENT_IS_PTHREAD) {
     } catch (ex) {
       err(`worker: onmessage() captured an uncaught exception: ${ex}`);
       if (ex?.stack) err(ex.stack);
-      __emscripten_thread_crashed();
+      if (runtimeInitialized) __emscripten_thread_crashed();
       throw ex;
     }
   }
@@ -627,7 +663,7 @@ if (ENVIRONMENT_IS_PTHREAD) {
 var wwParams;
 
 /**
- * Called once the intiial message has been recieved from the creating thread.
+ * Called once the initial message has been received from the creating thread.
  * The `props` object is property bag sent via postMessage to create the worker.
  *
  * This function is called both in normal wasm workers and in audio worklets.
@@ -640,7 +676,7 @@ var wwParams;
   run();
   // Drop now unneeded references to from the Module object in this Worker,
   // these are not needed anymore.
-  props.wasm = props.memMemory = 0;
+  props.wasm = props.wasmMemory = 0;
 }
 
 if (ENVIRONMENT_IS_WASM_WORKER && !ENVIRONMENT_IS_AUDIO_WORKLET) {
@@ -709,7 +745,7 @@ if (ENVIRONMENT_IS_AUDIO_WORKLET) {
         // Prepare the output views; see createOutputViews(). The 'STACK_ALIGN'
         // deduction stops the STACK_OVERFLOW_CHECK failing (since the stack will
         // be full if we allocate all the available space) leaving room for a
-        // single AudioSampleFrame as a minumum. There's an arbitrary maximum of
+        // single AudioSampleFrame as a minimum. There's an arbitrary maximum of
         // 64 frames, for the case where a multi-MB stack is passed.
         this.outputViews = new Array(Math.min(((wwParams.stackSize - 16) / this.bytesPerChannel) | 0, /*sensible limit*/ 64));
         assert(this.outputViews.length > 0, `AudioWorklet needs more stack allocating (at least ${this.bytesPerChannel})`);
@@ -743,7 +779,6 @@ if (ENVIRONMENT_IS_AUDIO_WORKLET) {
      * @param {Object} parameters
      */ process(inputList, outputList, parameters) {
         // Recreate the output views if the heap has changed
-        // TODO: add support for GROWABLE_ARRAYBUFFERS
         if ((growMemViews(), HEAPF32).buffer != this.outputViews[0].buffer) {
           this.createOutputViews();
         }
@@ -833,7 +868,7 @@ if (ENVIRONMENT_IS_AUDIO_WORKLET) {
           dataPtr += this.bytesPerChannel * entry.length;
         }
         // If all the maths worked out, we arrived at the original stack address
-        console.assert(dataPtr == oldStackPtr, `AudioWorklet stack missmatch (audio data finishes at ${dataPtr} instead of ${oldStackPtr})`);
+        console.assert(dataPtr == oldStackPtr, `AudioWorklet stack mismatch (audio data finishes at ${dataPtr} instead of ${oldStackPtr})`);
         // Sanity checks. If these trip the most likely cause, beyond unforeseen
         // stack shenanigans, is that the 'render quantum size' changed after
         // construction (which shouldn't be possible).
@@ -935,16 +970,19 @@ if (ENVIRONMENT_IS_AUDIO_WORKLET) {
 // ENVIRONMENT_IS_AUDIO_WORKLET
 // end include: audio_worklet.js
 // Memory management
-var /** @type {!Int8Array} */ HEAP8, /** @type {!Uint8Array} */ HEAPU8, /** @type {!Int16Array} */ HEAP16, /** @type {!Uint16Array} */ HEAPU16, /** @type {!Int32Array} */ HEAP32, /** @type {!Uint32Array} */ HEAPU32, /** @type {!Float32Array} */ HEAPF32, /** @type {!Float64Array} */ HEAPF64;
-
-// BigInt64Array type is not correctly defined in closure
-var /** not-@type {!BigInt64Array} */ HEAP64, /* BigUint64Array type is not correctly defined in closure
-/** not-@type {!BigUint64Array} */ HEAPU64;
-
 var runtimeInitialized = false;
 
+// When ALLOW_MEMORY_GROWTH is enabled, the conversion from Wasm
+// memory to ArrayBuffer requires some additional logic.
+function getMemoryBuffer() {
+  return wasmMemory.buffer;
+}
+
 function updateMemoryViews() {
-  var b = wasmMemory.buffer;
+  // If we already have a heap that is resizeable/growable buffer we don't
+  // need to do anything in updateMemoryViews.
+  if (HEAP8?.buffer?.growable) return;
+  var b = getMemoryBuffer();
   Module["HEAP8"] = HEAP8 = new Int8Array(b);
   Module["HEAP16"] = HEAP16 = new Int16Array(b);
   Module["HEAPU8"] = HEAPU8 = new Uint8Array(b);
@@ -965,11 +1003,9 @@ function initMemory() {
   if ((ENVIRONMENT_IS_PTHREAD || ENVIRONMENT_IS_WASM_WORKER)) {
     return;
   }
-  if (Module["wasmMemory"]) {
-    wasmMemory = Module["wasmMemory"];
-  } else {
-    var INITIAL_MEMORY = Module["INITIAL_MEMORY"] || 67108864;
-    assert(INITIAL_MEMORY >= 4194304, "INITIAL_MEMORY should be larger than STACK_SIZE, was " + INITIAL_MEMORY + "! (STACK_SIZE=" + 4194304 + ")");
+  {
+    var INITIAL_MEMORY = 67108864;
+    assert(INITIAL_MEMORY >= 4194304, `INITIAL_MEMORY should be larger than STACK_SIZE, was ${INITIAL_MEMORY}! (STACK_SIZE=4194304)`);
     /** @suppress {checkTypes} */ wasmMemory = new WebAssembly.Memory({
       "initial": INITIAL_MEMORY / 65536,
       // In theory we should not need to emit the maximum if we want "unlimited"
@@ -993,11 +1029,10 @@ assert(globalThis.Int32Array && globalThis.Float64Array && Int32Array.prototype.
 function preRun() {
   assert(!ENVIRONMENT_IS_PTHREAD);
   // PThreads reuse the runtime from the main thread.
-  if (Module["preRun"]) {
-    if (typeof Module["preRun"] == "function") Module["preRun"] = [ Module["preRun"] ];
-    while (Module["preRun"].length) {
-      addOnPreRun(Module["preRun"].shift());
-    }
+  var preRun = Module["preRun"];
+  if (preRun) {
+    if (typeof preRun == "function") preRun = [ preRun ];
+    onPreRuns.push(...preRun);
   }
   consumedModuleProp("preRun");
   // Begin ATPRERUNS hooks
@@ -1008,37 +1043,36 @@ function initRuntime() {
   assert(!runtimeInitialized);
   runtimeInitialized = true;
   if (ENVIRONMENT_IS_WASM_WORKER) return _wasmWorkerInitializeRuntime();
-  if (ENVIRONMENT_IS_PTHREAD) return startWorker();
+  if (ENVIRONMENT_IS_PTHREAD) return;
   checkStackCookie();
   // No ATINITS hooks
   wasmExports["__wasm_call_ctors"]();
+  // No ATPOSTCTORS hooks
+  checkStackCookie();
 }
 
 function postRun() {
   checkStackCookie();
-  if ((ENVIRONMENT_IS_PTHREAD || ENVIRONMENT_IS_WASM_WORKER)) {
-    return;
-  }
-  // PThreads reuse the runtime from the main thread.
-  if (Module["postRun"]) {
-    if (typeof Module["postRun"] == "function") Module["postRun"] = [ Module["postRun"] ];
-    while (Module["postRun"].length) {
-      addOnPostRun(Module["postRun"].shift());
-    }
+  var postRun = Module["postRun"];
+  if (postRun) {
+    if (typeof postRun == "function") postRun = [ postRun ];
+    onPostRuns.push(...postRun);
   }
   consumedModuleProp("postRun");
   // Begin ATPOSTRUNS hooks
   callRuntimeCallbacks(onPostRuns);
 }
 
-/** @param {string|number=} what */ function abort(what) {
+/**
+ * @param {string|number=} what
+ */ function abort(what) {
   Module["onAbort"]?.(what);
-  what = "Aborted(" + what + ")";
+  what = `Aborted(${what})`;
   // TODO(sbc): Should we remove printing and leave it up to whoever
   // catches the exception?
   err(what);
   ABORT = true;
-  if (what.indexOf("RuntimeError: unreachable") >= 0) {
+  if (what.search(/RuntimeError: [Uu]nreachable/) >= 0) {
     what += '. "unreachable" may be due to ASYNCIFY_STACK_SIZE not being large enough (try increasing it)';
   }
   // Use a wasm runtime error, because a JS error might be seen as a foreign
@@ -1054,7 +1088,6 @@ function postRun() {
   // though it can.
   // TODO(https://github.com/google/closure-compiler/pull/3913): Remove if/when upstream closure gets fixed.
   /** @suppress {checkTypes} */ var e = new WebAssembly.RuntimeError(what);
-  readyPromiseReject?.(e);
   // Throw the error whether or not MODULARIZE is set because abort is used
   // in code paths apart from instantiation where an exception is expected
   // to be thrown when abort is called.
@@ -1062,47 +1095,29 @@ function postRun() {
 }
 
 // show errors on likely calls to FS when it was not included
+function fsMissing() {
+  abort("Filesystem support (FS) was not included. The problem is that you are using files from JS, but files were not used from C/C++, so filesystem support was not auto-included. You can force-include filesystem support with -sFORCE_FILESYSTEM");
+}
+
 var FS = {
-  error() {
-    abort("Filesystem support (FS) was not included. The problem is that you are using files from JS, but files were not used from C/C++, so filesystem support was not auto-included. You can force-include filesystem support with -sFORCE_FILESYSTEM");
-  },
-  init() {
-    FS.error();
-  },
-  createDataFile() {
-    FS.error();
-  },
-  createPreloadedFile() {
-    FS.error();
-  },
-  createLazyFile() {
-    FS.error();
-  },
-  open() {
-    FS.error();
-  },
-  mkdev() {
-    FS.error();
-  },
-  registerDevice() {
-    FS.error();
-  },
-  analyzePath() {
-    FS.error();
-  },
-  ErrnoError() {
-    FS.error();
-  }
+  init: fsMissing,
+  createDataFile: fsMissing,
+  createPreloadedFile: fsMissing,
+  createLazyFile: fsMissing,
+  open: fsMissing,
+  mkdev: fsMissing,
+  registerDevice: fsMissing,
+  analyzePath: fsMissing,
+  ErrnoError: fsMissing
 };
 
-function createExportWrapper(name, nargs) {
+function createExportWrapper(name, func, nargs) {
+  assert(func);
   return (...args) => {
     assert(runtimeInitialized, `native function \`${name}\` called before runtime initialization`);
-    var f = wasmExports[name];
-    assert(f, `exported native function \`${name}\` not found`);
     // Only assert for too many arguments. Too few can be valid since the missing arguments will be zero filled.
     assert(args.length <= nargs, `native function \`${name}\` called with ${args.length} args but expects ${nargs}`);
-    return f(...args);
+    return func(...args);
   };
 }
 
@@ -1113,13 +1128,10 @@ function findWasmBinary() {
 }
 
 function getBinarySync(file) {
-  if (file == wasmBinaryFile && wasmBinary) {
-    return new Uint8Array(wasmBinary);
-  }
   if (readBinary) {
     return readBinary(file);
   }
-  // Throwing a plain string here, even though it not normally adviables since
+  // Throwing a plain string here, even though it not normally advisable since
   // this gets turning into an `abort` in instantiateArrayBuffer.
   throw "both async and sync fetching of the wasm failed";
 }
@@ -1173,7 +1185,7 @@ async function instantiateAsync(binary, binaryFile, imports) {
 function getWasmImports() {
   assignWasmImports();
   // instrumenting imports is used in asyncify in two ways: to add assertions
-  // that check for proper import use, and for ASYNCIFY=2 we use them to set up
+  // that check for proper import use, and for JSPI we use them to set up
   // the Promise API on the import side.
   // In pthreads builds getWasmImports is called more than once but we only
   // and the instrument the imports once.
@@ -1195,7 +1207,7 @@ async function createWasm() {
   // Load the wasm module and create an instance of using native support in the JS engine.
   // handle a generated wasm instance, receiving its exports and
   // performing other necessary setup
-  /** @param {WebAssembly.Module=} module*/ function receiveInstance(instance, module) {
+  function receiveInstance(instance, module) {
     wasmExports = instance.exports;
     wasmExports = Asyncify.instrumentWasmExports(wasmExports);
     registerTLSInit(wasmExports["_emscripten_tls_init"]);
@@ -1223,20 +1235,19 @@ async function createWasm() {
   // performing.
   // Also pthreads and wasm workers initialize the wasm instance through this
   // path.
-  if (Module["instantiateWasm"]) {
-    return new Promise((resolve, reject) => {
+  var instantiateWasm = Module["instantiateWasm"];
+  if (instantiateWasm) {
+    return new Promise(resolve => {
       try {
-        Module["instantiateWasm"](info, (inst, mod) => {
-          resolve(receiveInstance(inst, mod));
-        });
+        instantiateWasm(info, (inst, mod) => resolve(receiveInstance(inst, mod)));
       } catch (e) {
         err(`Module.instantiateWasm callback failed with error: ${e}`);
-        reject(e);
+        throw e;
       }
     });
   }
   if ((ENVIRONMENT_IS_PTHREAD || ENVIRONMENT_IS_WASM_WORKER)) {
-    // Instantiate from the module that was recieved via postMessage from
+    // Instantiate from the module that was received via postMessage from
     // the main thread. We can just use sync instantiation in the worker.
     assert(wasmModule, "wasmModule should have been received via postMessage");
     var instance = new WebAssembly.Instance(wasmModule, getWasmImports());
@@ -1258,22 +1269,42 @@ class ExitStatus {
   }
 }
 
+/** @type {!Int16Array} */ var HEAP16;
+
+/** @type {!Int32Array} */ var HEAP32;
+
+/** not-@type {!BigInt64Array} */ var HEAP64;
+
+/** @type {!Int8Array} */ var HEAP8;
+
+/** @type {!Float32Array} */ var HEAPF32;
+
+/** @type {!Float64Array} */ var HEAPF64;
+
+/** @type {!Uint16Array} */ var HEAPU16;
+
+/** @type {!Uint32Array} */ var HEAPU32;
+
+/** not-@type {!BigUint64Array} */ var HEAPU64;
+
+/** @type {!Uint8Array} */ var HEAPU8;
+
 var terminateWorker = worker => {
   worker.terminate();
   // terminate() can be asynchronous, so in theory the worker can continue
   // to run for some amount of time after termination.  However from our POV
-  // the worker now dead and we don't want to hear from it again, so we stub
+  // the worker is now dead and we don't want to hear from it again, so we stub
   // out its message handler here.  This avoids having to check in each of
-  // the onmessage handlers if the message was coming from valid worker.
+  // the onmessage handlers if the message was coming from a valid worker.
   worker.onmessage = e => {
-    var cmd = e["data"].cmd;
+    var cmd = e.data.cmd;
     err(`received "${cmd}" command from terminated worker: ${worker.workerID}`);
   };
 };
 
 var cleanupThread = pthread_ptr => {
-  assert(!ENVIRONMENT_IS_PTHREAD, "Internal Error! cleanupThread() can only ever be called from main application thread!");
-  assert(pthread_ptr, "Internal Error! Null pthread_ptr in cleanupThread!");
+  assert(!ENVIRONMENT_IS_PTHREAD, "cleanupThread() should only be called from the main thread");
+  assert(pthread_ptr, "null pthread_ptr passed to cleanupThread");
   var worker = PThread.pthreads[pthread_ptr];
   assert(worker);
   PThread.returnWorkerToPool(worker);
@@ -1290,9 +1321,13 @@ var onPreRuns = [];
 
 var addOnPreRun = cb => onPreRuns.push(cb);
 
+var dependenciesPromise = null;
+
+var resolveRunDependencies = async () => dependenciesPromise;
+
 var runDependencies = 0;
 
-var dependenciesFulfilled = null;
+var dependenciesPromiseResolve = null;
 
 var runDependencyTracking = {};
 
@@ -1304,26 +1339,25 @@ var removeRunDependency = id => {
   assert(id, "removeRunDependency requires an ID");
   assert(runDependencyTracking[id]);
   delete runDependencyTracking[id];
-  if (runDependencies == 0) {
+  if (!runDependencies) {
     if (runDependencyWatcher !== null) {
       clearInterval(runDependencyWatcher);
       runDependencyWatcher = null;
     }
-    if (dependenciesFulfilled) {
-      var callback = dependenciesFulfilled;
-      dependenciesFulfilled = null;
-      callback();
-    }
+    dependenciesPromiseResolve();
   }
 };
 
 var addRunDependency = id => {
+  if (!runDependencies) {
+    dependenciesPromise = new Promise(resolve => dependenciesPromiseResolve = resolve);
+  }
   runDependencies++;
   Module["monitorRunDependencies"]?.(runDependencies);
   assert(id, "addRunDependency requires an ID");
   assert(!runDependencyTracking[id]);
   runDependencyTracking[id] = 1;
-  if (runDependencyWatcher === null && globalThis.setInterval) {
+  if (!runDependencyWatcher && globalThis.setInterval) {
     // Check for missing dependencies every few seconds
     runDependencyWatcher = setInterval(() => {
       if (ABORT) {
@@ -1350,31 +1384,23 @@ var addRunDependency = id => {
 };
 
 var spawnThread = threadParams => {
-  assert(!ENVIRONMENT_IS_PTHREAD, "Internal Error! spawnThread() can only ever be called from main application thread!");
-  assert(threadParams.pthread_ptr, "Internal error, no pthread ptr!");
+  assert(!ENVIRONMENT_IS_PTHREAD, "spawnThread() should only be called from the main thread");
+  assert(threadParams.pthread_ptr, "spawnThread called with null pthread ptr");
   var worker = PThread.getNewWorker();
   if (!worker) {
     // No available workers in the PThread pool.
     return 6;
   }
-  assert(!worker.pthread_ptr, "Internal error!");
-  PThread.runningWorkers.push(worker);
+  assert(!worker.pthread_ptr);
   // Add to pthreads map
   PThread.pthreads[threadParams.pthread_ptr] = worker;
   worker.pthread_ptr = threadParams.pthread_ptr;
   var msg = {
-    cmd: "run",
+    cmd: 2,
     start_routine: threadParams.startRoutine,
     arg: threadParams.arg,
     pthread_ptr: threadParams.pthread_ptr
   };
-  if (ENVIRONMENT_IS_NODE) {
-    // Mark worker as weakly referenced once we start executing a pthread,
-    // so that its existence does not prevent Node.js from exiting.  This
-    // has no effect if the worker is already weakly referenced (e.g. if
-    // this worker was previously idle/unused).
-    worker.unref();
-  }
   // Ask the worker to start executing its pthread entry point function.
   worker.postMessage(msg, threadParams.transferList);
   return 0;
@@ -1390,7 +1416,7 @@ var stackRestore = val => __emscripten_stack_restore(val);
 
 var stackAlloc = sz => __emscripten_stack_alloc(sz);
 
-/** @type{function(number, (number|boolean), ...number)} */ var proxyToMainThread = (funcIndex, emAsmAddr, sync, ...callArgs) => {
+/** @type{function(number, (number|boolean), ...number)} */ var proxyToMainThread = (funcIndex, emAsmAddr, proxyMode, ...callArgs) => {
   // EM_ASM proxying is done by passing a pointer to the address of the EM_ASM
   // content as `emAsmAddr`.  JS library proxying is done by passing an index
   // into `proxiedJSCallArgs` as `funcIndex`. If `emAsmAddr` is non-zero then
@@ -1399,31 +1425,31 @@ var stackAlloc = sz => __emscripten_stack_alloc(sz);
   // function arguments.
   // The serialization buffer contains the number of call params, and then
   // all the args here.
-  // We also pass 'sync' to C separately, since C needs to look at it.
-  // Allocate a buffer, which will be copied by the C code.
+  // We also pass 'proxyMode' to C separately, since C needs to look at it.
+  // Allocate a buffer (on the stack), which will be copied if necessary by
+  // the C code.
   // First passed parameter specifies the number of arguments to the function.
   // When BigInt support is enabled, we must handle types in a more complex
   // way, detecting at runtime if a value is a BigInt or not (as we have no
   // type info here). To do that, add a "prefix" before each value that
   // indicates if it is a BigInt, which effectively doubles the number of
   // values we serialize for proxying. TODO: pack this?
-  var serializedNumCallArgs = callArgs.length * 2;
+  var bufSize = 8 * callArgs.length * 2;
   var sp = stackSave();
-  var args = stackAlloc(serializedNumCallArgs * 8);
+  var args = stackAlloc(bufSize);
   var b = ((args) >> 3);
-  for (var i = 0; i < callArgs.length; i++) {
-    var arg = callArgs[i];
+  for (var arg of callArgs) {
     if (typeof arg == "bigint") {
       // The prefix is non-zero to indicate a bigint.
-      (growMemViews(), HEAP64)[b + 2 * i] = 1n;
-      (growMemViews(), HEAP64)[b + 2 * i + 1] = arg;
+      (growMemViews(), HEAP64)[b++] = 1n;
+      (growMemViews(), HEAP64)[b++] = arg;
     } else {
       // The prefix is zero to indicate a JS Number.
-      (growMemViews(), HEAP64)[b + 2 * i] = 0n;
-      (growMemViews(), HEAPF64)[b + 2 * i + 1] = arg;
+      (growMemViews(), HEAP64)[b++] = 0n;
+      (growMemViews(), HEAPF64)[b++] = arg;
     }
   }
-  var rtn = __emscripten_run_js_on_main_thread(funcIndex, emAsmAddr, serializedNumCallArgs, args, sync);
+  var rtn = __emscripten_run_js_on_main_thread(funcIndex, emAsmAddr, bufSize, args, proxyMode);
   stackRestore(sp);
   return rtn;
 };
@@ -1460,7 +1486,6 @@ function exitOnMainThread(returnCode) {
   // if exit() was called explicitly, warn the user if the runtime isn't actually being shut down
   if (keepRuntimeAlive() && !implicit) {
     var msg = `program exited (with status: ${status}), but keepRuntimeAlive() is set (counter=${runtimeKeepaliveCounter}) due to an async operation, so halting execution but not exiting the runtime or preventing further async execution (you can use emscripten_force_exit, if you want to force a true shutdown)`;
-    readyPromiseReject?.(msg);
     err(msg);
   }
   _proc_exit(status);
@@ -1468,16 +1493,17 @@ function exitOnMainThread(returnCode) {
 
 var _exit = exitJS;
 
-var ptrToString = ptr => {
+var waitAsyncPolyfilled = (!Atomics.waitAsync || (globalThis.navigator?.userAgent && Number((navigator.userAgent.match(/Chrom(e|ium)\/([0-9]+)\./) || [])[2]) < 91));
+
+function ptrToString(ptr) {
   assert(typeof ptr === "number", `ptrToString expects a number, got ${typeof ptr}`);
   // Convert to 32-bit unsigned value
   ptr >>>= 0;
   return "0x" + ptr.toString(16).padStart(8, "0");
-};
+}
 
 var PThread = {
   unusedWorkers: [],
-  runningWorkers: [],
   tlsInitFunctions: [],
   pthreads: {},
   nextWorkerID: 1,
@@ -1502,40 +1528,54 @@ var PThread = {
     });
   },
   terminateAllThreads: () => {
-    assert(!ENVIRONMENT_IS_PTHREAD, "Internal Error! terminateAllThreads() can only ever be called from main application thread!");
+    assert(!ENVIRONMENT_IS_PTHREAD, "terminateAllThreads() should only be called from the main thread");
     // Attempt to kill all workers.  Sadly (at least on the web) there is no
     // way to terminate a worker synchronously, or to be notified when a
-    // worker in actually terminated.  This means there is some risk that
+    // worker is actually terminated.  This means there is some risk that
     // pthreads will continue to be executing after `worker.terminate` has
     // returned.  For this reason, we don't call `returnWorkerToPool` here or
     // free the underlying pthread data structures.
-    for (var worker of PThread.runningWorkers) {
+    for (var worker of Object.values(PThread.pthreads)) {
       terminateWorker(worker);
     }
     for (var worker of PThread.unusedWorkers) {
       terminateWorker(worker);
     }
     PThread.unusedWorkers = [];
-    PThread.runningWorkers = [];
     PThread.pthreads = {};
+  },
+  clearMailboxAwait: pthread_ptr => {
+    if (!waitAsyncPolyfilled) {
+      Atomics.notify((growMemViews(), HEAP32), ((pthread_ptr) >> 2));
+    }
+  },
+  terminateRuntime: () => {
+    assert(!ENVIRONMENT_IS_PTHREAD, "terminateRuntime() should only be called from the main thread");
+    PThread.terminateAllThreads();
+    var pthread_ptr = _pthread_self();
+    ___set_thread_state(0, 0, 0, 1);
+    PThread.clearMailboxAwait(pthread_ptr);
   },
   returnWorkerToPool: worker => {
     // We don't want to run main thread queued calls here, since we are doing
     // some operations that leave the worker queue in an invalid state until
     // we are completely done (it would be bad if free() ends up calling a
     // queued pthread_create which looks at the global data structures we are
-    // modifying). To achieve that, defer the free() til the very end, when
+    // modifying). To achieve that, defer the free() until the very end, when
     // we are all done.
     var pthread_ptr = worker.pthread_ptr;
     delete PThread.pthreads[pthread_ptr];
     // Note: worker is intentionally not terminated so the pool can
     // dynamically grow.
     PThread.unusedWorkers.push(worker);
-    PThread.runningWorkers.splice(PThread.runningWorkers.indexOf(worker), 1);
     // Not a running Worker anymore
     // Detach the worker from the pthread object, and return it to the
     // worker pool as an unused worker.
     worker.pthread_ptr = 0;
+    // Clear any pending waitAsync waiter armed on this thread's struct
+    // BEFORE freeing the memory so that memory recycled by malloc in another
+    // thread will not have a window where a stale async waiter is still active.
+    PThread.clearMailboxAwait(pthread_ptr);
     // Finally, free the underlying (and now-unused) pthread structure in
     // linear memory.
     __emscripten_thread_free_data(pthread_ptr);
@@ -1547,54 +1587,65 @@ var PThread = {
   },
   loadWasmModuleToWorker: worker => new Promise(onFinishedLoading => {
     worker.onmessage = e => {
-      var d = e["data"];
+      var d = e.data;
       var cmd = d.cmd;
       // If this message is intended to a recipient that is not the main
-      // thread, forward it to the target thread.
+      // thread, forward it to the target thread. This is currently only
+      // used by `CMD_CHECK_MAILBOX`.
       if (d.targetThread && d.targetThread != _pthread_self()) {
         var targetWorker = PThread.pthreads[d.targetThread];
-        if (targetWorker) {
-          targetWorker.postMessage(d, d.transferList);
-        } else {
-          err(`Internal error! Worker sent a message "${cmd}" to target pthread ${d.targetThread}, but that thread no longer exists!`);
-        }
+        if (!targetWorker) err(`worker sent message (${cmd}) to pthread (${d.targetThread}) that no longer exists`);
+        targetWorker?.postMessage(d);
         return;
       }
-      if (cmd === "checkMailbox") {
+      if (d === "setimmediate" || d === "_si") {
+        // Worker wants to postMessage() to itself to implement setImmediate()
+        // emulation.
+        worker.postMessage(d);
+        return;
+      }
+      switch (cmd) {
+       case 4:
         checkMailbox();
-      } else if (cmd === "spawnThread") {
+        break;
+
+       case 5:
         spawnThread(d);
-      } else if (cmd === "cleanupThread") {
+        break;
+
+       case 6:
         // cleanupThread needs to be run via callUserCallback since it calls
         // back into user code to free thread data. Without this it's possible
         // the unwind or ExitStatus exception could escape here.
         callUserCallback(() => cleanupThread(d.thread));
-      } else if (cmd === "loaded") {
-        worker.loaded = true;
-        // Check that this worker doesn't have an associated pthread.
-        if (ENVIRONMENT_IS_NODE && !worker.pthread_ptr) {
+        break;
+
+       case 3:
+        if (ENVIRONMENT_IS_NODE && !worker.strongref) {
           // Once worker is loaded & idle, mark it as weakly referenced,
           // so that mere existence of a Worker in the pool does not prevent
           // Node.js from exiting the app.
           worker.unref();
         }
         onFinishedLoading(worker);
-      } else if (d.target === "setimmediate") {
-        // Worker wants to postMessage() to itself to implement setImmediate()
-        // emulation.
-        worker.postMessage(d);
-      } else if (cmd === "uncaughtException") {
+        break;
+
+       case 8:
         // Message handler for Node.js specific out-of-order behavior:
         // https://github.com/nodejs/node/issues/59617
         // A pthread sent an uncaught exception event. Re-raise it on the main thread.
         worker.onerror(d.error);
-      } else if (cmd === "callHandler") {
+        break;
+
+       case 9:
         Module[d.handler](...d.args);
-      } else if (cmd) {
+        break;
+
+       default:
         // The received message looks like something that should be handled by this message
         // handler, (since there is a e.data.cmd field present), but is not one of the
         // recognized commands:
-        err(`worker sent an unknown command ${cmd}`);
+        if (cmd) err(`worker sent an unknown command ${cmd}`);
       }
     };
     worker.onerror = e => {
@@ -1611,8 +1662,8 @@ var PThread = {
       }));
       worker.on("error", e => worker.onerror(e));
     }
-    assert(wasmMemory instanceof WebAssembly.Memory, "WebAssembly memory should have been loaded by now!");
-    assert(wasmModule instanceof WebAssembly.Module, "WebAssembly Module should have been loaded by now!");
+    assert(wasmMemory instanceof WebAssembly.Memory, "wasmMemory should have been loaded by now");
+    assert(wasmModule instanceof WebAssembly.Module, "wasmModule should have been loaded by now");
     // When running on a pthread, none of the incoming parameters on the module
     // object are present. Proxy known handlers back to the main thread if specified.
     var handlers = [];
@@ -1624,11 +1675,11 @@ var PThread = {
     }
     // Ask the new worker to load up the Emscripten-compiled page. This is a heavy operation.
     worker.postMessage({
-      cmd: "load",
+      cmd: 1,
       handlers,
       wasmMemory,
       wasmModule,
-      "workerID": worker.workerID
+      workerID: worker.workerID
     });
   }),
   async loadWasmModuleToAllWorkers() {
@@ -1642,14 +1693,6 @@ var PThread = {
   allocateUnusedWorker() {
     var worker;
     var pthreadMainJs = _scriptName;
-    // We can't use makeModuleReceiveWithVar here since we want to also
-    // call URL.createObjectURL on the mainScriptUrlOrBlob.
-    if (Module["mainScriptUrlOrBlob"]) {
-      pthreadMainJs = Module["mainScriptUrlOrBlob"];
-      if (typeof pthreadMainJs != "string") {
-        pthreadMainJs = URL.createObjectURL(pthreadMainJs);
-      }
-    }
     worker = new Worker(pthreadMainJs, {
       // This is the way that we signal to the node worker that it is hosting
       // a pthread.
@@ -1660,6 +1703,7 @@ var PThread = {
     });
     worker.workerID = PThread.nextWorkerID++;
     PThread.unusedWorkers.push(worker);
+    return worker;
   },
   getNewWorker() {
     if (PThread.unusedWorkers.length == 0) {
@@ -1669,8 +1713,8 @@ var PThread = {
       if (!ENVIRONMENT_IS_NODE) {
         err("Tried to spawn a new thread, but the thread pool is exhausted.\n" + "This might result in a deadlock unless some threads eventually exit or the code explicitly breaks out to the event loop.\n" + "If you want to increase the pool size, use setting `-sPTHREAD_POOL_SIZE=...`." + "\nIf you want to throw an explicit error instead of the risk of deadlocking in those cases, use setting `-sPTHREAD_POOL_SIZE_STRICT=2`.");
       }
-      PThread.allocateUnusedWorker();
-      PThread.loadWasmModuleToWorker(PThread.unusedWorkers[0]);
+      var newWorker = PThread.allocateUnusedWorker();
+      PThread.loadWasmModuleToWorker(newWorker);
     }
     return PThread.unusedWorkers.pop();
   }
@@ -1719,10 +1763,11 @@ var callUserCallback = func => {
     return;
   }
   try {
-    func();
-    maybeExit();
+    return func();
   } catch (e) {
     handleException(e);
+  } finally {
+    maybeExit();
   }
 };
 
@@ -1733,7 +1778,7 @@ var getWasmTableEntry = funcPtr => {
   if (!func) {
     /** @suppress {checkTypes} */ wasmTableMirror[funcPtr] = func = wasmTable.get(funcPtr);
   }
-  /** @suppress {checkTypes} */ assert(wasmTable.get(funcPtr) == func, "JavaScript-side Wasm function table mirror is out of date!");
+  /** @suppress {checkTypes} */ assert(wasmTable.get(funcPtr) == func, "table mirror is out of date");
   return func;
 };
 
@@ -1749,6 +1794,11 @@ var _wasmWorkerAppendToQueue = e => {
   _wasmWorkerDelayedMessageQueue.push(e);
 };
 
+var alignMemory = (size, alignment) => {
+  assert(alignment, "alignment argument is required");
+  return Math.ceil(size / alignment) * alignment;
+};
+
 var _wasmWorkerInitializeRuntime = () => {
   assert(wwParams);
   assert(wwParams.wwID);
@@ -1757,10 +1807,10 @@ var _wasmWorkerInitializeRuntime = () => {
   // Wasm workers basically never exit their runtime
   noExitRuntime = 1;
   // Run the C side Worker initialization for stack and TLS.
-  __emscripten_wasm_worker_initialize(wwParams.stackLowestAddress, wwParams.stackSize);
+  __emscripten_wasm_worker_initialize(wwParams.wwID, wwParams.stackLowestAddress, wwParams.stackSize);
   // Record the pthread configuration, and whether this Wasm Worker supports synchronous blocking in emscripten_futex_wait().
   // (regular Wasm Workers do, AudioWorklets don't)
-  ___set_thread_state(/*thread_ptr=*/ 0, /*is_main_thread=*/ 0, /*is_runtime_thread=*/ 0, /*supports_wait=*/ !ENVIRONMENT_IS_AUDIO_WORKLET);
+  ___set_thread_state(wwParams.pthreadPtr ?? 0, /*is_main_thread=*/ 0, /*is_runtime_thread=*/ 0, /*supports_wait=*/ !ENVIRONMENT_IS_AUDIO_WORKLET);
   // Write the stack cookie last, after we have set up the proper bounds and
   // current position of the stack.
   writeStackCookie();
@@ -1811,8 +1861,8 @@ var dynCall = (sig, ptr, args = [], promising = false) => {
 };
 
 function establishStackSpace(pthread_ptr) {
-  var stackHigh = (growMemViews(), HEAPU32)[(((pthread_ptr) + (52)) >> 2)];
-  var stackSize = (growMemViews(), HEAPU32)[(((pthread_ptr) + (56)) >> 2)];
+  var stackHigh = (growMemViews(), HEAPU32)[(((pthread_ptr) + (48)) >> 2)];
+  var stackSize = (growMemViews(), HEAPU32)[(((pthread_ptr) + (52)) >> 2)];
   var stackLow = stackHigh - stackSize;
   assert(stackHigh != 0);
   assert(stackLow != 0);
@@ -1828,9 +1878,9 @@ function establishStackSpace(pthread_ptr) {
 }
 
 /**
-     * @param {number} ptr
-     * @param {string} type
-     */ function getValue(ptr, type = "i8") {
+   * @param {number} ptr
+   * @param {string} type
+   */ function getValue(ptr, type = "i8") {
   if (type.endsWith("*")) type = "*";
   switch (type) {
    case "i1":
@@ -1898,17 +1948,15 @@ var invokeEntryPoint = (ptr, arg) => {
   finish(result);
 };
 
-invokeEntryPoint.isAsync = true;
-
 var noExitRuntime = true;
 
 var registerTLSInit = tlsInitFunc => PThread.tlsInitFunctions.push(tlsInitFunc);
 
 /**
-     * @param {number} ptr
-     * @param {number} value
-     * @param {string} type
-     */ function setValue(ptr, value, type = "i8") {
+   * @param {number} ptr
+   * @param {number} value
+   * @param {string} type
+   */ function setValue(ptr, value, type = "i8") {
   if (type.endsWith("*")) type = "*";
   switch (type) {
    case "i1":
@@ -1961,7 +2009,13 @@ var wasmMemory;
 
 var UTF8Decoder = globalThis.TextDecoder && new TextDecoder;
 
-var findStringEnd = (heapOrArray, idx, maxBytesToRead, ignoreNul) => {
+/**
+   * heapOrArray is either a regular array, or a JavaScript typed array view.
+   * @param {number} idx
+   * @param {number=} maxBytesToRead
+   * @param {boolean=} ignoreNul
+   * @return {number}
+   */ var findStringEnd = (heapOrArray, idx, maxBytesToRead, ignoreNul) => {
   var maxIdx = idx + maxBytesToRead;
   if (ignoreNul) return maxIdx;
   // TextDecoder needs to know the byte length in advance, it doesn't stop on
@@ -1973,15 +2027,15 @@ var findStringEnd = (heapOrArray, idx, maxBytesToRead, ignoreNul) => {
 };
 
 /**
-     * Given a pointer 'idx' to a null-terminated UTF8-encoded string in the given
-     * array that contains uint8 values, returns a copy of that string as a
-     * Javascript String object.
-     * heapOrArray is either a regular array, or a JavaScript typed array view.
-     * @param {number=} idx
-     * @param {number=} maxBytesToRead
-     * @param {boolean=} ignoreNul - If true, the function will not stop on a NUL character.
-     * @return {string}
-     */ var UTF8ArrayToString = (heapOrArray, idx = 0, maxBytesToRead, ignoreNul) => {
+   * Given a pointer 'idx' to a null-terminated UTF8-encoded string in the given
+   * array that contains uint8 values, returns a copy of that string as a
+   * Javascript String object.
+   * heapOrArray is either a regular array, or a JavaScript typed array view.
+   * @param {number=} idx
+   * @param {number=} maxBytesToRead
+   * @param {boolean=} ignoreNul - If true, the function will not stop on a NUL character.
+   * @return {string}
+   */ var UTF8ArrayToString = (heapOrArray, idx = 0, maxBytesToRead, ignoreNul) => {
   var endPtr = findStringEnd(heapOrArray, idx, maxBytesToRead, ignoreNul);
   // When using conditional TextDecoder, skip it for short strings as the overhead of the native call is not worth it.
   if (endPtr - idx > 16 && heapOrArray.buffer && UTF8Decoder) {
@@ -2007,7 +2061,7 @@ var findStringEnd = (heapOrArray, idx, maxBytesToRead, ignoreNul) => {
     if ((u0 & 240) == 224) {
       u0 = ((u0 & 15) << 12) | (u1 << 6) | u2;
     } else {
-      if ((u0 & 248) != 240) warnOnce("Invalid UTF-8 leading byte " + ptrToString(u0) + " encountered when deserializing a UTF-8 string in wasm memory to a JS string!");
+      if ((u0 & 248) != 240) warnOnce(`Invalid UTF-8 leading byte ${ptrToString(u0)} encountered when deserializing a UTF-8 string in wasm memory to a JS string!`);
       u0 = ((u0 & 7) << 18) | (u1 << 12) | (u2 << 6) | (heapOrArray[idx++] & 63);
     }
     if (u0 < 65536) {
@@ -2021,18 +2075,18 @@ var findStringEnd = (heapOrArray, idx, maxBytesToRead, ignoreNul) => {
 };
 
 /**
-     * Given a pointer 'ptr' to a null-terminated UTF8-encoded string in the
-     * emscripten HEAP, returns a copy of that string as a Javascript String object.
-     *
-     * @param {number} ptr
-     * @param {number=} maxBytesToRead - An optional length that specifies the
-     *   maximum number of bytes to read. You can omit this parameter to scan the
-     *   string until the first 0 byte. If maxBytesToRead is passed, and the string
-     *   at [ptr, ptr+maxBytesToReadr[ contains a null byte in the middle, then the
-     *   string will cut short at that byte index.
-     * @param {boolean=} ignoreNul - If true, the function will not stop on a NUL character.
-     * @return {string}
-     */ var UTF8ToString = (ptr, maxBytesToRead, ignoreNul) => {
+   * Given a pointer 'ptr' to a null-terminated UTF8-encoded string in the
+   * emscripten HEAP, returns a copy of that string as a Javascript String object.
+   *
+   * @param {number} ptr
+   * @param {number=} maxBytesToRead - An optional length that specifies the
+   *   maximum number of bytes to read. You can omit this parameter to scan the
+   *   string until the first 0 byte. If maxBytesToRead is passed, and the string
+   *   at [ptr, ptr+maxBytesToReadr[ contains a null byte in the middle, then the
+   *   string will cut short at that byte index.
+   * @param {boolean=} ignoreNul - If true, the function will not stop on a NUL character.
+   * @return {string}
+   */ var UTF8ToString = (ptr, maxBytesToRead, ignoreNul) => {
   assert(typeof ptr == "number", `UTF8ToString expects a number (got ${typeof ptr})`);
   return ptr ? UTF8ArrayToString((growMemViews(), HEAPU8), ptr, maxBytesToRead, ignoreNul) : "";
 };
@@ -2085,17 +2139,18 @@ class ExceptionInfo {
   }
 }
 
-var exceptionLast = 0;
-
 var uncaughtExceptionCount = 0;
+
+var __Unwind_RaiseException = ex => {
+  assert(false, "Exception thrown, but exception catching is not enabled. Compile with -sNO_DISABLE_EXCEPTION_CATCHING or -sEXCEPTION_CATCHING_ALLOWED=[..] to catch.");
+};
 
 var ___cxa_throw = (ptr, type, destructor) => {
   var info = new ExceptionInfo(ptr);
   // Initialize ExceptionInfo content after it was allocated in __cxa_allocate_exception.
   info.init(type, destructor);
-  exceptionLast = ptr;
   uncaughtExceptionCount++;
-  assert(false, "Exception thrown, but exception catching is not enabled. Compile with -sNO_DISABLE_EXCEPTION_CATCHING or -sEXCEPTION_CATCHING_ALLOWED=[..] to catch.");
+  __Unwind_RaiseException(ptr);
 };
 
 function pthreadCreateProxied(pthread_ptr, attr, startRoutine, arg) {
@@ -2116,7 +2171,7 @@ var ___pthread_create_js = (pthread_ptr, attr, startRoutine, arg) => {
   // Synchronously proxy the thread creation to main thread if possible. If we
   // need to transfer ownership of objects, then proxy asynchronously via
   // postMessage.
-  if (ENVIRONMENT_IS_PTHREAD && (transferList.length === 0 || error)) {
+  if (ENVIRONMENT_IS_PTHREAD && (!transferList.length || error)) {
     return pthreadCreateProxied(pthread_ptr, attr, startRoutine, arg);
   }
   // If on the main thread, and accessing Canvas/OffscreenCanvas failed, abort
@@ -2132,7 +2187,7 @@ var ___pthread_create_js = (pthread_ptr, attr, startRoutine, arg) => {
     // The prepopulated pool of web workers that can host pthreads is stored
     // in the main JS thread. Therefore if a pthread is attempting to spawn a
     // new thread, the thread creation must be deferred to the main JS thread.
-    threadParams.cmd = "spawnThread";
+    threadParams.cmd = 5;
     postMessage(threadParams, transferList);
     // When we defer thread creation this way, we have no way to detect thread
     // creation synchronously today, so we have to assume success and return 0.
@@ -2145,47 +2200,150 @@ var ___pthread_create_js = (pthread_ptr, attr, startRoutine, arg) => {
 
 var __abort_js = () => abort("native code called abort()");
 
-var __emscripten_init_main_thread_js = tb => {
-  // Pass the thread address to the native code where they stored in wasm
-  // globals which act as a form of TLS. Global constructors trying
-  // to access this value will read the wrong value, but that is UB anyway.
-  __emscripten_thread_init(tb, /*is_main=*/ !ENVIRONMENT_IS_WORKER, /*is_runtime=*/ 1, /*can_block=*/ !ENVIRONMENT_IS_WEB, /*default_stacksize=*/ 4194304, /*start_profiling=*/ false);
-  PThread.threadInitTLS();
+var emAudioExpectNodeOrContext = (handle, methodName) => {
+  var obj = _emAudioExpectHandle(handle, methodName);
+  assert(obj instanceof window.AudioNode || obj instanceof window.AudioContext, `${methodName}() called with a handle ${handle} that is not an AudioContext or AudioNode, but of type ${typeof obj}`);
 };
 
-var waitAsyncPolyfilled = (!Atomics.waitAsync || (globalThis.navigator?.userAgent && Number((navigator.userAgent.match(/Chrom(e|ium)\/([0-9]+)\./) || [])[2]) < 91));
+var emAudioExpectContext = (handle, methodName) => {
+  var obj = _emAudioExpectHandle(handle, methodName);
+  assert(obj instanceof window.AudioContext, `${methodName}() called with ${handle} that is not an AudioContext, but of type ${typeof obj}`);
+};
+
+var emAudioExpectNode = (handle, methodName) => {
+  var obj = _emAudioExpectHandle(handle, methodName);
+  assert(obj instanceof window.AudioNode, `${methodName}() called with a handle ${handle} that is not an AudioNode, but of type ${typeof obj}`);
+};
+
+var _emAudioExpectHandle = (handle, methodName) => {
+  var obj = emAudio[handle];
+  assert(obj, `${methodName}() called on a nonexisting handle ${handle}`);
+  return obj;
+};
+
+var _emAudioDispatchProcessorCallback = e => {
+  var data = e.data;
+  // '_wsc' is short for 'wasm call', trying to use an identifier name that
+  // will never conflict with user code. This is used to call both the 3-param
+  // call (handle, true, userData) and the variable argument post functions.
+  var wasmCall = data["_wsc"];
+  wasmCall && getWasmTableEntry(wasmCall)(...data.args);
+};
+
+var __emscripten_create_audio_worklet = (wwID, contextHandle, stackLowestAddress, stackSize, pthreadPtr, callback, userData) => {
+  emAudioExpectContext(contextHandle, "_emscripten_create_audio_worklet");
+  var audioContext = emAudio[contextHandle];
+  var audioWorklet = audioContext.audioWorklet;
+  assert(stackLowestAddress != 0, "AudioWorklets require a dedicated stack space for audio data marshalling between Wasm and JS");
+  assert(stackLowestAddress % 16 == 0, `AudioWorklet stack should be aligned to 16 bytes (was ${stackLowestAddress} == ${stackLowestAddress % 16} mod 16) Use e.g. memalign(16, stackSize) to align the stack`);
+  assert(stackSize != 0, "AudioWorklets require a dedicated stack space for audio data marshalling between Wasm and JS");
+  assert(stackSize % 16 == 0, `AudioWorklet stack size should be a multiple of 16 bytes! (was ${stackSize} == ${stackSize % 16} mod 16)`);
+  assert(!audioContext.audioWorkletInitialized, `emscripten_create_wasm_audio_worklet() was already called for AudioContext ${contextHandle}! Only call this function once per AudioContext`);
+  audioContext.audioWorkletInitialized = 1;
+  assert(pthreadPtr);
+  var audioWorkletCreationFailed = () => {
+    dbg(`_emscripten_create_audio_worklet() addModule() failed!`);
+    ((a1, a2, a3) => dynCall_viii(callback, a1, a2, a3))(contextHandle, 0, userData);
+  };
+  // Does browser not support AudioWorklets?
+  if (!audioWorklet) {
+    if (location.protocol == "http:") {
+      console.error(`AudioWorklets are not supported. This is possibly due to running the page over unsecure http:// protocol. Try running over https://, or debug via a localhost-based server, which should also allow AudioWorklets to function.`);
+    } else {
+      console.error(`AudioWorklets are not supported by current browser.`);
+    }
+    return audioWorkletCreationFailed();
+  }
+  audioWorklet.addModule(locateFile("libflutter_recorder_plugin_mt.js")).then(() => {
+    // If this browser does not support the up-to-date AudioWorklet standard
+    // that has a MessagePort over to the AudioWorklet, then polyfill that by
+    // instantiating a dummy AudioWorkletNode to get a MessagePort over.
+    // Firefox added support in https://hg-edge.mozilla.org/integration/autoland/rev/ab38a1796126f2b3fc06475ffc5a625059af59c1
+    // Chrome ticket: https://crbug.com/446920095
+    // Safari ticket: https://webkit.org/b/299386
+    if (!audioWorklet.port) {
+      audioWorklet.port = {
+        postMessage: msg => {
+          if (msg["_boot"]) {
+            audioWorklet.bootstrapMessage = new AudioWorkletNode(audioContext, "em-bootstrap", {
+              processorOptions: msg
+            });
+            audioWorklet.bootstrapMessage.port.onmessage = msg => {
+              audioWorklet.port.onmessage(msg);
+            };
+          } else {
+            audioWorklet.bootstrapMessage.port.postMessage(msg);
+          }
+        }
+      };
+    }
+    audioWorklet.port.postMessage({
+      // This is the bootstrap message to the Audio Worklet.
+      "_boot": 1,
+      // Assign the loaded AudioWorkletGlobalScope a Wasm Worker ID so that
+      // it can utilized its own TLS slots, and it is recognized to not be
+      // the main browser thread.
+      wwID,
+      wasm: wasmModule,
+      wasmMemory,
+      stackLowestAddress,
+      // sb = stack base
+      stackSize,
+      // sz = stack size
+      pthreadPtr
+    });
+    audioWorklet.port.onmessage = _emAudioDispatchProcessorCallback;
+    ((a1, a2, a3) => dynCall_viii(callback, a1, a2, a3))(contextHandle, 1, userData);
+  }).catch(audioWorkletCreationFailed);
+};
+
+var __emscripten_init_main_thread_js = tb => {
+  var can_block = !ENVIRONMENT_IS_WEB;
+  // Feature detect whether the main thread can block.
+  try {
+    Atomics.wait((growMemViews(), HEAP32), 0, 0, 0);
+    can_block = true;
+  } catch (e) {}
+  // Pass the thread address to the native code where they are stored in wasm
+  // globals which act as a form of TLS. Global constructors trying
+  // to access this value will read the wrong value, but that is UB anyway.
+  __emscripten_thread_init(tb, /*is_main=*/ !ENVIRONMENT_IS_WORKER, /*is_runtime=*/ 1, can_block, /*default_stacksize=*/ 4194304, /*start_profiling=*/ false);
+  PThread.threadInitTLS();
+};
 
 var __emscripten_thread_mailbox_await = pthread_ptr => {
   if (!waitAsyncPolyfilled) {
     // Wait on the pthread's initial self-pointer field because it is easy and
     // safe to access from sending threads that need to notify the waiting
     // thread.
-    // TODO: How to make this work with wasm64?
+    // Note: Under wasm64 only the low 32-bit of the pthread_ptr are
+    // read/compared here, but we don't actually care about the exact values
+    // here as long as they match.
     var wait = Atomics.waitAsync((growMemViews(), HEAP32), ((pthread_ptr) >> 2), pthread_ptr);
     assert(wait.async);
     wait.value.then(checkMailbox);
-    var waitingAsync = pthread_ptr + 128;
+    var waitingAsync = pthread_ptr + 112;
     Atomics.store((growMemViews(), HEAP32), ((waitingAsync) >> 2), 1);
   }
 };
 
-var checkMailbox = () => callUserCallback(() => {
-  // Only check the mailbox if we have a live pthread runtime. We implement
-  // pthread_self to return 0 if there is no live runtime.
-  // TODO(https://github.com/emscripten-core/emscripten/issues/25076):
-  // Is this check still needed?  `callUserCallback` is supposed to
-  // ensure the runtime is alive, and if `_pthread_self` is NULL then the
-  // runtime certainly is *not* alive, so this should be a redundant check.
+var checkMailbox = () => {
+  // checkMailbox can be called after the pthread has shut down. See
+  // Pthread.terminateRuntime().
+  // In this case we return silently without re-registering using waitAsync.
+  // Perhaps there is a more universal way we can detect runtime has exited.
+  // TODO(https://github.com/emscripten-core/emscripten/issues/25076)
   var pthread_ptr = _pthread_self();
-  if (pthread_ptr) {
+  if (!pthread_ptr) return;
+  callUserCallback(() => {
     // If we are using Atomics.waitAsync as our notification mechanism, wait
     // for a notification before processing the mailbox to avoid missing any
     // work that could otherwise arrive after we've finished processing the
     // mailbox and before we're ready for the next notification.
     __emscripten_thread_mailbox_await(pthread_ptr);
     __emscripten_check_mailbox();
-  }
-});
+  });
+};
 
 var __emscripten_notify_mailbox_postmessage = (targetThread, currThreadId) => {
   if (targetThread == currThreadId) {
@@ -2193,7 +2351,7 @@ var __emscripten_notify_mailbox_postmessage = (targetThread, currThreadId) => {
   } else if (ENVIRONMENT_IS_PTHREAD) {
     postMessage({
       targetThread,
-      cmd: "checkMailbox"
+      cmd: 4
     });
   } else {
     var worker = PThread.pthreads[targetThread];
@@ -2202,39 +2360,45 @@ var __emscripten_notify_mailbox_postmessage = (targetThread, currThreadId) => {
       return;
     }
     worker.postMessage({
-      cmd: "checkMailbox"
+      cmd: 4
     });
   }
 };
 
 var proxiedJSCallArgs = [];
 
-var __emscripten_receive_on_main_thread_js = (funcIndex, emAsmAddr, callingThread, numCallArgs, args) => {
+var __emscripten_receive_on_main_thread_js = (funcIndex, emAsmAddr, callingThread, bufSize, args, ctx, ctxArgs) => {
   // Sometimes we need to backproxy events to the calling thread (e.g.
   // HTML5 DOM events handlers such as
   // emscripten_set_mousemove_callback()), so keep track in a globally
   // accessible variable about the thread that initiated the proxying.
-  numCallArgs /= 2;
-  proxiedJSCallArgs.length = numCallArgs;
+  proxiedJSCallArgs.length = 0;
   var b = ((args) >> 3);
-  for (var i = 0; i < numCallArgs; i++) {
-    if ((growMemViews(), HEAP64)[b + 2 * i]) {
+  var end = ((args + bufSize) >> 3);
+  while (b < end) {
+    var arg;
+    if ((growMemViews(), HEAP64)[b++]) {
       // It's a BigInt.
-      proxiedJSCallArgs[i] = (growMemViews(), HEAP64)[b + 2 * i + 1];
+      arg = (growMemViews(), HEAP64)[b++];
     } else {
       // It's a Number.
-      proxiedJSCallArgs[i] = (growMemViews(), HEAPF64)[b + 2 * i + 1];
+      arg = (growMemViews(), HEAPF64)[b++];
     }
+    proxiedJSCallArgs.push(arg);
   }
   // Proxied JS library funcs use funcIndex and EM_ASM functions use emAsmAddr
   var func = emAsmAddr ? ASM_CONSTS[emAsmAddr] : proxiedFunctionTable[funcIndex];
   assert(!(funcIndex && emAsmAddr));
-  assert(func.length == numCallArgs, "Call args mismatch in _emscripten_receive_on_main_thread_js");
+  assert(func.length == proxiedJSCallArgs.length, "Call args mismatch in _emscripten_receive_on_main_thread_js");
   PThread.currentProxiedOperationCallerThread = callingThread;
   var rtn = func(...proxiedJSCallArgs);
   PThread.currentProxiedOperationCallerThread = 0;
+  if (ctx) {
+    rtn.then(rtn => __emscripten_run_js_on_main_thread_done(ctx, ctxArgs, rtn));
+    return;
+  }
   // Proxied functions can return any type except bigint.  All other types
-  // cooerce to f64/double (the return type of this function in C) but not
+  // coerce to f64/double (the return type of this function in C) but not
   // bigint.
   assert(typeof rtn != "bigint");
   return rtn;
@@ -2247,7 +2411,7 @@ var __emscripten_thread_cleanup = thread => {
   // Detached threads are responsible for calling this themselves,
   // otherwise pthread_join is responsible for calling this.
   if (!ENVIRONMENT_IS_PTHREAD) cleanupThread(thread); else postMessage({
-    cmd: "cleanupThread",
+    cmd: 6,
     thread
   });
 };
@@ -2256,10 +2420,15 @@ var __emscripten_thread_set_strongref = thread => {
   // Called when a thread needs to be strongly referenced.
   // Currently only used for:
   // - keeping the "main" thread alive in PROXY_TO_PTHREAD mode;
-  // - crashed threads that needs to propagate the uncaught exception
+  // - crashed threads that need to propagate the uncaught exception
   //   back to the main thread.
   if (ENVIRONMENT_IS_NODE) {
-    PThread.pthreads[thread].ref();
+    var worker = PThread.pthreads[thread];
+    worker.ref();
+    // Also, record that we called strongref, in case this function is called
+    // bafore the 'loaded' callback from the thread (where we would normally
+    // `unref` it.
+    worker.strongref = 1;
   }
 };
 
@@ -2269,7 +2438,7 @@ var _emscripten_get_now;
 // (https://github.com/WebAudio/web-audio-api/issues/2527), so if building
 // with
 // Audio Worklets enabled, do a dynamic check for its presence.
-if (globalThis.performance && performance.now) {
+if (globalThis.performance?.now) {
   _emscripten_get_now = () => performance.timeOrigin + performance.now();
 } else {
   _emscripten_get_now = Date.now;
@@ -2346,27 +2515,6 @@ var runEmAsmFunction = (code, sigPtr, argbuf) => {
 
 var _emscripten_asm_const_int = (code, sigPtr, argbuf) => runEmAsmFunction(code, sigPtr, argbuf);
 
-var emAudioExpectNodeOrContext = (handle, methodName) => {
-  var obj = _emAudioExpectHandle(handle, methodName);
-  assert(obj instanceof window.AudioNode || obj instanceof (window.AudioContext || window.webkitAudioContext), `${methodName}() called with a handle ${handle} that is not an AudioContext or AudioNode, but of type ${typeof obj}`);
-};
-
-var emAudioExpectContext = (handle, methodName) => {
-  var obj = _emAudioExpectHandle(handle, methodName);
-  assert(obj instanceof (window.AudioContext || window.webkitAudioContext), `${methodName}() called with ${handle} that is not an AudioContext, but of type ${typeof obj}`);
-};
-
-var emAudioExpectNode = (handle, methodName) => {
-  var obj = _emAudioExpectHandle(handle, methodName);
-  assert(obj instanceof window.AudioNode, `${methodName}() called with a handle ${handle} that is not an AudioNode, but of type ${typeof obj}`);
-};
-
-var _emAudioExpectHandle = (handle, methodName) => {
-  var obj = emAudio[handle];
-  assert(obj, `Called ${methodName}() on a nonexisting handle ${handle}`);
-  return obj;
-};
-
 var emscriptenGetContextQuantumSize = contextHandle => emAudio[contextHandle]["renderQuantumSize"] || 128;
 
 var _emscripten_audio_context_quantum_size = contextHandle => {
@@ -2378,7 +2526,7 @@ function emAudioWorkletPostFunction(audioContext, funcPtr, args) {
   assert(funcPtr);
   if (audioContext) emAudioExpectContext(audioContext, "emAudioWorkletPostFunction");
   // _wsc = "WaSm Call"
-  (audioContext ? emAudio[audioContext].audioWorklet["port"] : port).postMessage({
+  (audioContext ? emAudio[audioContext].audioWorklet.port : port).postMessage({
     "_wsc": funcPtr,
     args
   });
@@ -2386,9 +2534,17 @@ function emAudioWorkletPostFunction(audioContext, funcPtr, args) {
 
 var _emscripten_audio_worklet_post_function_sig = (audioContext, funcPtr, sigPtr, varargs) => {
   assert(sigPtr);
-  assert(UTF8ToString(sigPtr)[0] != "v", "Do NOT specify the return argument in the signature string for a call to emscripten_audio_worklet_post_function_sig(), just pass the function arguments.");
+  assert(UTF8ToString(sigPtr)[0] != "v", "emscripten_audio_worklet_post_function_sig() supports only void return type");
   assert(varargs);
   emAudioWorkletPostFunction(audioContext, funcPtr, readEmAsmArgs(sigPtr, varargs));
+};
+
+var emscripten_audio_worklet_post_function_2 = (audioContext, funcPtr, arg0, arg1) => {
+  emAudioWorkletPostFunction(audioContext, funcPtr, [ arg0, arg1 ]);
+};
+
+var _emscripten_audio_worklet_post_function_vii = (audioContext, funcPtr, arg0, arg1) => {
+  emscripten_audio_worklet_post_function_2(audioContext, funcPtr, arg0, arg1);
 };
 
 var emscripten_audio_worklet_post_function_3 = (audioContext, funcPtr, arg0, arg1, arg2) => {
@@ -2411,7 +2567,7 @@ var emAudio = {};
 var emAudioCounter = 0;
 
 var emscriptenRegisterAudioObject = object => {
-  assert(object, "Called emscriptenRegisterAudioObject() with a null object handle!");
+  assert(object, "null pointer passed to emscriptenRegisterAudioObject");
   emAudio[++emAudioCounter] = object;
   return emAudioCounter;
 };
@@ -2420,8 +2576,7 @@ var emscriptenGetAudioObject = objectHandle => emAudio[objectHandle];
 
 var _emscripten_create_audio_context = options => {
   // Safari added unprefixed AudioContext support in Safari 14.5 on iOS: https://caniuse.com/audio-api
-  var ctx = window.AudioContext || window.webkitAudioContext;
-  if (!ctx) console.error("emscripten_create_audio_context failed! Web Audio is not supported.");
+  if (!globalThis.AudioContext) console.error("emscripten_create_audio_context failed! Web Audio is not supported.");
   // Converts AUDIO_CONTEXT_RENDER_SIZE_* into AudioContextRenderSizeCategory
   // enums, otherwise returns a positive int value.
   function readRenderSizeHint(val) {
@@ -2432,7 +2587,7 @@ var _emscripten_create_audio_context = options => {
     sampleRate: (growMemViews(), HEAPU32)[(((options) + (4)) >> 2)] || undefined,
     renderSizeHint: readRenderSizeHint((growMemViews(), HEAP32)[(((options) + (8)) >> 2)])
   } : undefined;
-  return ctx && emscriptenRegisterAudioObject(new ctx(opts));
+  return emscriptenRegisterAudioObject(new AudioContext(opts));
 };
 
 var _emscripten_create_wasm_audio_worklet_node = (contextHandle, name, options, callback, userData) => {
@@ -2478,7 +2633,7 @@ var _emscripten_create_wasm_audio_worklet_processor_async = (contextHandle, opti
     });
     audioParamDescriptors += 16;
   }
-  emAudio[contextHandle].audioWorklet["port"].postMessage({
+  emAudio[contextHandle].audioWorklet.port.postMessage({
     // Deliberately mangled and short names used here ('_wpn', the 'Worklet
     // Processor Name' used as a 'key' to verify the message type so as to
     // not get accidentally mixed with user submitted messages, the remainder
@@ -2519,11 +2674,6 @@ var getHeapMax = () => // Stay one Wasm page short of 4GB: while e.g. Chrome is 
 // for any code that deals with heap sizes, which would require special
 // casing all heap size related code to treat 0 specially.
 2147483648;
-
-var alignMemory = (size, alignment) => {
-  assert(alignment, "alignment argument is required");
-  return Math.ceil(size / alignment) * alignment;
-};
 
 var growMemory = size => {
   var oldHeapSize = wasmMemory.buffer.byteLength;
@@ -2589,97 +2739,12 @@ var _emscripten_resize_heap = requestedSize => {
   return false;
 };
 
-var runtimeKeepalivePop = () => {
-  assert(runtimeKeepaliveCounter > 0);
-  runtimeKeepaliveCounter -= 1;
+var _emscripten_sleep = function(ms) {
+  let innerFunc = () => new Promise(resolve => setTimeout(resolve, ms));
+  return Asyncify.handleAsync(innerFunc);
 };
-
-/** @param {number=} timeout */ var safeSetTimeout = (func, timeout) => {
-  runtimeKeepalivePush();
-  return setTimeout(() => {
-    runtimeKeepalivePop();
-    callUserCallback(func);
-  }, timeout);
-};
-
-var _emscripten_sleep = ms => Asyncify.handleSleep(wakeUp => safeSetTimeout(wakeUp, ms));
 
 _emscripten_sleep.isAsync = true;
-
-var _wasmWorkersID = 1;
-
-var _emAudioDispatchProcessorCallback = e => {
-  var data = e.data;
-  // '_wsc' is short for 'wasm call', trying to use an identifier name that
-  // will never conflict with user code. This is used to call both the 3-param
-  // call (handle, true, userData) and the variable argument post functions.
-  var wasmCall = data["_wsc"];
-  wasmCall && getWasmTableEntry(wasmCall)(...data.args);
-};
-
-var _emscripten_start_wasm_audio_worklet_thread_async = (contextHandle, stackLowestAddress, stackSize, callback, userData) => {
-  emAudioExpectContext(contextHandle, "emscripten_start_wasm_audio_worklet_thread_async");
-  var audioContext = emAudio[contextHandle];
-  var audioWorklet = audioContext.audioWorklet;
-  assert(stackLowestAddress != 0, "AudioWorklets require a dedicated stack space for audio data marshalling between Wasm and JS!");
-  assert(stackLowestAddress % 16 == 0, `AudioWorklet stack should be aligned to 16 bytes! (was ${stackLowestAddress} == ${stackLowestAddress % 16} mod 16) Use e.g. memalign(16, stackSize) to align the stack!`);
-  assert(stackSize != 0, "AudioWorklets require a dedicated stack space for audio data marshalling between Wasm and JS!");
-  assert(stackSize % 16 == 0, `AudioWorklet stack size should be a multiple of 16 bytes! (was ${stackSize} == ${stackSize % 16} mod 16)`);
-  assert(!audioContext.audioWorkletInitialized, "emscripten_create_wasm_audio_worklet() was already called for AudioContext " + contextHandle + "! Only call this function once per AudioContext!");
-  audioContext.audioWorkletInitialized = 1;
-  var audioWorkletCreationFailed = () => {
-    dbg(`emscripten_start_wasm_audio_worklet_thread_async() addModule() failed!`);
-    ((a1, a2, a3) => dynCall_viii(callback, a1, a2, a3))(contextHandle, 0, userData);
-  };
-  // Does browser not support AudioWorklets?
-  if (!audioWorklet) {
-    if (location.protocol == "http:") {
-      console.error(`AudioWorklets are not supported. This is possibly due to running the page over unsecure http:// protocol. Try running over https://, or debug via a localhost-based server, which should also allow AudioWorklets to function.`);
-    } else {
-      console.error(`AudioWorklets are not supported by current browser.`);
-    }
-    return audioWorkletCreationFailed();
-  }
-  audioWorklet.addModule(locateFile("libflutter_recorder_plugin_mt.js")).then(() => {
-    // If this browser does not support the up-to-date AudioWorklet standard
-    // that has a MessagePort over to the AudioWorklet, then polyfill that by
-    // instantiating a dummy AudioWorkletNode to get a MessagePort over.
-    // Firefox added support in https://hg-edge.mozilla.org/integration/autoland/rev/ab38a1796126f2b3fc06475ffc5a625059af59c1
-    // Chrome ticket: https://crbug.com/446920095
-    // Safari ticket: https://webkit.org/b/299386
-    if (!audioWorklet["port"]) {
-      audioWorklet["port"] = {
-        postMessage: msg => {
-          if (msg["_boot"]) {
-            audioWorklet.bootstrapMessage = new AudioWorkletNode(audioContext, "em-bootstrap", {
-              processorOptions: msg
-            });
-            audioWorklet.bootstrapMessage["port"].onmessage = msg => {
-              audioWorklet["port"].onmessage(msg);
-            };
-          } else {
-            audioWorklet.bootstrapMessage["port"].postMessage(msg);
-          }
-        }
-      };
-    }
-    audioWorklet["port"].postMessage({
-      // This is the bootstrap message to the Audio Worklet.
-      "_boot": 1,
-      // Assign the loaded AudioWorkletGlobalScope a Wasm Worker ID so that
-      // it can utilized its own TLS slots, and it is recognized to not be
-      // the main browser thread.
-      wwID: _wasmWorkersID++,
-      wasm: wasmModule,
-      wasmMemory,
-      stackLowestAddress,
-      // sb = stack base
-      stackSize
-    });
-    audioWorklet["port"].onmessage = _emAudioDispatchProcessorCallback;
-    ((a1, a2, a3) => dynCall_viii(callback, a1, a2, a3))(contextHandle, 1, userData);
-  }).catch(audioWorkletCreationFailed);
-};
 
 var SYSCALLS = {
   varargs: undefined,
@@ -2705,7 +2770,7 @@ var printCharBuffers = [ null, [], [] ];
 var printChar = (stream, curr) => {
   var buffer = printCharBuffers[stream];
   assert(buffer);
-  if (curr === 0 || curr === 10) {
+  if (!curr || curr === 10) {
     (stream === 1 ? out : err)(UTF8ArrayToString(buffer));
     buffer.length = 0;
   } else {
@@ -2748,6 +2813,11 @@ var runAndAbortIfError = func => {
 var createNamedFunction = (name, func) => Object.defineProperty(func, "name", {
   value: name
 });
+
+var runtimeKeepalivePop = () => {
+  assert(runtimeKeepaliveCounter > 0);
+  runtimeKeepaliveCounter -= 1;
+};
 
 var Asyncify = {
   instrumentWasmImports(imports) {
@@ -2833,7 +2903,7 @@ var Asyncify = {
     return Asyncify.callstackFuncToId.get(func);
   },
   maybeStopUnwind() {
-    if (Asyncify.currData && Asyncify.state === Asyncify.State.Unwinding && Asyncify.exportCallStack.length === 0) {
+    if (Asyncify.currData && Asyncify.state === Asyncify.State.Unwinding && !Asyncify.exportCallStack.length) {
       // We just finished unwinding.
       // Be sure to set the state before calling any other functions to avoid
       // possible infinite recursion here (For example in debug pthread builds
@@ -2849,8 +2919,8 @@ var Asyncify = {
     }
   },
   whenDone() {
-    assert(Asyncify.currData, "Tried to wait for an async operation when none is in progress.");
-    assert(!Asyncify.asyncPromiseHandlers, "Cannot have multiple async operations in flight at once");
+    assert(Asyncify.currData, "tried to wait for an async operation when none is in progress");
+    assert(!Asyncify.asyncPromiseHandlers, "cannot have multiple async operations in flight at once");
     return new Promise((resolve, reject) => {
       Asyncify.asyncPromiseHandlers = {
         resolve,
@@ -2895,10 +2965,10 @@ var Asyncify = {
     // Once we have rewound and the stack we no longer need to artificially
     // keep the runtime alive.
     runtimeKeepalivePop();
-    return func();
+    return callUserCallback(func);
   },
   handleSleep(startAsync) {
-    assert(Asyncify.state !== Asyncify.State.Disabled, "Asyncify cannot be done during or after the runtime exits");
+    assert(Asyncify.state !== Asyncify.State.Disabled, "handleSleep called after Asyncify was shut down");
     if (ABORT) return;
     if (Asyncify.state === Asyncify.State.Normal) {
       // Prepare to sleep. Call startAsync, and see what happens:
@@ -2908,8 +2978,8 @@ var Asyncify = {
       var reachedCallback = false;
       var reachedAfterCallback = false;
       startAsync((handleSleepReturnValue = 0) => {
-        assert(!handleSleepReturnValue || typeof handleSleepReturnValue == "number" || typeof handleSleepReturnValue == "boolean");
         // old emterpretify API supported other stuff
+        assert([ "undefined", "number", "boolean", "bigint" ].includes(typeof handleSleepReturnValue), `invalid type for handleSleepReturnValue: '${typeof handleSleepReturnValue}'`);
         if (ABORT) return;
         Asyncify.handleSleepReturnValue = handleSleepReturnValue;
         reachedCallback = true;
@@ -2922,7 +2992,7 @@ var Asyncify = {
         // as it might break later operations (we can rewind ok now, but if
         // we unwind again, we would unwind through the extra compiled code
         // too).
-        assert(!Asyncify.exportCallStack.length, "Waking up (starting to rewind) must be done from JS, without compiled code on the stack.");
+        assert(!Asyncify.exportCallStack.length, "waking up (starting to rewind) must be done from JS, without compiled code on the stack");
         Asyncify.state = Asyncify.State.Rewinding;
         runAndAbortIfError(() => _asyncify_start_rewind(Asyncify.currData));
         if (typeof MainLoop != "undefined" && MainLoop.func) {
@@ -2945,7 +3015,7 @@ var Asyncify = {
           // `Asyncify.handleSleepReturnValue`.
           // `Asyncify.handleSleepReturnValue` contains the return
           // value of the last C function to have executed
-          // `Asyncify.handleSleep()`, where as `asyncWasmReturnValue`
+          // `Asyncify.handleSleep()`, whereas `asyncWasmReturnValue`
           // contains the return value of the exported WASM function
           // that may have called C functions that
           // call `Asyncify.handleSleep()`.
@@ -2987,16 +3057,16 @@ var Asyncify = {
     }
     return Asyncify.handleSleepReturnValue;
   },
-  handleAsync: startAsync => Asyncify.handleSleep(wakeUp => {
+  handleAsync: startAsync => Asyncify.handleSleep(async wakeUp => {
     // TODO: add error handling as a second param when handleSleep implements it.
-    startAsync().then(wakeUp);
+    wakeUp(await startAsync());
   })
 };
 
 var getCFunc = ident => {
   var func = Module["_" + ident];
   // closure exported function
-  assert(func, "Cannot call unknown function " + ident + ", make sure it is exported");
+  assert(func, `Cannot call unknown function ${ident}, make sure it is exported`);
   return func;
 };
 
@@ -3055,7 +3125,7 @@ var stringToUTF8Array = (str, heap, outIdx, maxBytesToWrite) => {
       heap[outIdx++] = 128 | (u & 63);
     } else {
       if (outIdx + 3 >= endIdx) break;
-      if (u > 1114111) warnOnce("Invalid Unicode code point " + ptrToString(u) + " encountered when serializing a JS string to a UTF-8 string in wasm memory! (Valid unicode code points should be in range 0-0x10FFFF).");
+      if (u > 1114111) warnOnce(`Invalid Unicode code point ${ptrToString(u)} encountered when serializing a JS string to a UTF-8 string in wasm memory! (Valid unicode code points should be in range 0-0x10FFFF).`);
       heap[outIdx++] = 240 | (u >> 18);
       heap[outIdx++] = 128 | ((u >> 12) & 63);
       heap[outIdx++] = 128 | ((u >> 6) & 63);
@@ -3071,7 +3141,7 @@ var stringToUTF8Array = (str, heap, outIdx, maxBytesToWrite) => {
 };
 
 var stringToUTF8 = (str, outPtr, maxBytesToWrite) => {
-  assert(typeof maxBytesToWrite == "number", "stringToUTF8(str, outPtr, maxBytesToWrite) is missing the third parameter that specifies the length of the output buffer!");
+  assert(typeof maxBytesToWrite == "number", "stringToUTF8 requires a third parameter that specifies the length of the output buffer");
   return stringToUTF8Array(str, (growMemViews(), HEAPU8), outPtr, maxBytesToWrite);
 };
 
@@ -3083,11 +3153,11 @@ var stringToUTF8OnStack = str => {
 };
 
 /**
-     * @param {string|null=} returnType
-     * @param {Array=} argTypes
-     * @param {Array=} args
-     * @param {Object=} opts
-     */ var ccall = (ident, returnType, argTypes, args, opts) => {
+   * @param {string|null=} returnType
+   * @param {Array=} argTypes
+   * @param {Array=} args
+   * @param {Object=} opts
+   */ var ccall = (ident, returnType, argTypes, args, opts) => {
   // For fast lookup of conversion functions
   var toC = {
     "string": str => {
@@ -3114,12 +3184,12 @@ var stringToUTF8OnStack = str => {
   var func = getCFunc(ident);
   var cArgs = [];
   var stack = 0;
-  assert(returnType !== "array", 'Return type should not be "array".');
+  assert(returnType !== "array", 'return type should not be "array"');
   if (args) {
     for (var i = 0; i < args.length; i++) {
       var converter = toC[argTypes[i]];
       if (converter) {
-        if (stack === 0) stack = stackSave();
+        if (!stack) stack = stackSave();
         cArgs[i] = converter(args[i]);
       } else {
         cArgs[i] = args[i];
@@ -3131,7 +3201,7 @@ var stringToUTF8OnStack = str => {
   var ret = func(...cArgs);
   function onDone(ret) {
     runtimeKeepalivePop();
-    if (stack !== 0) stackRestore(stack);
+    if (stack) stackRestore(stack);
     return convertReturnValue(ret);
   }
   var asyncMode = opts?.async;
@@ -3145,12 +3215,12 @@ var stringToUTF8OnStack = str => {
     // either. The only valid combination is to have no change in the async
     // data (so we either had one in flight and left it alone, or we didn't have
     // one), or to have nothing in flight and to start one.
-    assert(!(previousAsync && Asyncify.currData), "We cannot start an async operation when one is already flight");
+    assert(!(previousAsync && Asyncify.currData), "We cannot start an async operation when one is already in flight");
     assert(!(previousAsync && !Asyncify.currData), "We cannot stop an async operation in flight");
     // This is a new async operation. The wasm is paused and has unwound its stack.
     // We need to return a Promise that resolves the return value
     // once the stack is rewound and execution finishes.
-    assert(asyncMode, "The call to " + ident + " is running asynchronously. If this was intended, add the async option to the ccall/cwrap call.");
+    assert(asyncMode, `The call to ${ident} is running asynchronously. If this was intended, add the async option to the ccall/cwrap call.`);
     return Asyncify.whenDone().then(onDone);
   }
   ret = onDone(ret);
@@ -3160,10 +3230,10 @@ var stringToUTF8OnStack = str => {
 };
 
 /**
-     * @param {string=} returnType
-     * @param {Array=} argTypes
-     * @param {Object=} opts
-     */ var cwrap = (ident, returnType, argTypes, opts) => (...args) => ccall(ident, returnType, argTypes, args, opts);
+   * @param {string=} returnType
+   * @param {Array=} argTypes
+   * @param {Object=} opts
+   */ var cwrap = (ident, returnType, argTypes, opts) => (...args) => ccall(ident, returnType, argTypes, args, opts);
 
 PThread.init();
 
@@ -3179,12 +3249,11 @@ PThread.init();
   if (Module["noExitRuntime"]) noExitRuntime = Module["noExitRuntime"];
   if (Module["print"]) out = Module["print"];
   if (Module["printErr"]) err = Module["printErr"];
-  if (Module["wasmBinary"]) wasmBinary = Module["wasmBinary"];
   Module["FS_createDataFile"] = FS.createDataFile;
   Module["FS_createPreloadedFile"] = FS.createPreloadedFile;
   // End ATMODULES hooks
   checkIncomingModuleAPI();
-  if (Module["arguments"]) arguments_ = Module["arguments"];
+  if (Module["arguments"]) programArgs = Module["arguments"];
   if (Module["thisProgram"]) thisProgram = Module["thisProgram"];
   // Assertions on removed incoming Module JS APIs.
   assert(typeof Module["memoryInitializerPrefixURL"] == "undefined", "Module.memoryInitializerPrefixURL option was removed, use Module.locateFile instead");
@@ -3198,10 +3267,13 @@ PThread.init();
   assert(typeof Module["TOTAL_MEMORY"] == "undefined", "Module.TOTAL_MEMORY has been renamed Module.INITIAL_MEMORY");
   assert(typeof Module["ENVIRONMENT"] == "undefined", "Module.ENVIRONMENT has been deprecated. To force the environment, use the ENVIRONMENT compile-time option (for example, -sENVIRONMENT=web or -sENVIRONMENT=node)");
   assert(typeof Module["STACK_SIZE"] == "undefined", "STACK_SIZE can no longer be set at runtime.  Use -sSTACK_SIZE at link time");
-  if (Module["preInit"]) {
-    if (typeof Module["preInit"] == "function") Module["preInit"] = [ Module["preInit"] ];
-    while (Module["preInit"].length > 0) {
-      Module["preInit"].shift()();
+  var preInit = Module["preInit"];
+  if (preInit) {
+    if (typeof preInit == "function") Module["preInit"] = preInit = [ preInit ];
+    // Written as a loop so that preInit functions that themselves add more
+    // preInit functions.  Is this actually needed?
+    while (preInit.length > 0) {
+      preInit.shift()();
     }
   }
   consumedModuleProp("preInit");
@@ -3222,6 +3294,26 @@ Module["UTF8ToString"] = UTF8ToString;
 // Begin JS library exports
 Module["ExitStatus"] = ExitStatus;
 
+Module["HEAP16"] = (growMemViews(), HEAP16);
+
+Module["HEAP32"] = (growMemViews(), HEAP32);
+
+Module["HEAP64"] = (growMemViews(), HEAP64);
+
+Module["HEAP8"] = (growMemViews(), HEAP8);
+
+Module["HEAPF32"] = (growMemViews(), HEAPF32);
+
+Module["HEAPF64"] = (growMemViews(), HEAPF64);
+
+Module["HEAPU16"] = (growMemViews(), HEAPU16);
+
+Module["HEAPU32"] = (growMemViews(), HEAPU32);
+
+Module["HEAPU64"] = (growMemViews(), HEAPU64);
+
+Module["HEAPU8"] = (growMemViews(), HEAPU8);
+
 Module["PThread"] = PThread;
 
 Module["terminateWorker"] = terminateWorker;
@@ -3238,9 +3330,13 @@ Module["addRunDependency"] = addRunDependency;
 
 Module["runDependencies"] = runDependencies;
 
+Module["resolveRunDependencies"] = resolveRunDependencies;
+
+Module["dependenciesPromise"] = dependenciesPromise;
+
 Module["removeRunDependency"] = removeRunDependency;
 
-Module["dependenciesFulfilled"] = dependenciesFulfilled;
+Module["dependenciesPromiseResolve"] = dependenciesPromiseResolve;
 
 Module["runDependencyTracking"] = runDependencyTracking;
 
@@ -3268,6 +3364,8 @@ Module["stackAlloc"] = stackAlloc;
 
 Module["exitOnMainThread"] = exitOnMainThread;
 
+Module["waitAsyncPolyfilled"] = waitAsyncPolyfilled;
+
 Module["ptrToString"] = ptrToString;
 
 Module["_wasmWorkerInitializeRuntime"] = _wasmWorkerInitializeRuntime;
@@ -3287,6 +3385,8 @@ Module["getWasmTableEntry"] = getWasmTableEntry;
 Module["wasmTableMirror"] = wasmTableMirror;
 
 Module["_wasmWorkerAppendToQueue"] = _wasmWorkerAppendToQueue;
+
+Module["alignMemory"] = alignMemory;
 
 Module["addOnPostRun"] = addOnPostRun;
 
@@ -3328,9 +3428,9 @@ Module["___cxa_throw"] = ___cxa_throw;
 
 Module["ExceptionInfo"] = ExceptionInfo;
 
-Module["exceptionLast"] = exceptionLast;
-
 Module["uncaughtExceptionCount"] = uncaughtExceptionCount;
+
+Module["__Unwind_RaiseException"] = __Unwind_RaiseException;
 
 Module["___pthread_create_js"] = ___pthread_create_js;
 
@@ -3340,6 +3440,18 @@ Module["_emscripten_has_threading_support"] = _emscripten_has_threading_support;
 
 Module["__abort_js"] = __abort_js;
 
+Module["__emscripten_create_audio_worklet"] = __emscripten_create_audio_worklet;
+
+Module["_emAudioDispatchProcessorCallback"] = _emAudioDispatchProcessorCallback;
+
+Module["_emAudioExpectHandle"] = _emAudioExpectHandle;
+
+Module["emAudioExpectNode"] = emAudioExpectNode;
+
+Module["emAudioExpectContext"] = emAudioExpectContext;
+
+Module["emAudioExpectNodeOrContext"] = emAudioExpectNodeOrContext;
+
 Module["__emscripten_init_main_thread_js"] = __emscripten_init_main_thread_js;
 
 Module["__emscripten_notify_mailbox_postmessage"] = __emscripten_notify_mailbox_postmessage;
@@ -3347,8 +3459,6 @@ Module["__emscripten_notify_mailbox_postmessage"] = __emscripten_notify_mailbox_
 Module["checkMailbox"] = checkMailbox;
 
 Module["__emscripten_thread_mailbox_await"] = __emscripten_thread_mailbox_await;
-
-Module["waitAsyncPolyfilled"] = waitAsyncPolyfilled;
 
 Module["__emscripten_receive_on_main_thread_js"] = __emscripten_receive_on_main_thread_js;
 
@@ -3386,17 +3496,13 @@ Module["_emscripten_audio_context_quantum_size"] = _emscripten_audio_context_qua
 
 Module["emscriptenGetContextQuantumSize"] = emscriptenGetContextQuantumSize;
 
-Module["_emAudioExpectHandle"] = _emAudioExpectHandle;
-
-Module["emAudioExpectNode"] = emAudioExpectNode;
-
-Module["emAudioExpectContext"] = emAudioExpectContext;
-
-Module["emAudioExpectNodeOrContext"] = emAudioExpectNodeOrContext;
-
 Module["_emscripten_audio_worklet_post_function_sig"] = _emscripten_audio_worklet_post_function_sig;
 
 Module["emAudioWorkletPostFunction"] = emAudioWorkletPostFunction;
+
+Module["_emscripten_audio_worklet_post_function_vii"] = _emscripten_audio_worklet_post_function_vii;
+
+Module["emscripten_audio_worklet_post_function_2"] = emscripten_audio_worklet_post_function_2;
 
 Module["_emscripten_audio_worklet_post_function_viii"] = _emscripten_audio_worklet_post_function_viii;
 
@@ -3430,21 +3536,9 @@ Module["_emscripten_resize_heap"] = _emscripten_resize_heap;
 
 Module["getHeapMax"] = getHeapMax;
 
-Module["alignMemory"] = alignMemory;
-
 Module["growMemory"] = growMemory;
 
 Module["_emscripten_sleep"] = _emscripten_sleep;
-
-Module["safeSetTimeout"] = safeSetTimeout;
-
-Module["runtimeKeepalivePop"] = runtimeKeepalivePop;
-
-Module["_emscripten_start_wasm_audio_worklet_thread_async"] = _emscripten_start_wasm_audio_worklet_thread_async;
-
-Module["_wasmWorkersID"] = _wasmWorkersID;
-
-Module["_emAudioDispatchProcessorCallback"] = _emAudioDispatchProcessorCallback;
 
 Module["_fd_close"] = _fd_close;
 
@@ -3465,6 +3559,8 @@ Module["Asyncify"] = Asyncify;
 Module["runAndAbortIfError"] = runAndAbortIfError;
 
 Module["createNamedFunction"] = createNamedFunction;
+
+Module["runtimeKeepalivePop"] = runtimeKeepalivePop;
 
 Module["ccall"] = ccall;
 
@@ -3492,15 +3588,41 @@ var proxiedFunctionTable = [ _proc_exit, exitOnMainThread, pthreadCreateProxied,
 
 function checkIncomingModuleAPI() {
   ignoredModuleProp("fetchSettings");
+  ignoredModuleProp("logReadFiles");
+  ignoredModuleProp("loadSplitModule");
+  ignoredModuleProp("onMalloc");
+  ignoredModuleProp("onRealloc");
+  ignoredModuleProp("onFree");
+  ignoredModuleProp("onSbrkGrow");
+  ignoredModuleProp("onCOSCacheHit");
+  ignoredModuleProp("onCOSCacheMiss");
+  ignoredModuleProp("onCOSStore");
+  ignoredModuleProp("GL_MAX_TEXTURE_IMAGE_UNITS");
+  ignoredModuleProp("SDL_canPlayWithWebAudio");
+  ignoredModuleProp("SDL_numSimultaneouslyQueuedBuffers");
+  ignoredModuleProp("freePreloadedMediaOnUse");
+  ignoredModuleProp("preinitializedWebGLContext");
+  ignoredModuleProp("keyboardListeningElement");
+  ignoredModuleProp("doNotCaptureKeyboard");
+  ignoredModuleProp("extraStackTrace");
+  ignoredModuleProp("preloadPlugins");
+  ignoredModuleProp("preMainLoop");
+  ignoredModuleProp("postMainLoop");
+  ignoredModuleProp("forcedAspectRatio");
+  ignoredModuleProp("mainScriptUrlOrBlob");
+  ignoredModuleProp("onFullScreen");
+  ignoredModuleProp("INITIAL_MEMORY");
+  ignoredModuleProp("wasmMemory");
+  ignoredModuleProp("wasmBinary");
 }
 
 var ASM_CONSTS = {
-  88356: ($0, $1, $2, $3, $4) => {
+  89868: ($0, $1, $2, $3, $4) => {
     if (typeof _wasmRecorderVisualizationCallback === "function") {
       _wasmRecorderVisualizationCallback($0, $1, $2, $3, $4);
     }
   },
-  88482: ($0, $1, $2) => {
+  89994: ($0, $1, $2) => {
     const data = new Uint8Array((growMemViews(), HEAPU8).subarray($0, $0 + $1));
     const blob = new Blob([ data ], {
       type: "audio/wav"
@@ -3525,7 +3647,7 @@ var ASM_CONSTS = {
       URL.revokeObjectURL(url);
     }
   },
-  89152: () => {
+  90664: () => {
     if (!RecorderModule.wasmWorker) {
       var workerUri = "assets/packages/flutter_recorder/web/worker.dart.js";
       RecorderModule.wasmWorker = new Worker(workerUri);
@@ -3534,7 +3656,7 @@ var ASM_CONSTS = {
       console.log("EM_ASM web worker already created!");
     }
   },
-  89466: ($0, $1, $2) => {
+  90978: ($0, $1, $2) => {
     if (RecorderModule.wasmWorker) {
       RecorderModule.wasmWorker.postMessage({
         message: UTF8ToString($0),
@@ -3545,7 +3667,7 @@ var ASM_CONSTS = {
       console.error("Worker not found.");
     }
   },
-  89652: ($0, $1, $2) => {
+  91164: ($0, $1, $2) => {
     if (RecorderModule.wasmWorker) {
       const audioDataArray = new Uint8Array(RecorderModule.HEAPU8.subarray($1, $1 + $2));
       RecorderModule.wasmWorker.postMessage({
@@ -3556,7 +3678,17 @@ var ASM_CONSTS = {
       console.error("Worker not found.");
     }
   },
-  89915: ($0, $1, $2, $3, $4) => {
+  91427: ($0, $1) => {
+    if (RecorderModule.wasmWorker) {
+      RecorderModule.wasmWorker.postMessage({
+        message: UTF8ToString($0),
+        type: $1
+      });
+    } else {
+      console.error("Worker not found.");
+    }
+  },
+  91594: ($0, $1, $2, $3, $4) => {
     if (typeof window === "undefined" || (window.AudioContext || window.webkitAudioContext) === undefined) {
       return 0;
     }
@@ -3628,7 +3760,7 @@ var ASM_CONSTS = {
     window.miniaudio.referenceCount += 1;
     return 1;
   },
-  92093: () => {
+  93772: () => {
     if (typeof (window.miniaudio) !== "undefined") {
       window.miniaudio.unlock_event_types.map(function(event_type) {
         document.removeEventListener(event_type, window.miniaudio.unlock, true);
@@ -3639,8 +3771,8 @@ var ASM_CONSTS = {
       }
     }
   },
-  92397: () => (navigator.mediaDevices !== undefined && navigator.mediaDevices.getUserMedia !== undefined),
-  92501: () => {
+  94076: () => (navigator.mediaDevices !== undefined && navigator.mediaDevices.getUserMedia !== undefined),
+  94180: () => {
     try {
       var temp = new (window.AudioContext || window.webkitAudioContext);
       var sampleRate = temp.sampleRate;
@@ -3650,12 +3782,12 @@ var ASM_CONSTS = {
       return 0;
     }
   },
-  92672: ($0, $1) => window.miniaudio.track_device({
+  94351: ($0, $1) => window.miniaudio.track_device({
     webaudio: emscriptenGetAudioObject($0),
     state: 1,
     pDevice: $1
   }),
-  92781: ($0, $1) => {
+  94460: ($0, $1) => {
     var getUserMediaResult = 0;
     var audioWorklet = emscriptenGetAudioObject($0);
     var audioContext = emscriptenGetAudioObject($1);
@@ -3673,14 +3805,14 @@ var ASM_CONSTS = {
     });
     return getUserMediaResult;
   },
-  93343: ($0, $1) => {
+  95022: ($0, $1) => {
     var audioWorklet = emscriptenGetAudioObject($0);
     var audioContext = emscriptenGetAudioObject($1);
     audioWorklet.connect(audioContext.destination);
     return 0;
   },
-  93503: $0 => emscriptenGetAudioObject($0).sampleRate,
-  93555: $0 => {
+  95182: $0 => emscriptenGetAudioObject($0).sampleRate,
+  95234: $0 => {
     var device = window.miniaudio.get_device_by_index($0);
     if (device.streamNode !== undefined) {
       device.streamNode.disconnect();
@@ -3688,20 +3820,20 @@ var ASM_CONSTS = {
     }
     device.pDevice = undefined;
   },
-  93746: $0 => {
+  95425: $0 => {
     window.miniaudio.untrack_device_by_index($0);
   },
-  93796: $0 => {
+  95475: $0 => {
     var device = window.miniaudio.get_device_by_index($0);
     device.webaudio.resume();
     device.state = window.miniaudio.device_state.started;
   },
-  93935: $0 => {
+  95614: $0 => {
     var device = window.miniaudio.get_device_by_index($0);
     device.webaudio.suspend();
     device.state = window.miniaudio.device_state.stopped;
   },
-  94075: ($0, $1, $2) => {
+  95754: ($0, $1, $2) => {
     const data = new Uint8Array((growMemViews(), HEAPU8).subarray($0, $0 + $1));
     const blob = new Blob([ data ], {
       type: "audio/ogg"
@@ -3728,15 +3860,23 @@ var ASM_CONSTS = {
 };
 
 // Imports from the Wasm binary.
+var _free = Module["_free"] = makeInvalidEarlyAccess("_free");
+
 var _flutter_recorder_createWorkerInWasm = Module["_flutter_recorder_createWorkerInWasm"] = makeInvalidEarlyAccess("_flutter_recorder_createWorkerInWasm");
 
 var __Z41flutter_recorder_sendSilenceEventToWorkerPKcbf = Module["__Z41flutter_recorder_sendSilenceEventToWorkerPKcbf"] = makeInvalidEarlyAccess("__Z41flutter_recorder_sendSilenceEventToWorkerPKcbf");
 
 var __Z35flutter_recorder_sendStreamToWorkerPKcPKhi = Module["__Z35flutter_recorder_sendStreamToWorkerPKcPKhi"] = makeInvalidEarlyAccess("__Z35flutter_recorder_sendStreamToWorkerPKcPKhi");
 
+var __Z41flutter_recorder_sendNotificationToWorkerPKci = Module["__Z41flutter_recorder_sendNotificationToWorkerPKci"] = makeInvalidEarlyAccess("__Z41flutter_recorder_sendNotificationToWorkerPKci");
+
 var _flutter_recorder_setDartEventCallbackForEngine = Module["_flutter_recorder_setDartEventCallbackForEngine"] = makeInvalidEarlyAccess("_flutter_recorder_setDartEventCallbackForEngine");
 
 var _flutter_recorder_setDartEventCallback = Module["_flutter_recorder_setDartEventCallback"] = makeInvalidEarlyAccess("_flutter_recorder_setDartEventCallback");
+
+var _flutter_recorder_setDartDeviceNotificationCallbackForEngine = Module["_flutter_recorder_setDartDeviceNotificationCallbackForEngine"] = makeInvalidEarlyAccess("_flutter_recorder_setDartDeviceNotificationCallbackForEngine");
+
+var _flutter_recorder_setDartDeviceNotificationCallback = Module["_flutter_recorder_setDartDeviceNotificationCallback"] = makeInvalidEarlyAccess("_flutter_recorder_setDartDeviceNotificationCallback");
 
 var _flutter_recorder_setDartVisualizationCallbackForEngine = Module["_flutter_recorder_setDartVisualizationCallbackForEngine"] = makeInvalidEarlyAccess("_flutter_recorder_setDartVisualizationCallbackForEngine");
 
@@ -3757,8 +3897,6 @@ var _flutter_recorder_requestEngineTeardownForEngine = Module["_flutter_recorder
 var _flutter_recorder_retireDartCallbacksFinalizer = Module["_flutter_recorder_retireDartCallbacksFinalizer"] = makeInvalidEarlyAccess("_flutter_recorder_retireDartCallbacksFinalizer");
 
 var _flutter_recorder_nativeFree = Module["_flutter_recorder_nativeFree"] = makeInvalidEarlyAccess("_flutter_recorder_nativeFree");
-
-var _free = Module["_free"] = makeInvalidEarlyAccess("_free");
 
 var _flutter_recorder_listCaptureDevices = Module["_flutter_recorder_listCaptureDevices"] = makeInvalidEarlyAccess("_flutter_recorder_listCaptureDevices");
 
@@ -3803,6 +3941,8 @@ var _flutter_recorder_setVisualizationEnabled = Module["_flutter_recorder_setVis
 var _flutter_recorder_isVisualizationEnabled = Module["_flutter_recorder_isVisualizationEnabled"] = makeInvalidEarlyAccess("_flutter_recorder_isVisualizationEnabled");
 
 var _flutter_recorder_setFftSmoothing = Module["_flutter_recorder_setFftSmoothing"] = makeInvalidEarlyAccess("_flutter_recorder_setFftSmoothing");
+
+var _flutter_recorder_setFftDecibelRange = Module["_flutter_recorder_setFftDecibelRange"] = makeInvalidEarlyAccess("_flutter_recorder_setFftDecibelRange");
 
 var _flutter_recorder_setLoopback = Module["_flutter_recorder_setLoopback"] = makeInvalidEarlyAccess("_flutter_recorder_setLoopback");
 
@@ -3853,6 +3993,8 @@ var _emscripten_stack_get_end = Module["_emscripten_stack_get_end"] = makeInvali
 var _emscripten_stack_get_base = Module["_emscripten_stack_get_base"] = makeInvalidEarlyAccess("_emscripten_stack_get_base");
 
 var _strerror = Module["_strerror"] = makeInvalidEarlyAccess("_strerror");
+
+var __emscripten_run_js_on_main_thread_done = Module["__emscripten_run_js_on_main_thread_done"] = makeInvalidEarlyAccess("__emscripten_run_js_on_main_thread_done");
 
 var __emscripten_run_js_on_main_thread = Module["__emscripten_run_js_on_main_thread"] = makeInvalidEarlyAccess("__emscripten_run_js_on_main_thread");
 
@@ -3910,11 +4052,13 @@ var dynCall_jii = Module["dynCall_jii"] = makeInvalidEarlyAccess("dynCall_jii");
 
 var dynCall_viiiiiii = Module["dynCall_viiiiiii"] = makeInvalidEarlyAccess("dynCall_viiiiiii");
 
+var dynCall_i = Module["dynCall_i"] = makeInvalidEarlyAccess("dynCall_i");
+
 var dynCall_v = Module["dynCall_v"] = makeInvalidEarlyAccess("dynCall_v");
 
 var dynCall_jiji = Module["dynCall_jiji"] = makeInvalidEarlyAccess("dynCall_jiji");
 
-var dynCall_iidiiii = Module["dynCall_iidiiii"] = makeInvalidEarlyAccess("dynCall_iidiiii");
+var dynCall_iidiiiii = Module["dynCall_iidiiiii"] = makeInvalidEarlyAccess("dynCall_iidiiiii");
 
 var _asyncify_start_unwind = Module["_asyncify_start_unwind"] = makeInvalidEarlyAccess("_asyncify_start_unwind");
 
@@ -3929,11 +4073,15 @@ var __indirect_function_table = Module["__indirect_function_table"] = makeInvali
 var wasmTable = Module["wasmTable"] = makeInvalidEarlyAccess("wasmTable");
 
 function assignWasmExports(wasmExports) {
+  assert(typeof wasmExports["free"] != "undefined", "missing Wasm export: free");
   assert(typeof wasmExports["flutter_recorder_createWorkerInWasm"] != "undefined", "missing Wasm export: flutter_recorder_createWorkerInWasm");
   assert(typeof wasmExports["_Z41flutter_recorder_sendSilenceEventToWorkerPKcbf"] != "undefined", "missing Wasm export: _Z41flutter_recorder_sendSilenceEventToWorkerPKcbf");
   assert(typeof wasmExports["_Z35flutter_recorder_sendStreamToWorkerPKcPKhi"] != "undefined", "missing Wasm export: _Z35flutter_recorder_sendStreamToWorkerPKcPKhi");
+  assert(typeof wasmExports["_Z41flutter_recorder_sendNotificationToWorkerPKci"] != "undefined", "missing Wasm export: _Z41flutter_recorder_sendNotificationToWorkerPKci");
   assert(typeof wasmExports["flutter_recorder_setDartEventCallbackForEngine"] != "undefined", "missing Wasm export: flutter_recorder_setDartEventCallbackForEngine");
   assert(typeof wasmExports["flutter_recorder_setDartEventCallback"] != "undefined", "missing Wasm export: flutter_recorder_setDartEventCallback");
+  assert(typeof wasmExports["flutter_recorder_setDartDeviceNotificationCallbackForEngine"] != "undefined", "missing Wasm export: flutter_recorder_setDartDeviceNotificationCallbackForEngine");
+  assert(typeof wasmExports["flutter_recorder_setDartDeviceNotificationCallback"] != "undefined", "missing Wasm export: flutter_recorder_setDartDeviceNotificationCallback");
   assert(typeof wasmExports["flutter_recorder_setDartVisualizationCallbackForEngine"] != "undefined", "missing Wasm export: flutter_recorder_setDartVisualizationCallbackForEngine");
   assert(typeof wasmExports["flutter_recorder_setDartVisualizationCallback"] != "undefined", "missing Wasm export: flutter_recorder_setDartVisualizationCallback");
   assert(typeof wasmExports["flutter_recorder_prepareEngineInit"] != "undefined", "missing Wasm export: flutter_recorder_prepareEngineInit");
@@ -3944,7 +4092,6 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports["flutter_recorder_requestEngineTeardownForEngine"] != "undefined", "missing Wasm export: flutter_recorder_requestEngineTeardownForEngine");
   assert(typeof wasmExports["flutter_recorder_retireDartCallbacksFinalizer"] != "undefined", "missing Wasm export: flutter_recorder_retireDartCallbacksFinalizer");
   assert(typeof wasmExports["flutter_recorder_nativeFree"] != "undefined", "missing Wasm export: flutter_recorder_nativeFree");
-  assert(typeof wasmExports["free"] != "undefined", "missing Wasm export: free");
   assert(typeof wasmExports["flutter_recorder_listCaptureDevices"] != "undefined", "missing Wasm export: flutter_recorder_listCaptureDevices");
   assert(typeof wasmExports["malloc"] != "undefined", "missing Wasm export: malloc");
   assert(typeof wasmExports["flutter_recorder_freeListCaptureDevices"] != "undefined", "missing Wasm export: flutter_recorder_freeListCaptureDevices");
@@ -3967,6 +4114,7 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports["flutter_recorder_setVisualizationEnabled"] != "undefined", "missing Wasm export: flutter_recorder_setVisualizationEnabled");
   assert(typeof wasmExports["flutter_recorder_isVisualizationEnabled"] != "undefined", "missing Wasm export: flutter_recorder_isVisualizationEnabled");
   assert(typeof wasmExports["flutter_recorder_setFftSmoothing"] != "undefined", "missing Wasm export: flutter_recorder_setFftSmoothing");
+  assert(typeof wasmExports["flutter_recorder_setFftDecibelRange"] != "undefined", "missing Wasm export: flutter_recorder_setFftDecibelRange");
   assert(typeof wasmExports["flutter_recorder_setLoopback"] != "undefined", "missing Wasm export: flutter_recorder_setLoopback");
   assert(typeof wasmExports["flutter_recorder_isLoopbackEnabled"] != "undefined", "missing Wasm export: flutter_recorder_isLoopbackEnabled");
   assert(typeof wasmExports["flutter_recorder_isFilterActive"] != "undefined", "missing Wasm export: flutter_recorder_isFilterActive");
@@ -3992,6 +4140,7 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports["emscripten_stack_get_end"] != "undefined", "missing Wasm export: emscripten_stack_get_end");
   assert(typeof wasmExports["emscripten_stack_get_base"] != "undefined", "missing Wasm export: emscripten_stack_get_base");
   assert(typeof wasmExports["strerror"] != "undefined", "missing Wasm export: strerror");
+  assert(typeof wasmExports["_emscripten_run_js_on_main_thread_done"] != "undefined", "missing Wasm export: _emscripten_run_js_on_main_thread_done");
   assert(typeof wasmExports["_emscripten_run_js_on_main_thread"] != "undefined", "missing Wasm export: _emscripten_run_js_on_main_thread");
   assert(typeof wasmExports["_emscripten_thread_free_data"] != "undefined", "missing Wasm export: _emscripten_thread_free_data");
   assert(typeof wasmExports["_emscripten_thread_exit"] != "undefined", "missing Wasm export: _emscripten_thread_exit");
@@ -4020,112 +4169,119 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports["dynCall_iiiiiii"] != "undefined", "missing Wasm export: dynCall_iiiiiii");
   assert(typeof wasmExports["dynCall_jii"] != "undefined", "missing Wasm export: dynCall_jii");
   assert(typeof wasmExports["dynCall_viiiiiii"] != "undefined", "missing Wasm export: dynCall_viiiiiii");
+  assert(typeof wasmExports["dynCall_i"] != "undefined", "missing Wasm export: dynCall_i");
   assert(typeof wasmExports["dynCall_v"] != "undefined", "missing Wasm export: dynCall_v");
   assert(typeof wasmExports["dynCall_jiji"] != "undefined", "missing Wasm export: dynCall_jiji");
-  assert(typeof wasmExports["dynCall_iidiiii"] != "undefined", "missing Wasm export: dynCall_iidiiii");
+  assert(typeof wasmExports["dynCall_iidiiiii"] != "undefined", "missing Wasm export: dynCall_iidiiiii");
   assert(typeof wasmExports["asyncify_start_unwind"] != "undefined", "missing Wasm export: asyncify_start_unwind");
   assert(typeof wasmExports["asyncify_stop_unwind"] != "undefined", "missing Wasm export: asyncify_stop_unwind");
   assert(typeof wasmExports["asyncify_start_rewind"] != "undefined", "missing Wasm export: asyncify_start_rewind");
   assert(typeof wasmExports["asyncify_stop_rewind"] != "undefined", "missing Wasm export: asyncify_stop_rewind");
   assert(typeof wasmExports["__indirect_function_table"] != "undefined", "missing Wasm export: __indirect_function_table");
-  _flutter_recorder_createWorkerInWasm = Module["_flutter_recorder_createWorkerInWasm"] = createExportWrapper("flutter_recorder_createWorkerInWasm", 0);
-  __Z41flutter_recorder_sendSilenceEventToWorkerPKcbf = Module["__Z41flutter_recorder_sendSilenceEventToWorkerPKcbf"] = createExportWrapper("_Z41flutter_recorder_sendSilenceEventToWorkerPKcbf", 3);
-  __Z35flutter_recorder_sendStreamToWorkerPKcPKhi = Module["__Z35flutter_recorder_sendStreamToWorkerPKcPKhi"] = createExportWrapper("_Z35flutter_recorder_sendStreamToWorkerPKcPKhi", 3);
-  _flutter_recorder_setDartEventCallbackForEngine = Module["_flutter_recorder_setDartEventCallbackForEngine"] = createExportWrapper("flutter_recorder_setDartEventCallbackForEngine", 3);
-  _flutter_recorder_setDartEventCallback = Module["_flutter_recorder_setDartEventCallback"] = createExportWrapper("flutter_recorder_setDartEventCallback", 2);
-  _flutter_recorder_setDartVisualizationCallbackForEngine = Module["_flutter_recorder_setDartVisualizationCallbackForEngine"] = createExportWrapper("flutter_recorder_setDartVisualizationCallbackForEngine", 2);
-  _flutter_recorder_setDartVisualizationCallback = Module["_flutter_recorder_setDartVisualizationCallback"] = createExportWrapper("flutter_recorder_setDartVisualizationCallback", 1);
-  _flutter_recorder_prepareEngineInit = Module["_flutter_recorder_prepareEngineInit"] = createExportWrapper("flutter_recorder_prepareEngineInit", 1);
-  _flutter_recorder_currentEngineShutdownEpoch = Module["_flutter_recorder_currentEngineShutdownEpoch"] = createExportWrapper("flutter_recorder_currentEngineShutdownEpoch", 0);
-  _flutter_recorder_prepareEngineInitForRequest = Module["_flutter_recorder_prepareEngineInitForRequest"] = createExportWrapper("flutter_recorder_prepareEngineInitForRequest", 2);
-  _flutter_recorder_clearDartCallbackRegistrationsForEngine = Module["_flutter_recorder_clearDartCallbackRegistrationsForEngine"] = createExportWrapper("flutter_recorder_clearDartCallbackRegistrationsForEngine", 1);
-  _flutter_recorder_clearDartCallbackRegistrations = Module["_flutter_recorder_clearDartCallbackRegistrations"] = createExportWrapper("flutter_recorder_clearDartCallbackRegistrations", 0);
-  _flutter_recorder_requestEngineTeardownForEngine = Module["_flutter_recorder_requestEngineTeardownForEngine"] = createExportWrapper("flutter_recorder_requestEngineTeardownForEngine", 1);
-  _flutter_recorder_retireDartCallbacksFinalizer = Module["_flutter_recorder_retireDartCallbacksFinalizer"] = createExportWrapper("flutter_recorder_retireDartCallbacksFinalizer", 1);
-  _flutter_recorder_nativeFree = Module["_flutter_recorder_nativeFree"] = createExportWrapper("flutter_recorder_nativeFree", 1);
-  _free = Module["_free"] = createExportWrapper("free", 1);
-  _flutter_recorder_listCaptureDevices = Module["_flutter_recorder_listCaptureDevices"] = createExportWrapper("flutter_recorder_listCaptureDevices", 4);
-  _malloc = Module["_malloc"] = createExportWrapper("malloc", 1);
-  _flutter_recorder_freeListCaptureDevices = Module["_flutter_recorder_freeListCaptureDevices"] = createExportWrapper("flutter_recorder_freeListCaptureDevices", 4);
-  _flutter_recorder_init = Module["_flutter_recorder_init"] = createExportWrapper("flutter_recorder_init", 6);
-  _flutter_recorder_deinit = Module["_flutter_recorder_deinit"] = createExportWrapper("flutter_recorder_deinit", 0);
-  _flutter_recorder_isInited = Module["_flutter_recorder_isInited"] = createExportWrapper("flutter_recorder_isInited", 0);
-  _flutter_recorder_isDeviceStarted = Module["_flutter_recorder_isDeviceStarted"] = createExportWrapper("flutter_recorder_isDeviceStarted", 0);
-  _flutter_recorder_start = Module["_flutter_recorder_start"] = createExportWrapper("flutter_recorder_start", 0);
-  _flutter_recorder_stop = Module["_flutter_recorder_stop"] = createExportWrapper("flutter_recorder_stop", 0);
-  _flutter_recorder_startStreamingData = Module["_flutter_recorder_startStreamingData"] = createExportWrapper("flutter_recorder_startStreamingData", 1);
-  _flutter_recorder_stopStreamingData = Module["_flutter_recorder_stopStreamingData"] = createExportWrapper("flutter_recorder_stopStreamingData", 0);
-  _flutter_recorder_setSilenceDetection = Module["_flutter_recorder_setSilenceDetection"] = createExportWrapper("flutter_recorder_setSilenceDetection", 1);
-  _flutter_recorder_setSilenceThresholdDb = Module["_flutter_recorder_setSilenceThresholdDb"] = createExportWrapper("flutter_recorder_setSilenceThresholdDb", 1);
-  _flutter_recorder_setSilenceDuration = Module["_flutter_recorder_setSilenceDuration"] = createExportWrapper("flutter_recorder_setSilenceDuration", 1);
-  _flutter_recorder_setSecondsOfAudioToWriteBefore = Module["_flutter_recorder_setSecondsOfAudioToWriteBefore"] = createExportWrapper("flutter_recorder_setSecondsOfAudioToWriteBefore", 1);
-  _flutter_recorder_startRecording = Module["_flutter_recorder_startRecording"] = createExportWrapper("flutter_recorder_startRecording", 2);
-  _flutter_recorder_setPauseRecording = Module["_flutter_recorder_setPauseRecording"] = createExportWrapper("flutter_recorder_setPauseRecording", 1);
-  _flutter_recorder_stopRecording = Module["_flutter_recorder_stopRecording"] = createExportWrapper("flutter_recorder_stopRecording", 0);
-  _flutter_recorder_getVolumeDb = Module["_flutter_recorder_getVolumeDb"] = createExportWrapper("flutter_recorder_getVolumeDb", 1);
-  _flutter_recorder_setVisualizationEnabled = Module["_flutter_recorder_setVisualizationEnabled"] = createExportWrapper("flutter_recorder_setVisualizationEnabled", 4);
-  _flutter_recorder_isVisualizationEnabled = Module["_flutter_recorder_isVisualizationEnabled"] = createExportWrapper("flutter_recorder_isVisualizationEnabled", 0);
-  _flutter_recorder_setFftSmoothing = Module["_flutter_recorder_setFftSmoothing"] = createExportWrapper("flutter_recorder_setFftSmoothing", 1);
-  _flutter_recorder_setLoopback = Module["_flutter_recorder_setLoopback"] = createExportWrapper("flutter_recorder_setLoopback", 1);
-  _flutter_recorder_isLoopbackEnabled = Module["_flutter_recorder_isLoopbackEnabled"] = createExportWrapper("flutter_recorder_isLoopbackEnabled", 0);
-  _flutter_recorder_isFilterActive = Module["_flutter_recorder_isFilterActive"] = createExportWrapper("flutter_recorder_isFilterActive", 1);
-  _flutter_recorder_addFilter = Module["_flutter_recorder_addFilter"] = createExportWrapper("flutter_recorder_addFilter", 1);
-  _flutter_recorder_removeFilter = Module["_flutter_recorder_removeFilter"] = createExportWrapper("flutter_recorder_removeFilter", 1);
-  _flutter_recorder_getFilterParamNames = Module["_flutter_recorder_getFilterParamNames"] = createExportWrapper("flutter_recorder_getFilterParamNames", 3);
-  _flutter_recorder_setFilterParams = Module["_flutter_recorder_setFilterParams"] = createExportWrapper("flutter_recorder_setFilterParams", 3);
-  _flutter_recorder_getFilterParams = Module["_flutter_recorder_getFilterParams"] = createExportWrapper("flutter_recorder_getFilterParams", 2);
-  _flutter_recorder_feedPlaybackData = Module["_flutter_recorder_feedPlaybackData"] = createExportWrapper("flutter_recorder_feedPlaybackData", 4);
-  _ma_device__on_notification_unlocked = Module["_ma_device__on_notification_unlocked"] = createExportWrapper("ma_device__on_notification_unlocked", 1);
-  _ma_malloc_emscripten = Module["_ma_malloc_emscripten"] = createExportWrapper("ma_malloc_emscripten", 2);
-  _ma_free_emscripten = Module["_ma_free_emscripten"] = createExportWrapper("ma_free_emscripten", 2);
-  _ma_device_process_pcm_frames_capture__webaudio = Module["_ma_device_process_pcm_frames_capture__webaudio"] = createExportWrapper("ma_device_process_pcm_frames_capture__webaudio", 3);
-  _ma_device_process_pcm_frames_playback__webaudio = Module["_ma_device_process_pcm_frames_playback__webaudio"] = createExportWrapper("ma_device_process_pcm_frames_playback__webaudio", 3);
-  __emscripten_tls_init = Module["__emscripten_tls_init"] = createExportWrapper("_emscripten_tls_init", 0);
-  _pthread_self = Module["_pthread_self"] = createExportWrapper("pthread_self", 0);
-  _memcpy = Module["_memcpy"] = createExportWrapper("memcpy", 3);
-  _memset = Module["_memset"] = createExportWrapper("memset", 3);
-  __emscripten_thread_init = Module["__emscripten_thread_init"] = createExportWrapper("_emscripten_thread_init", 6);
-  ___set_thread_state = Module["___set_thread_state"] = createExportWrapper("__set_thread_state", 4);
-  __emscripten_thread_crashed = Module["__emscripten_thread_crashed"] = createExportWrapper("_emscripten_thread_crashed", 0);
-  _fflush = Module["_fflush"] = createExportWrapper("fflush", 1);
+  _free = Module["_free"] = createExportWrapper("free", wasmExports["free"], 1);
+  _flutter_recorder_createWorkerInWasm = Module["_flutter_recorder_createWorkerInWasm"] = createExportWrapper("flutter_recorder_createWorkerInWasm", wasmExports["flutter_recorder_createWorkerInWasm"], 0);
+  __Z41flutter_recorder_sendSilenceEventToWorkerPKcbf = Module["__Z41flutter_recorder_sendSilenceEventToWorkerPKcbf"] = createExportWrapper("_Z41flutter_recorder_sendSilenceEventToWorkerPKcbf", wasmExports["_Z41flutter_recorder_sendSilenceEventToWorkerPKcbf"], 3);
+  __Z35flutter_recorder_sendStreamToWorkerPKcPKhi = Module["__Z35flutter_recorder_sendStreamToWorkerPKcPKhi"] = createExportWrapper("_Z35flutter_recorder_sendStreamToWorkerPKcPKhi", wasmExports["_Z35flutter_recorder_sendStreamToWorkerPKcPKhi"], 3);
+  __Z41flutter_recorder_sendNotificationToWorkerPKci = Module["__Z41flutter_recorder_sendNotificationToWorkerPKci"] = createExportWrapper("_Z41flutter_recorder_sendNotificationToWorkerPKci", wasmExports["_Z41flutter_recorder_sendNotificationToWorkerPKci"], 2);
+  _flutter_recorder_setDartEventCallbackForEngine = Module["_flutter_recorder_setDartEventCallbackForEngine"] = createExportWrapper("flutter_recorder_setDartEventCallbackForEngine", wasmExports["flutter_recorder_setDartEventCallbackForEngine"], 3);
+  _flutter_recorder_setDartEventCallback = Module["_flutter_recorder_setDartEventCallback"] = createExportWrapper("flutter_recorder_setDartEventCallback", wasmExports["flutter_recorder_setDartEventCallback"], 2);
+  _flutter_recorder_setDartDeviceNotificationCallbackForEngine = Module["_flutter_recorder_setDartDeviceNotificationCallbackForEngine"] = createExportWrapper("flutter_recorder_setDartDeviceNotificationCallbackForEngine", wasmExports["flutter_recorder_setDartDeviceNotificationCallbackForEngine"], 2);
+  _flutter_recorder_setDartDeviceNotificationCallback = Module["_flutter_recorder_setDartDeviceNotificationCallback"] = createExportWrapper("flutter_recorder_setDartDeviceNotificationCallback", wasmExports["flutter_recorder_setDartDeviceNotificationCallback"], 1);
+  _flutter_recorder_setDartVisualizationCallbackForEngine = Module["_flutter_recorder_setDartVisualizationCallbackForEngine"] = createExportWrapper("flutter_recorder_setDartVisualizationCallbackForEngine", wasmExports["flutter_recorder_setDartVisualizationCallbackForEngine"], 2);
+  _flutter_recorder_setDartVisualizationCallback = Module["_flutter_recorder_setDartVisualizationCallback"] = createExportWrapper("flutter_recorder_setDartVisualizationCallback", wasmExports["flutter_recorder_setDartVisualizationCallback"], 1);
+  _flutter_recorder_prepareEngineInit = Module["_flutter_recorder_prepareEngineInit"] = createExportWrapper("flutter_recorder_prepareEngineInit", wasmExports["flutter_recorder_prepareEngineInit"], 1);
+  _flutter_recorder_currentEngineShutdownEpoch = Module["_flutter_recorder_currentEngineShutdownEpoch"] = createExportWrapper("flutter_recorder_currentEngineShutdownEpoch", wasmExports["flutter_recorder_currentEngineShutdownEpoch"], 0);
+  _flutter_recorder_prepareEngineInitForRequest = Module["_flutter_recorder_prepareEngineInitForRequest"] = createExportWrapper("flutter_recorder_prepareEngineInitForRequest", wasmExports["flutter_recorder_prepareEngineInitForRequest"], 2);
+  _flutter_recorder_clearDartCallbackRegistrationsForEngine = Module["_flutter_recorder_clearDartCallbackRegistrationsForEngine"] = createExportWrapper("flutter_recorder_clearDartCallbackRegistrationsForEngine", wasmExports["flutter_recorder_clearDartCallbackRegistrationsForEngine"], 1);
+  _flutter_recorder_clearDartCallbackRegistrations = Module["_flutter_recorder_clearDartCallbackRegistrations"] = createExportWrapper("flutter_recorder_clearDartCallbackRegistrations", wasmExports["flutter_recorder_clearDartCallbackRegistrations"], 0);
+  _flutter_recorder_requestEngineTeardownForEngine = Module["_flutter_recorder_requestEngineTeardownForEngine"] = createExportWrapper("flutter_recorder_requestEngineTeardownForEngine", wasmExports["flutter_recorder_requestEngineTeardownForEngine"], 1);
+  _flutter_recorder_retireDartCallbacksFinalizer = Module["_flutter_recorder_retireDartCallbacksFinalizer"] = createExportWrapper("flutter_recorder_retireDartCallbacksFinalizer", wasmExports["flutter_recorder_retireDartCallbacksFinalizer"], 1);
+  _flutter_recorder_nativeFree = Module["_flutter_recorder_nativeFree"] = createExportWrapper("flutter_recorder_nativeFree", wasmExports["flutter_recorder_nativeFree"], 1);
+  _flutter_recorder_listCaptureDevices = Module["_flutter_recorder_listCaptureDevices"] = createExportWrapper("flutter_recorder_listCaptureDevices", wasmExports["flutter_recorder_listCaptureDevices"], 4);
+  _malloc = Module["_malloc"] = createExportWrapper("malloc", wasmExports["malloc"], 1);
+  _flutter_recorder_freeListCaptureDevices = Module["_flutter_recorder_freeListCaptureDevices"] = createExportWrapper("flutter_recorder_freeListCaptureDevices", wasmExports["flutter_recorder_freeListCaptureDevices"], 4);
+  _flutter_recorder_init = Module["_flutter_recorder_init"] = createExportWrapper("flutter_recorder_init", wasmExports["flutter_recorder_init"], 6);
+  _flutter_recorder_deinit = Module["_flutter_recorder_deinit"] = createExportWrapper("flutter_recorder_deinit", wasmExports["flutter_recorder_deinit"], 0);
+  _flutter_recorder_isInited = Module["_flutter_recorder_isInited"] = createExportWrapper("flutter_recorder_isInited", wasmExports["flutter_recorder_isInited"], 0);
+  _flutter_recorder_isDeviceStarted = Module["_flutter_recorder_isDeviceStarted"] = createExportWrapper("flutter_recorder_isDeviceStarted", wasmExports["flutter_recorder_isDeviceStarted"], 0);
+  _flutter_recorder_start = Module["_flutter_recorder_start"] = createExportWrapper("flutter_recorder_start", wasmExports["flutter_recorder_start"], 0);
+  _flutter_recorder_stop = Module["_flutter_recorder_stop"] = createExportWrapper("flutter_recorder_stop", wasmExports["flutter_recorder_stop"], 0);
+  _flutter_recorder_startStreamingData = Module["_flutter_recorder_startStreamingData"] = createExportWrapper("flutter_recorder_startStreamingData", wasmExports["flutter_recorder_startStreamingData"], 1);
+  _flutter_recorder_stopStreamingData = Module["_flutter_recorder_stopStreamingData"] = createExportWrapper("flutter_recorder_stopStreamingData", wasmExports["flutter_recorder_stopStreamingData"], 0);
+  _flutter_recorder_setSilenceDetection = Module["_flutter_recorder_setSilenceDetection"] = createExportWrapper("flutter_recorder_setSilenceDetection", wasmExports["flutter_recorder_setSilenceDetection"], 1);
+  _flutter_recorder_setSilenceThresholdDb = Module["_flutter_recorder_setSilenceThresholdDb"] = createExportWrapper("flutter_recorder_setSilenceThresholdDb", wasmExports["flutter_recorder_setSilenceThresholdDb"], 1);
+  _flutter_recorder_setSilenceDuration = Module["_flutter_recorder_setSilenceDuration"] = createExportWrapper("flutter_recorder_setSilenceDuration", wasmExports["flutter_recorder_setSilenceDuration"], 1);
+  _flutter_recorder_setSecondsOfAudioToWriteBefore = Module["_flutter_recorder_setSecondsOfAudioToWriteBefore"] = createExportWrapper("flutter_recorder_setSecondsOfAudioToWriteBefore", wasmExports["flutter_recorder_setSecondsOfAudioToWriteBefore"], 1);
+  _flutter_recorder_startRecording = Module["_flutter_recorder_startRecording"] = createExportWrapper("flutter_recorder_startRecording", wasmExports["flutter_recorder_startRecording"], 2);
+  _flutter_recorder_setPauseRecording = Module["_flutter_recorder_setPauseRecording"] = createExportWrapper("flutter_recorder_setPauseRecording", wasmExports["flutter_recorder_setPauseRecording"], 1);
+  _flutter_recorder_stopRecording = Module["_flutter_recorder_stopRecording"] = createExportWrapper("flutter_recorder_stopRecording", wasmExports["flutter_recorder_stopRecording"], 0);
+  _flutter_recorder_getVolumeDb = Module["_flutter_recorder_getVolumeDb"] = createExportWrapper("flutter_recorder_getVolumeDb", wasmExports["flutter_recorder_getVolumeDb"], 1);
+  _flutter_recorder_setVisualizationEnabled = Module["_flutter_recorder_setVisualizationEnabled"] = createExportWrapper("flutter_recorder_setVisualizationEnabled", wasmExports["flutter_recorder_setVisualizationEnabled"], 4);
+  _flutter_recorder_isVisualizationEnabled = Module["_flutter_recorder_isVisualizationEnabled"] = createExportWrapper("flutter_recorder_isVisualizationEnabled", wasmExports["flutter_recorder_isVisualizationEnabled"], 0);
+  _flutter_recorder_setFftSmoothing = Module["_flutter_recorder_setFftSmoothing"] = createExportWrapper("flutter_recorder_setFftSmoothing", wasmExports["flutter_recorder_setFftSmoothing"], 1);
+  _flutter_recorder_setFftDecibelRange = Module["_flutter_recorder_setFftDecibelRange"] = createExportWrapper("flutter_recorder_setFftDecibelRange", wasmExports["flutter_recorder_setFftDecibelRange"], 2);
+  _flutter_recorder_setLoopback = Module["_flutter_recorder_setLoopback"] = createExportWrapper("flutter_recorder_setLoopback", wasmExports["flutter_recorder_setLoopback"], 1);
+  _flutter_recorder_isLoopbackEnabled = Module["_flutter_recorder_isLoopbackEnabled"] = createExportWrapper("flutter_recorder_isLoopbackEnabled", wasmExports["flutter_recorder_isLoopbackEnabled"], 0);
+  _flutter_recorder_isFilterActive = Module["_flutter_recorder_isFilterActive"] = createExportWrapper("flutter_recorder_isFilterActive", wasmExports["flutter_recorder_isFilterActive"], 1);
+  _flutter_recorder_addFilter = Module["_flutter_recorder_addFilter"] = createExportWrapper("flutter_recorder_addFilter", wasmExports["flutter_recorder_addFilter"], 1);
+  _flutter_recorder_removeFilter = Module["_flutter_recorder_removeFilter"] = createExportWrapper("flutter_recorder_removeFilter", wasmExports["flutter_recorder_removeFilter"], 1);
+  _flutter_recorder_getFilterParamNames = Module["_flutter_recorder_getFilterParamNames"] = createExportWrapper("flutter_recorder_getFilterParamNames", wasmExports["flutter_recorder_getFilterParamNames"], 3);
+  _flutter_recorder_setFilterParams = Module["_flutter_recorder_setFilterParams"] = createExportWrapper("flutter_recorder_setFilterParams", wasmExports["flutter_recorder_setFilterParams"], 3);
+  _flutter_recorder_getFilterParams = Module["_flutter_recorder_getFilterParams"] = createExportWrapper("flutter_recorder_getFilterParams", wasmExports["flutter_recorder_getFilterParams"], 2);
+  _flutter_recorder_feedPlaybackData = Module["_flutter_recorder_feedPlaybackData"] = createExportWrapper("flutter_recorder_feedPlaybackData", wasmExports["flutter_recorder_feedPlaybackData"], 4);
+  _ma_device__on_notification_unlocked = Module["_ma_device__on_notification_unlocked"] = createExportWrapper("ma_device__on_notification_unlocked", wasmExports["ma_device__on_notification_unlocked"], 1);
+  _ma_malloc_emscripten = Module["_ma_malloc_emscripten"] = createExportWrapper("ma_malloc_emscripten", wasmExports["ma_malloc_emscripten"], 2);
+  _ma_free_emscripten = Module["_ma_free_emscripten"] = createExportWrapper("ma_free_emscripten", wasmExports["ma_free_emscripten"], 2);
+  _ma_device_process_pcm_frames_capture__webaudio = Module["_ma_device_process_pcm_frames_capture__webaudio"] = createExportWrapper("ma_device_process_pcm_frames_capture__webaudio", wasmExports["ma_device_process_pcm_frames_capture__webaudio"], 3);
+  _ma_device_process_pcm_frames_playback__webaudio = Module["_ma_device_process_pcm_frames_playback__webaudio"] = createExportWrapper("ma_device_process_pcm_frames_playback__webaudio", wasmExports["ma_device_process_pcm_frames_playback__webaudio"], 3);
+  __emscripten_tls_init = Module["__emscripten_tls_init"] = createExportWrapper("_emscripten_tls_init", wasmExports["_emscripten_tls_init"], 0);
+  _pthread_self = Module["_pthread_self"] = wasmExports["pthread_self"];
+  _memcpy = Module["_memcpy"] = createExportWrapper("memcpy", wasmExports["memcpy"], 3);
+  _memset = Module["_memset"] = createExportWrapper("memset", wasmExports["memset"], 3);
+  __emscripten_thread_init = Module["__emscripten_thread_init"] = createExportWrapper("_emscripten_thread_init", wasmExports["_emscripten_thread_init"], 6);
+  ___set_thread_state = Module["___set_thread_state"] = createExportWrapper("__set_thread_state", wasmExports["__set_thread_state"], 4);
+  __emscripten_thread_crashed = Module["__emscripten_thread_crashed"] = createExportWrapper("_emscripten_thread_crashed", wasmExports["_emscripten_thread_crashed"], 0);
+  _fflush = Module["_fflush"] = createExportWrapper("fflush", wasmExports["fflush"], 1);
   _emscripten_stack_get_end = Module["_emscripten_stack_get_end"] = wasmExports["emscripten_stack_get_end"];
   _emscripten_stack_get_base = Module["_emscripten_stack_get_base"] = wasmExports["emscripten_stack_get_base"];
-  _strerror = Module["_strerror"] = createExportWrapper("strerror", 1);
-  __emscripten_run_js_on_main_thread = Module["__emscripten_run_js_on_main_thread"] = createExportWrapper("_emscripten_run_js_on_main_thread", 5);
-  __emscripten_thread_free_data = Module["__emscripten_thread_free_data"] = createExportWrapper("_emscripten_thread_free_data", 1);
-  __emscripten_thread_exit = Module["__emscripten_thread_exit"] = createExportWrapper("_emscripten_thread_exit", 1);
-  __emscripten_check_mailbox = Module["__emscripten_check_mailbox"] = createExportWrapper("_emscripten_check_mailbox", 0);
+  _strerror = Module["_strerror"] = createExportWrapper("strerror", wasmExports["strerror"], 1);
+  __emscripten_run_js_on_main_thread_done = Module["__emscripten_run_js_on_main_thread_done"] = createExportWrapper("_emscripten_run_js_on_main_thread_done", wasmExports["_emscripten_run_js_on_main_thread_done"], 3);
+  __emscripten_run_js_on_main_thread = Module["__emscripten_run_js_on_main_thread"] = createExportWrapper("_emscripten_run_js_on_main_thread", wasmExports["_emscripten_run_js_on_main_thread"], 5);
+  __emscripten_thread_free_data = Module["__emscripten_thread_free_data"] = createExportWrapper("_emscripten_thread_free_data", wasmExports["_emscripten_thread_free_data"], 1);
+  __emscripten_thread_exit = Module["__emscripten_thread_exit"] = createExportWrapper("_emscripten_thread_exit", wasmExports["_emscripten_thread_exit"], 1);
+  __emscripten_check_mailbox = Module["__emscripten_check_mailbox"] = createExportWrapper("_emscripten_check_mailbox", wasmExports["_emscripten_check_mailbox"], 0);
   _emscripten_stack_init = Module["_emscripten_stack_init"] = wasmExports["emscripten_stack_init"];
   _emscripten_stack_set_limits = Module["_emscripten_stack_set_limits"] = wasmExports["emscripten_stack_set_limits"];
   _emscripten_stack_get_free = Module["_emscripten_stack_get_free"] = wasmExports["emscripten_stack_get_free"];
   __emscripten_stack_restore = Module["__emscripten_stack_restore"] = wasmExports["_emscripten_stack_restore"];
   __emscripten_stack_alloc = Module["__emscripten_stack_alloc"] = wasmExports["_emscripten_stack_alloc"];
   _emscripten_stack_get_current = Module["_emscripten_stack_get_current"] = wasmExports["emscripten_stack_get_current"];
-  __emscripten_wasm_worker_initialize = Module["__emscripten_wasm_worker_initialize"] = createExportWrapper("_emscripten_wasm_worker_initialize", 2);
-  dynCall_vi = dynCalls["vi"] = Module["dynCall_vi"] = createExportWrapper("dynCall_vi", 2);
-  dynCall_viiiii = dynCalls["viiiii"] = Module["dynCall_viiiii"] = createExportWrapper("dynCall_viiiii", 6);
-  dynCall_ii = dynCalls["ii"] = Module["dynCall_ii"] = createExportWrapper("dynCall_ii", 2);
-  dynCall_fii = dynCalls["fii"] = Module["dynCall_fii"] = createExportWrapper("dynCall_fii", 3);
-  dynCall_viii = dynCalls["viii"] = Module["dynCall_viii"] = createExportWrapper("dynCall_viii", 4);
-  dynCall_viif = dynCalls["viif"] = Module["dynCall_viif"] = createExportWrapper("dynCall_viif", 4);
-  dynCall_viiiiii = dynCalls["viiiiii"] = Module["dynCall_viiiiii"] = createExportWrapper("dynCall_viiiiii", 7);
-  dynCall_viiii = dynCalls["viiii"] = Module["dynCall_viiii"] = createExportWrapper("dynCall_viiii", 5);
-  dynCall_vii = dynCalls["vii"] = Module["dynCall_vii"] = createExportWrapper("dynCall_vii", 3);
-  dynCall_iii = dynCalls["iii"] = Module["dynCall_iii"] = createExportWrapper("dynCall_iii", 3);
-  dynCall_iiii = dynCalls["iiii"] = Module["dynCall_iiii"] = createExportWrapper("dynCall_iiii", 4);
-  dynCall_iiiii = dynCalls["iiiii"] = Module["dynCall_iiiii"] = createExportWrapper("dynCall_iiiii", 5);
-  dynCall_iiiiiiii = dynCalls["iiiiiiii"] = Module["dynCall_iiiiiiii"] = createExportWrapper("dynCall_iiiiiiii", 8);
-  dynCall_iiiji = dynCalls["iiiji"] = Module["dynCall_iiiji"] = createExportWrapper("dynCall_iiiji", 5);
-  dynCall_iiiiiii = dynCalls["iiiiiii"] = Module["dynCall_iiiiiii"] = createExportWrapper("dynCall_iiiiiii", 7);
-  dynCall_jii = dynCalls["jii"] = Module["dynCall_jii"] = createExportWrapper("dynCall_jii", 3);
-  dynCall_viiiiiii = dynCalls["viiiiiii"] = Module["dynCall_viiiiiii"] = createExportWrapper("dynCall_viiiiiii", 8);
-  dynCall_v = dynCalls["v"] = Module["dynCall_v"] = createExportWrapper("dynCall_v", 1);
-  dynCall_jiji = dynCalls["jiji"] = Module["dynCall_jiji"] = createExportWrapper("dynCall_jiji", 4);
-  dynCall_iidiiii = dynCalls["iidiiii"] = Module["dynCall_iidiiii"] = createExportWrapper("dynCall_iidiiii", 7);
-  _asyncify_start_unwind = Module["_asyncify_start_unwind"] = createExportWrapper("asyncify_start_unwind", 1);
-  _asyncify_stop_unwind = Module["_asyncify_stop_unwind"] = createExportWrapper("asyncify_stop_unwind", 0);
-  _asyncify_start_rewind = Module["_asyncify_start_rewind"] = createExportWrapper("asyncify_start_rewind", 1);
-  _asyncify_stop_rewind = Module["_asyncify_stop_rewind"] = createExportWrapper("asyncify_stop_rewind", 0);
+  __emscripten_wasm_worker_initialize = Module["__emscripten_wasm_worker_initialize"] = createExportWrapper("_emscripten_wasm_worker_initialize", wasmExports["_emscripten_wasm_worker_initialize"], 3);
+  dynCall_vi = dynCalls["vi"] = Module["dynCall_vi"] = createExportWrapper("dynCall_vi", wasmExports["dynCall_vi"], 2);
+  dynCall_viiiii = dynCalls["viiiii"] = Module["dynCall_viiiii"] = createExportWrapper("dynCall_viiiii", wasmExports["dynCall_viiiii"], 6);
+  dynCall_ii = dynCalls["ii"] = Module["dynCall_ii"] = createExportWrapper("dynCall_ii", wasmExports["dynCall_ii"], 2);
+  dynCall_fii = dynCalls["fii"] = Module["dynCall_fii"] = createExportWrapper("dynCall_fii", wasmExports["dynCall_fii"], 3);
+  dynCall_viii = dynCalls["viii"] = Module["dynCall_viii"] = createExportWrapper("dynCall_viii", wasmExports["dynCall_viii"], 4);
+  dynCall_viif = dynCalls["viif"] = Module["dynCall_viif"] = createExportWrapper("dynCall_viif", wasmExports["dynCall_viif"], 4);
+  dynCall_viiiiii = dynCalls["viiiiii"] = Module["dynCall_viiiiii"] = createExportWrapper("dynCall_viiiiii", wasmExports["dynCall_viiiiii"], 7);
+  dynCall_viiii = dynCalls["viiii"] = Module["dynCall_viiii"] = createExportWrapper("dynCall_viiii", wasmExports["dynCall_viiii"], 5);
+  dynCall_vii = dynCalls["vii"] = Module["dynCall_vii"] = createExportWrapper("dynCall_vii", wasmExports["dynCall_vii"], 3);
+  dynCall_iii = dynCalls["iii"] = Module["dynCall_iii"] = createExportWrapper("dynCall_iii", wasmExports["dynCall_iii"], 3);
+  dynCall_iiii = dynCalls["iiii"] = Module["dynCall_iiii"] = createExportWrapper("dynCall_iiii", wasmExports["dynCall_iiii"], 4);
+  dynCall_iiiii = dynCalls["iiiii"] = Module["dynCall_iiiii"] = createExportWrapper("dynCall_iiiii", wasmExports["dynCall_iiiii"], 5);
+  dynCall_iiiiiiii = dynCalls["iiiiiiii"] = Module["dynCall_iiiiiiii"] = createExportWrapper("dynCall_iiiiiiii", wasmExports["dynCall_iiiiiiii"], 8);
+  dynCall_iiiji = dynCalls["iiiji"] = Module["dynCall_iiiji"] = createExportWrapper("dynCall_iiiji", wasmExports["dynCall_iiiji"], 5);
+  dynCall_iiiiiii = dynCalls["iiiiiii"] = Module["dynCall_iiiiiii"] = createExportWrapper("dynCall_iiiiiii", wasmExports["dynCall_iiiiiii"], 7);
+  dynCall_jii = dynCalls["jii"] = Module["dynCall_jii"] = createExportWrapper("dynCall_jii", wasmExports["dynCall_jii"], 3);
+  dynCall_viiiiiii = dynCalls["viiiiiii"] = Module["dynCall_viiiiiii"] = createExportWrapper("dynCall_viiiiiii", wasmExports["dynCall_viiiiiii"], 8);
+  dynCall_i = dynCalls["i"] = Module["dynCall_i"] = createExportWrapper("dynCall_i", wasmExports["dynCall_i"], 1);
+  dynCall_v = dynCalls["v"] = Module["dynCall_v"] = createExportWrapper("dynCall_v", wasmExports["dynCall_v"], 1);
+  dynCall_jiji = dynCalls["jiji"] = Module["dynCall_jiji"] = createExportWrapper("dynCall_jiji", wasmExports["dynCall_jiji"], 4);
+  dynCall_iidiiiii = dynCalls["iidiiiii"] = Module["dynCall_iidiiiii"] = createExportWrapper("dynCall_iidiiiii", wasmExports["dynCall_iidiiiii"], 8);
+  _asyncify_start_unwind = Module["_asyncify_start_unwind"] = createExportWrapper("asyncify_start_unwind", wasmExports["asyncify_start_unwind"], 1);
+  _asyncify_stop_unwind = Module["_asyncify_stop_unwind"] = createExportWrapper("asyncify_stop_unwind", wasmExports["asyncify_stop_unwind"], 0);
+  _asyncify_start_rewind = Module["_asyncify_start_rewind"] = createExportWrapper("asyncify_start_rewind", wasmExports["asyncify_start_rewind"], 1);
+  _asyncify_stop_rewind = Module["_asyncify_stop_rewind"] = createExportWrapper("asyncify_stop_rewind", wasmExports["asyncify_stop_rewind"], 0);
   __indirect_function_table = Module["__indirect_function_table"] = wasmTable = wasmExports["__indirect_function_table"];
 }
 
@@ -4137,6 +4293,7 @@ function assignWasmImports() {
     /** @export */ __cxa_throw: ___cxa_throw,
     /** @export */ __pthread_create_js: ___pthread_create_js,
     /** @export */ _abort_js: __abort_js,
+    /** @export */ _emscripten_create_audio_worklet: __emscripten_create_audio_worklet,
     /** @export */ _emscripten_init_main_thread_js: __emscripten_init_main_thread_js,
     /** @export */ _emscripten_notify_mailbox_postmessage: __emscripten_notify_mailbox_postmessage,
     /** @export */ _emscripten_receive_on_main_thread_js: __emscripten_receive_on_main_thread_js,
@@ -4147,6 +4304,7 @@ function assignWasmImports() {
     /** @export */ emscripten_asm_const_int: _emscripten_asm_const_int,
     /** @export */ emscripten_audio_context_quantum_size: _emscripten_audio_context_quantum_size,
     /** @export */ emscripten_audio_worklet_post_function_sig: _emscripten_audio_worklet_post_function_sig,
+    /** @export */ emscripten_audio_worklet_post_function_vii: _emscripten_audio_worklet_post_function_vii,
     /** @export */ emscripten_audio_worklet_post_function_viii: _emscripten_audio_worklet_post_function_viii,
     /** @export */ emscripten_check_blocking_allowed: _emscripten_check_blocking_allowed,
     /** @export */ emscripten_create_audio_context: _emscripten_create_audio_context,
@@ -4159,7 +4317,6 @@ function assignWasmImports() {
     /** @export */ emscripten_get_now: _emscripten_get_now,
     /** @export */ emscripten_resize_heap: _emscripten_resize_heap,
     /** @export */ emscripten_sleep: _emscripten_sleep,
-    /** @export */ emscripten_start_wasm_audio_worklet_thread_async: _emscripten_start_wasm_audio_worklet_thread_async,
     /** @export */ exit: _exit,
     /** @export */ fd_close: _fd_close,
     /** @export */ fd_seek: _fd_seek,
@@ -4183,47 +4340,32 @@ function stackCheckInit() {
   writeStackCookie();
 }
 
-function run() {
-  if (runDependencies > 0) {
-    dependenciesFulfilled = run;
-    return;
-  }
+async function run() {
+  assert(!calledRun);
+  calledRun = true;
   if ((ENVIRONMENT_IS_PTHREAD || ENVIRONMENT_IS_WASM_WORKER)) {
-    readyPromiseResolve?.(Module);
     initRuntime();
     return;
   }
   stackCheckInit();
   preRun();
-  // a preRun added a dependency, run will be called later
-  if (runDependencies > 0) {
-    dependenciesFulfilled = run;
-    return;
+  if (runDependencies) {
+    await resolveRunDependencies();
   }
-  function doRun() {
-    // run may have just been called through dependencies being fulfilled just in this very frame,
-    // or while the async setStatus time below was happening
-    assert(!calledRun);
-    calledRun = true;
-    Module["calledRun"] = true;
-    if (ABORT) return;
-    initRuntime();
-    readyPromiseResolve?.(Module);
-    Module["onRuntimeInitialized"]?.();
-    consumedModuleProp("onRuntimeInitialized");
-    assert(!Module["_main"], 'compiled without a main, but one is present. if you added it from JS, use Module["onRuntimeInitialized"]');
-    postRun();
+  var setStatus = Module["setStatus"];
+  if (setStatus) {
+    setStatus("Running...");
+    // Yield to the event loop to allow the browser to paint "Running..."
+    await new Promise(resolve => setTimeout(resolve, 1));
+    // Then we want to clear the status text, but only after the rest of this function runs.
+    setTimeout(setStatus, 1, "");
   }
-  if (Module["setStatus"]) {
-    Module["setStatus"]("Running...");
-    setTimeout(() => {
-      setTimeout(() => Module["setStatus"](""), 1);
-      doRun();
-    }, 1);
-  } else {
-    doRun();
-  }
-  checkStackCookie();
+  if (ABORT) return;
+  initRuntime();
+  Module["onRuntimeInitialized"]?.();
+  consumedModuleProp("onRuntimeInitialized");
+  assert(!Module["_main"], 'compiled without a main, but one is present. if you added it from JS, use Module["onRuntimeInitialized"]');
+  postRun();
 }
 
 function checkUnflushedContent() {
@@ -4263,26 +4405,14 @@ if ((!(ENVIRONMENT_IS_PTHREAD || ENVIRONMENT_IS_WASM_WORKER))) {
   // Worker threads call this once they receive the module via postMessage
   // In modularize mode the generated code is within a factory function so we
   // can use await here (since it's not top-level-await).
-  wasmExports = await (createWasm());
-  run();
+  wasmExports = await createWasm();
+  await run();
 }
 
 // end include: postamble.js
 // include: postamble_modularize.js
 // In MODULARIZE mode we wrap the generated code in a factory function
 // and return either the Module itself, or a promise of the module.
-// We assign to the `moduleRtn` global here and configure closure to see
-// this as and extern so it won't get minified.
-if (runtimeInitialized) {
-  moduleRtn = Module;
-} else {
-  // Set up the promise that indicates the Module is initialized
-  moduleRtn = new Promise((resolve, reject) => {
-    readyPromiseResolve = resolve;
-    readyPromiseReject = reject;
-  });
-}
-
 // Assertion for attempting to access module properties on the incoming
 // moduleArg.  In the past we used this object as the prototype of the module
 // and assigned properties to it, but now we return a distinct object.  This
@@ -4300,7 +4430,7 @@ for (const prop of Object.keys(Module)) {
 }
 
 
-    return moduleRtn;
+    return Module;
   };
 })();
 
@@ -4317,10 +4447,10 @@ if (typeof exports === 'object' && typeof module === 'object') {
 // Normally this detection is done when the module is itself run but
 // when running in MODULARIZE mode we need use this to know if we should
 // run the module constructor on startup (true only for pthreads).
-var isPthread = globalThis.self?.name?.startsWith('em-pthread');
+var isPthread = globalThis.name?.startsWith('em-pthread');
 // In order to support both web and node we also need to detect node here.
 var isNode = globalThis.process?.versions?.node && globalThis.process?.type != 'renderer';
-if (isNode) isPthread = require('worker_threads').workerData === 'em-pthread'
+if (isNode) isPthread = require('node:worker_threads').workerData === 'em-pthread'
 
 isPthread && RecorderModule();
 
@@ -4328,9 +4458,9 @@ isPthread && RecorderModule();
 // Normally this detection is done when the module is itself run but
 // when running in MODULARIZE mode we need use this to know if we should
 // run the module constructor on startup (true only for pthreads).
-var isWW = globalThis.self?.name == 'em-ww';
+var isWW = globalThis.name?.startsWith('em-ww');
 // In order to support both web and node we also need to detect node here.
-if (isNode) isWW = require('worker_threads').workerData === 'em-ww';
+if (isNode) isWW = require('node:worker_threads').workerData === 'em-ww';
 
 isWW ||= !!globalThis.AudioWorkletGlobalScope;
 // When running as a wasm worker, construct a new instance on startup

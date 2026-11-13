@@ -337,7 +337,7 @@ class RecorderFfi extends RecorderImpl {
         CaptureErrors.fromValue(error),
       );
     }
-    super.init(
+    await super.init(
       deviceID: deviceID,
       format: format,
       sampleRate: sampleRate,
