@@ -359,7 +359,7 @@ Capture::Capture()
       silenceDuration(2.0f), secondsOfAudioToWriteBefore(0.0f),
       isRecording(false), isRecordingPaused(false), isStreamingData(false),
       recordingFormat(recordingFormatWav), streamingFormat(streamingFormatPcm),
-      mInited(false), mUsesContext(false) {}
+      isLoopbackEnabled(false), mInited(false), mUsesContext(false) {}
 
 Capture::~Capture() { dispose(); }
 
@@ -438,9 +438,12 @@ CaptureErrors Capture::init(Filters *filters, int deviceID, PCMFormat pcmFormat,
   }
 #endif
 
-  bool isDuplex =
-      (filters != nullptr &&
-       filters->isFilterActive(RecorderFilterType::echoCancellation) >= 0);
+  // Only native loopback plays through this device, so only loopback needs a
+  // duplex one. Echo cancellation does not: without loopback the duplex output
+  // is silence, which the filter appended to its reference next to what
+  // feedPlaybackData() supplies. The reference then filled at twice the
+  // microphone's rate and stayed the 2 s its FIFO keeps behind it.
+  bool isDuplex = isLoopbackEnabled;
   deviceConfig = ma_device_config_init(isDuplex ? ma_device_type_duplex
                                                 : ma_device_type_capture);
   mUsesContext = false;

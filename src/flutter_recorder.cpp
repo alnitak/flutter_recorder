@@ -571,7 +571,13 @@ FFI_PLUGIN_EXPORT void flutter_recorder_setFftDecibelRange(float minDecibels, fl
 
 FFI_PLUGIN_EXPORT void flutter_recorder_setLoopback(bool enable)
 {
+    if (capture.isLoopback() == enable)
+        return;
     capture.setLoopback(enable);
+    // The device is duplex only while looping back (Capture::init): open it
+    // again as the other kind.
+    if (capture.isInited())
+        capture.reinitDevice();
 }
 
 FFI_PLUGIN_EXPORT int flutter_recorder_isLoopbackEnabled()
@@ -589,22 +595,12 @@ FFI_PLUGIN_EXPORT int flutter_recorder_isFilterActive(enum RecorderFilterType fi
 
 FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_addFilter(enum RecorderFilterType filterType)
 {
-    CaptureErrors err = mFilters.get()->addFilter(filterType);
-    if (err == captureNoError && filterType == RecorderFilterType::echoCancellation && capture.isInited())
-    {
-        capture.reinitDevice();
-    }
-    return err;
+    return mFilters.get()->addFilter(filterType);
 }
 
 FFI_PLUGIN_EXPORT enum CaptureErrors flutter_recorder_removeFilter(enum RecorderFilterType filterType)
 {
-    CaptureErrors err = mFilters.get()->removeFilter(filterType);
-    if (err == captureNoError && filterType == RecorderFilterType::echoCancellation && capture.isInited())
-    {
-        capture.reinitDevice();
-    }
-    return err;
+    return mFilters.get()->removeFilter(filterType);
 }
 
 FFI_PLUGIN_EXPORT void flutter_recorder_getFilterParamNames(enum RecorderFilterType filterType, char **names, int *paramsCount)
