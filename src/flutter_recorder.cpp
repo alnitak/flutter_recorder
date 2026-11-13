@@ -377,6 +377,9 @@ FFI_PLUGIN_EXPORT void flutter_recorder_listCaptureDevices(
     int numDevices = 0;
     for (int i = 0; i < (int)d.size(); i++)
     {
+        // The length first: the scan below reads the first 5 chars.
+        if (strlen(d[i].name) <= 5)
+            continue;
         bool hasSpecialChar = false;
         /// check if the device name has some strange chars (happens on Linux)
         for (int n = 0; n < 5; n++)
@@ -384,7 +387,7 @@ FFI_PLUGIN_EXPORT void flutter_recorder_listCaptureDevices(
             if (d[i].name[n] < 0x20 && d[i].name[n] >= 0)
                 hasSpecialChar = true;
         }
-        if (strlen(d[i].name) <= 5 || hasSpecialChar)
+        if (hasSpecialChar)
             continue;
 
         devicesName[numDevices] = strdup(d[i].name);
@@ -395,6 +398,8 @@ FFI_PLUGIN_EXPORT void flutter_recorder_listCaptureDevices(
 
         numDevices++;
     }
+    for (auto &device : d)
+        free(device.name);
     *n_devices = numDevices;
 }
 

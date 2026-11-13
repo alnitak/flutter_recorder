@@ -147,6 +147,16 @@ private:
 
   /// true when the capture owns an explicit miniaudio context.
   bool mUsesContext;
+
+  /// The context devices are listed on, initialized on the first listing and
+  /// kept: one initialized on every listing was never uninitialized, and on
+  /// WASAPI each kept a thread of its own. Left to the OS at exit.
+  ma_context mEnumContext;
+  bool mEnumContextInited;
+
+  /// The chosen input device's id, copied out of the device list, which the
+  /// next listing replaces.
+  ma_device_id mCaptureDeviceId;
 };
 
 #endif // CAPTURE_H

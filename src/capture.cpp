@@ -7,6 +7,7 @@
 #include <atomic>
 #include <cmath>
 #include <cstdarg>
+#include <cstdlib>
 #include <cstring>
 #include <memory.h>
 #include <memory>
@@ -359,7 +360,8 @@ Capture::Capture()
       silenceDuration(2.0f), secondsOfAudioToWriteBefore(0.0f),
       isRecording(false), isRecordingPaused(false), isStreamingData(false),
       recordingFormat(recordingFormatWav), streamingFormat(streamingFormatPcm),
-      isLoopbackEnabled(false), mInited(false), mUsesContext(false) {}
+      isLoopbackEnabled(false), mInited(false), mUsesContext(false),
+      mEnumContextInited(false) {}
 
 Capture::~Capture() { dispose(); }
 
@@ -371,13 +373,23 @@ std::vector<CaptureDevice> Capture::listCaptureDevices() {
   printf("***************** LIST DEVICES START\n");
 #endif
   std::vector<CaptureDevice> ret;
-  if (!mInited &&
-      (result = ma_context_init(NULL, 0, NULL, &context)) != MA_SUCCESS) {
-    printf("Failed to initialize context %d\n", result);
-    return ret;
+  if (!mEnumContextInited) {
+    ma_context_config contextConfig = ma_context_config_init();
+#if defined(MA_HAS_COREAUDIO)
+    // Listing must leave the AVAudioSession alone, as init() does.
+    contextConfig.coreaudio.sessionCategory = ma_ios_session_category_none;
+    contextConfig.coreaudio.noAudioSessionActivate = true;
+    contextConfig.coreaudio.noAudioSessionDeactivate = true;
+#endif
+    if ((result = ma_context_init(NULL, 0, &contextConfig, &mEnumContext)) !=
+        MA_SUCCESS) {
+      printf("Failed to initialize context %d\n", result);
+      return ret;
+    }
+    mEnumContextInited = true;
   }
 
-  if ((result = ma_context_get_devices(&context, &pPlaybackInfos,
+  if ((result = ma_context_get_devices(&mEnumContext, &pPlaybackInfos,
                                        &playbackCount, &pCaptureInfos,
                                        &captureCount)) != MA_SUCCESS) {
     printf("Failed to get devices %d\n", result);
@@ -450,9 +462,13 @@ CaptureErrors Capture::init(Filters *filters, int deviceID, PCMFormat pcmFormat,
   deviceConfig.periodSizeInFrames = BUFFER_SIZE;
   if (deviceID != -1) {
     auto devices = listCaptureDevices();
-    if (devices.size() == 0 || deviceID >= devices.size())
+    bool found = deviceID >= 0 && deviceID < (int)devices.size();
+    for (auto &device : devices)
+      free(device.name);
+    if (!found)
       return captureInitFailed;
-    deviceConfig.capture.pDeviceID = &pCaptureInfos[deviceID].id;
+    mCaptureDeviceId = pCaptureInfos[deviceID].id;
+    deviceConfig.capture.pDeviceID = &mCaptureDeviceId;
   }
   ma_format format;
   switch (pcmFormat) {
