@@ -1,5 +1,5 @@
 // ignore_for_file: public_member_api_docs
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_recorder/flutter_recorder.dart';
 
 /// Custom painter to draw the FFT data.

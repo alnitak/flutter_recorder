@@ -1,3 +1,6 @@
+## 2.0.7
+- fix: Open a duplex device only for native loopback. Thanks to @myavuzokumus #67
+
 ## 2.0.6
 - fix windows: rebuild vendored ogg with export name `fr_ogg.dll` and remove `ogg.dll` alias to avoid Native Assets collision with `flutter_soloud` #66
 

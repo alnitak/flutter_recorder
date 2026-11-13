@@ -3,7 +3,7 @@ import 'dart:developer' as dev;
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_recorder/flutter_recorder.dart';
 import 'package:flutter_recorder_example/ui/bars.dart';
 import 'package:logging/logging.dart';
