@@ -1,3 +1,6 @@
+## 2.0.8
+- fix android: suppress -Wvla warning on Android
+
 ## 2.0.7
 - fix: Open a duplex device only for native loopback. Thanks to @myavuzokumus #67
 
