@@ -63,7 +63,7 @@ void main(List<String> args) async {
           '-msse3',
         ],
       ],
-      if (isApple || os == OS.linux) '-Wno-vla',
+      if (os != OS.windows) '-Wno-vla',
       if (os == OS.linux && arch == Architecture.x64) ...['-msse2', '-msse3'],
     ];
 
