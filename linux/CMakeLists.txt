@@ -39,8 +39,14 @@ set(flutter_recorder_bundled_libraries
   # Defined in ../src/CMakeLists.txt.
   # This can be changed to accommodate different builds.
   $<TARGET_FILE:flutter_recorder>
-  ${OGG_LIBRARY}
-  ${OPUS_LIBRARY}
-  ${SPEEXDSP_LIBRARY}
   PARENT_SCOPE
 )
+if(NOT FLUTTER_RECORDER_USE_SYSTEM_XIPH)
+  set(flutter_recorder_bundled_libraries
+    $<TARGET_FILE:flutter_recorder>
+    ${OGG_LIBRARY}
+    ${OPUS_LIBRARY}
+    ${SPEEXDSP_LIBRARY}
+    PARENT_SCOPE
+  )
+endif()
