@@ -7,12 +7,18 @@ project(flutter_recorder_library VERSION 0.0.1 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+option(FLUTTER_RECORDER_USE_SYSTEM_XIPH
+  "Use Linux ogg, opus and speexdsp development libraries from pkg-config" OFF)
+if(FLUTTER_RECORDER_USE_SYSTEM_XIPH AND NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  message(FATAL_ERROR "FLUTTER_RECORDER_USE_SYSTEM_XIPH is supported on Linux only")
+endif()
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/pffft)
 
 # Ogg/Opus include and library paths for non-Apple platforms.
 # On iOS/macOS the podspec provides the XCFrameworks and headers.
-if (NOT APPLE)
+if (NOT APPLE AND NOT FLUTTER_RECORDER_USE_SYSTEM_XIPH)
   if (ANDROID)
     set(OGGOPUS_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../android/include")
     set(OGGOPUS_LIBRARY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../android/libs/${ANDROID_ABI}")
@@ -61,7 +67,11 @@ if (ANDROID)
   target_link_libraries(flutter_recorder log)
 endif()
 
-if (NOT APPLE)
+if (FLUTTER_RECORDER_USE_SYSTEM_XIPH)
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(FLUTTER_RECORDER_XIPH REQUIRED IMPORTED_TARGET ogg opus speexdsp)
+  target_link_libraries(flutter_recorder PkgConfig::FLUTTER_RECORDER_XIPH)
+elseif (NOT APPLE)
   if (ANDROID)
     # On Android the prebuilt shared libraries live under libs/<abi>.
     # They are renamed to avoid conflicts with other plugins that also ship

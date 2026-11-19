@@ -287,6 +287,13 @@ final class XiphLink {
         );
 
       case OS.linux:
+        final useSystem = input.userDefines['linux_use_system_xiph'];
+        if (useSystem is! bool?) {
+          throw const FormatException(
+            'linux_use_system_xiph must be a boolean',
+          );
+        }
+        if (useSystem ?? false) return XiphLink.systemLinux();
         const dir = 'linux/libs';
         const libs = ['ogg', 'opus', 'speexdsp'];
         return XiphLink._(
@@ -302,6 +309,50 @@ final class XiphLink {
       default:
         throw UnsupportedError('Unsupported target OS: $os');
     }
+  }
+
+  /// Use the build environment's Linux libraries, without bundling prebuilts.
+  /// The application's distributor must provide their runtime SONAMEs.
+  factory XiphLink.systemLinux() {
+    const libs = ['ogg', 'opus', 'speexdsp'];
+    String variable(String library, String name) {
+      final result = Process.runSync('pkg-config', [
+        '--variable=$name',
+        library,
+      ]);
+      final value = (result.stdout as String).trim();
+      if (result.exitCode != 0 || value.isEmpty) {
+        throw StateError(
+          'Cannot find system $library ($name): ${result.stderr}. '
+          'Install its development package in the Linux build environment.',
+        );
+      }
+      return value;
+    }
+
+    final directories = <String>{};
+    final includes = <String>{};
+    final dependencies = <Uri>[];
+    for (final library in libs) {
+      final directory = variable(library, 'libdir');
+      directories.add(directory);
+      includes.add(variable(library, 'includedir'));
+      dependencies.add(
+        File('${variable(library, 'pcfiledir')}/$library.pc').uri,
+      );
+      final linkerFile = File('$directory/lib$library.so');
+      // Track the versioned file too, so SDK upgrades invalidate the hook.
+      dependencies
+        ..add(linkerFile.uri)
+        ..add(File(linkerFile.resolveSymbolicLinksSync()).uri);
+    }
+    return XiphLink._(
+      libraries: libs,
+      libraryDirectories: directories.toList(),
+      includeDirs: includes.toList(),
+      bundledAssets: const [],
+      dependencies: dependencies,
+    );
   }
 
   /// Library names passed to the linker (`-l<name>`).

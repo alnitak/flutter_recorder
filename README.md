@@ -25,6 +25,36 @@ A low-level audio recorder plugin that uses miniaudio as the backend and support
 After setting up permission for you Android, MacOS or iOS, in your app, you will need to ask for permission to use the microphone maybe using [permission_handler](https://pub.dev/packages/permission_handler) plugin.
 https://pub.dev/packages/permission_handler
 
+#### Linux distribution builds
+
+By default, Linux builds use the prebuilt Xiph libraries shipped with this
+package. Their glibc requirements may be newer than a distribution or Flatpak
+runtime. Distributors can opt into the build environment's development packages
+instead (`pkg-config`, Ogg, Opus, and SpeexDSP).
+
+For the Dart native-assets build hook, add this to the consuming app's
+`pubspec.yaml`:
+
+```yaml
+hooks:
+  user_defines:
+    flutter_recorder:
+      linux_use_system_xiph: true
+```
+
+For the Linux CMake plugin, set `FLUTTER_RECORDER_USE_SYSTEM_XIPH` to `ON` in
+the app's `linux/CMakeLists.txt`, before including `flutter/generated_plugins.cmake`:
+
+```cmake
+set(FLUTTER_RECORDER_USE_SYSTEM_XIPH ON CACHE BOOL "Use SDK Xiph libraries")
+```
+
+Configure both paths when using Flutter, which may run both CMake and native
+asset hooks. System mode does not bundle the Xiph libraries: the distributor
+must provide their runtime SONAMEs in the target environment. Build inside the
+distribution's SDK/sysroot, rather than selecting libraries from a newer host.
+Cross builds require target pkg-config metadata and the target compiler/sysroot.
+
 #### Android
 Add the permission in the `AndroidManifest.xml`.
 ```

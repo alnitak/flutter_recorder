@@ -1,3 +1,7 @@
+## Unreleased
+- Linux distributors can opt into system Ogg/Opus/SpeexDSP libraries in both
+  CMake and native-assets hooks instead of shipping the vendored binaries.
+
 ## 2.0.8
 - fix android: suppress -Wvla warning on Android
 
