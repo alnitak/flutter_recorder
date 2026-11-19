@@ -173,7 +173,7 @@ final _androidAbi = {
   Architecture.x64: 'x86_64',
 };
 
-/// How the prebuilt Xiph libraries are linked for one target.
+/// How the Xiph libraries are linked for one target.
 final class XiphLink {
   XiphLink._({
     required this.libraries,
@@ -361,12 +361,13 @@ final class XiphLink {
   /// Directories searched for [libraries]. Absolute paths.
   final List<String> libraryDirectories;
 
-  /// Xiph header directories, relative to the package root.
+  /// Xiph header directories, relative to the package root or absolute for
+  /// system libraries.
   final List<String> includeDirs;
 
   /// Extra code assets to bundle (prebuilt shared libraries).
   final List<CodeAsset> bundledAssets;
 
-  /// Prebuilt files consumed by the build, for cache invalidation.
+  /// Files consumed by the build, for cache invalidation.
   final List<Uri> dependencies;
 }

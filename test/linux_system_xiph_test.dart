@@ -12,6 +12,19 @@ import '../hook/build.dart' as hook;
 
 // Requires pkg-config and the Ogg/Opus/SpeexDSP development packages.
 void main() {
+  var hasSystemXiph = false;
+  try {
+    hasSystemXiph =
+        Process.runSync('pkg-config', [
+          '--exists',
+          'ogg',
+          'opus',
+          'speexdsp',
+        ]).exitCode ==
+        0;
+  } on ProcessException {
+    // The default prebuilt build does not require pkg-config.
+  }
   test(
     'system Xiph hook builds a loadable library without vendored assets',
     () async {
@@ -45,5 +58,8 @@ void main() {
       );
     },
     timeout: const Timeout(Duration(minutes: 3)),
+    skip: hasSystemXiph
+        ? null
+        : 'Requires pkg-config and Ogg/Opus/SpeexDSP development packages',
   );
 }
