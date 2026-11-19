@@ -64,6 +64,7 @@ build_lib() {
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX="$temp_install_path" \
             -DBUILD_SHARED_LIBS=ON \
+            -DCMAKE_PROJECT_INCLUDE="$BASE_DIR/fr_rename.cmake" \
             -DCMAKE_C_FLAGS="-O2 -flto -ffunction-sections -fdata-sections" \
             -DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -flto" \
             -DCMAKE_SHARED_LINKER_FLAGS="-Wl,--gc-sections -flto" \
@@ -77,6 +78,7 @@ build_lib() {
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX="$temp_install_path" \
             -DBUILD_SHARED_LIBS=ON \
+            -DCMAKE_PROJECT_INCLUDE="$BASE_DIR/fr_rename.cmake" \
             -DCMAKE_C_FLAGS="-O2 -flto -ffunction-sections -fdata-sections" \
             -DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -flto" \
             -DCMAKE_SHARED_LINKER_FLAGS="-Wl,--gc-sections -flto" \

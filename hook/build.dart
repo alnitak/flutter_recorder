@@ -287,15 +287,39 @@ final class XiphLink {
         );
 
       case OS.linux:
+        final useSystem =
+            _parseBool(input.userDefines['linux_use_system_xiph']) ??
+            _parseBool(input.userDefines['linux_use_system_libs']) ??
+            _parseBool(input.userDefines['use_system_xiph_libs']) ??
+            false;
+        if (useSystem) return XiphLink.systemLinux();
+
         const dir = 'linux/libs';
-        const libs = ['ogg', 'opus', 'speexdsp'];
+        final hasFrLibs = File(
+          packageRoot.resolve('$dir/libfr_ogg.so').toFilePath(),
+        ).existsSync();
+        final libs = hasFrLibs
+            ? const ['fr_ogg', 'fr_opus', 'fr_speexdsp']
+            : const ['ogg', 'opus', 'speexdsp'];
+        final runtimeLibs = hasFrLibs
+            ? const ['libfr_ogg.so.0', 'libfr_opus.so.0', 'libfr_speexdsp.so']
+            : const ['libogg.so.0', 'libopus.so.0', 'libspeexdsp.so'];
         return XiphLink._(
           libraries: libs,
           libraryDirectories: [packageRoot.resolve(dir).toFilePath()],
           includeDirs: const ['linux/include'],
-          bundledAssets: const [],
+          bundledAssets: [
+            for (final file in runtimeLibs)
+              CodeAsset(
+                package: packageName,
+                name: 'xiph/$file',
+                linkMode: DynamicLoadingBundled(),
+                file: packageRoot.resolve('$dir/$file'),
+              ),
+          ],
           dependencies: [
             for (final lib in libs) packageRoot.resolve('$dir/lib$lib.so'),
+            for (final file in runtimeLibs) packageRoot.resolve('$dir/$file'),
           ],
         );
 
@@ -304,13 +328,61 @@ final class XiphLink {
     }
   }
 
+  /// Use the build environment's Linux libraries, without bundling prebuilts.
+  /// The application's distributor must provide their runtime SONAMEs.
+  factory XiphLink.systemLinux() {
+    const libs = ['ogg', 'opus', 'speexdsp'];
+    String variable(String library, String name) {
+      final result = Process.runSync('pkg-config', [
+        '--variable=$name',
+        library,
+      ]);
+      final value = (result.stdout as String).trim();
+      if (result.exitCode != 0 || value.isEmpty) {
+        throw StateError(
+          'Cannot find system $library ($name): ${result.stderr}. '
+          'Install its development package in the Linux build environment.',
+        );
+      }
+      return value;
+    }
+
+    final directories = <String>{};
+    final includes = <String>{};
+    final dependencies = <Uri>[];
+    for (final library in libs) {
+      final directory = variable(library, 'libdir');
+      directories.add(directory);
+      includes.add(variable(library, 'includedir'));
+      dependencies.add(
+        File('${variable(library, 'pcfiledir')}/$library.pc').uri,
+      );
+      final linkerFile = File('$directory/lib$library.so');
+      // Track the versioned file too, so SDK upgrades invalidate the hook.
+      dependencies.add(linkerFile.uri);
+      if (linkerFile.existsSync()) {
+        try {
+          dependencies.add(File(linkerFile.resolveSymbolicLinksSync()).uri);
+        } catch (_) {}
+      }
+    }
+    return XiphLink._(
+      libraries: libs,
+      libraryDirectories: directories.toList(),
+      includeDirs: includes.toList(),
+      bundledAssets: const [],
+      dependencies: dependencies,
+    );
+  }
+
   /// Library names passed to the linker (`-l<name>`).
   final List<String> libraries;
 
   /// Directories searched for [libraries]. Absolute paths.
   final List<String> libraryDirectories;
 
-  /// Xiph header directories, relative to the package root.
+  /// Xiph header directories, relative to the package root or absolute for
+  /// system libraries.
   final List<String> includeDirs;
 
   /// Extra code assets to bundle (prebuilt shared libraries).
@@ -318,4 +390,14 @@ final class XiphLink {
 
   /// Prebuilt files consumed by the build, for cache invalidation.
   final List<Uri> dependencies;
+}
+
+bool? _parseBool(Object? val) {
+  if (val == null) return null;
+  if (val is bool) return val;
+  if (val is String) {
+    if (val.toLowerCase() == 'true' || val == '1') return true;
+    if (val.toLowerCase() == 'false' || val == '0') return false;
+  }
+  return null;
 }

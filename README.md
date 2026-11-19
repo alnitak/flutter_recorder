@@ -90,6 +90,55 @@ In capabilities, activate "Audio input" in debug and release schemes or add in `
 <true/>
 ```
 
+#### Linux
+
+`flutter_recorder` uses ALSA by default for Linux audio capture.
+
+By default, Linux builds use the tested prebuilt Xiph libraries shipped with this package (`linux/libs/`), so no external audio packages need to be installed.
+
+##### Using System Libraries (Distribution & Flatpak Builds)
+When packaging for Linux distributions (Debian, Arch, Fedora) or containerized Flatpak runtimes (such as Freedesktop SDK), you can opt into linking the build environment's system packages instead of shipping vendored prebuilts.
+
+In your application's `pubspec.yaml`, add:
+
+```yaml
+hooks:
+  user_defines:
+    flutter_recorder:
+      linux_use_system_xiph: true
+      # or:
+      # linux_use_system_libs: true
+```
+
+Install the required development packages in your Linux build environment:
+
+- **Debian / Ubuntu / Linux Mint**:
+  ```bash
+  sudo apt install pkg-config libogg-dev libopus-dev libspeexdsp-dev libasound2-dev
+  ```
+
+- **Fedora / RHEL**:
+  ```bash
+  sudo dnf install pkgconf-pkg-config libogg-devel opus-devel speexdsp-devel alsa-lib-devel
+  ```
+
+- **Arch Linux / Manjaro**:
+  ```bash
+  sudo pacman -S pkgconf libogg opus speexdsp alsa-lib
+  ```
+
+- **openSUSE**:
+  ```bash
+  sudo zypper install pkg-config libogg-devel libopus-devel speexdsp-devel alsa-devel
+  ```
+
+- **Alpine Linux**:
+  ```bash
+  sudo apk add pkgconf libogg-dev opus-dev speexdsp-dev alsa-lib-dev
+  ```
+
+> **Note:** The native engine is built entirely with Dart build hooks (`hook/build.dart`). You only need to define `linux_use_system_xiph: true` in `pubspec.yaml`—no CMake variables or manual CMakeLists.txt edits are needed.
+
 #### Web (Single-Threaded & Multi-Threaded AudioWorklet)
 
 `flutter_recorder` supports both **Single-Threaded (ST)** and **Multi-Threaded (MT)** WebAssembly builds:
