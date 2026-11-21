@@ -1,5 +1,6 @@
 ## 2.0.8
 - fix android: suppress -Wvla warning on Android
+- Added the option to link the Ogg, Opus and SpeexDSP libraries installed in the build environment instead of the bundled prebuilt ones, on Linux, macOS and Windows. Enable it per platform with `linux_use_system_xiph`, `macos_use_system_xiph` or `windows_use_system_xiph` under `hooks.user_defines.flutter_recorder` in the app's `pubspec.yaml`. See the README for details #71. Thanks to @realdev-fr #70
 
 ## 2.0.7
 - fix: Open a duplex device only for native loopback. Thanks to @myavuzokumus #67
