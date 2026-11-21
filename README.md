@@ -90,6 +90,88 @@ In capabilities, activate "Audio input" in debug and release schemes or add in `
 <true/>
 ```
 
+#### Linux
+
+`flutter_recorder` uses ALSA for Linux audio capture. The ALSA development package is needed to build (for example `sudo apt install libasound2-dev`).
+
+By default, Linux builds bundle the prebuilt Ogg, Opus and SpeexDSP libraries shipped with this package, so nothing else needs to be installed on the build machine or on the user's machine. The prebuilt libraries are available for x86_64 only: on other architectures use the system libraries as described below.
+
+#### Using system Xiph libraries (Linux, macOS, Windows)
+
+The native code is built by a Dart build hook (`hook/build.dart`), which by default links the prebuilt Ogg, Opus and SpeexDSP libraries shipped with this package. On desktop platforms you can link the libraries installed in the build environment instead, which is what Linux distributions and Flatpak runtimes usually require.
+
+Add the platforms you need to your application's `pubspec.yaml`:
+
+```yaml
+hooks:
+  user_defines:
+    flutter_recorder:
+      linux_use_system_xiph: true
+      macos_use_system_xiph: true
+      windows_use_system_xiph: true
+```
+
+`<platform>_use_system_libs` is accepted as an alias, so the same key names work for `flutter_soloud`. The values must be `true` or `false`; anything else stops the build with an error.
+
+> **Important:** In this mode the libraries are **not bundled** with your app: they must also be installed wherever the app runs. This fits distribution packages and Flatpak, where the runtime provides them. For an app you ship directly to users, keep the default prebuilt libraries.
+
+> **Note:** If your app also uses `flutter_soloud`, enable the system libraries in both packages. Otherwise `flutter_recorder` loads the Ogg and Opus libraries bundled by `flutter_soloud` instead of the system ones.
+
+##### Linux
+
+The libraries are located with `pkg-config`. Install it and the development packages in the build environment:
+
+- **Debian / Ubuntu / Linux Mint**:
+  ```bash
+  sudo apt install pkg-config libogg-dev libopus-dev libspeexdsp-dev libasound2-dev
+  ```
+
+- **Fedora / RHEL**:
+  ```bash
+  sudo dnf install pkgconf-pkg-config libogg-devel opus-devel speexdsp-devel alsa-lib-devel
+  ```
+
+- **Arch Linux / Manjaro**:
+  ```bash
+  sudo pacman -S pkgconf libogg opus speexdsp alsa-lib
+  ```
+
+- **openSUSE**:
+  ```bash
+  sudo zypper install pkg-config libogg-devel libopus-devel speexdsp-devel alsa-devel
+  ```
+
+- **Alpine Linux**:
+  ```bash
+  sudo apk add pkgconf libogg-dev opus-dev speexdsp-dev alsa-lib-dev
+  ```
+
+At runtime the target system needs the matching runtime packages (for example `libogg0`, `libopus0` and `libspeexdsp1` on Debian).
+
+##### macOS
+
+The libraries are located with `pkg-config` when it is installed, then in the Homebrew and MacPorts prefixes (`/opt/homebrew`, `/usr/local`, `/opt/local`):
+
+```bash
+brew install libogg opus speexdsp
+```
+
+Homebrew installs libraries for the host architecture only, while Flutter builds macOS release apps for both `arm64` and `x86_64`. A build for an architecture the libraries do not contain stops with an error: provide universal libraries, or build only for the host architecture.
+
+The resulting app loads the libraries from their install location, so it only runs on machines where they are installed at the same path.
+
+##### Windows
+
+The libraries are located in a [vcpkg](https://vcpkg.io) installation, searched in `%VCPKG_ROOT%`, `C:\vcpkg` and `C:\tools\vcpkg`:
+
+```bat
+vcpkg install libogg opus speexdsp --triplet x64-windows
+```
+
+The triplet defaults to `x64-windows` (`arm64-windows` for ARM64 builds); set the `VCPKG_DEFAULT_TRIPLET` environment variable to use another one.
+
+With a dynamic triplet, the DLLs in `installed\<triplet>\bin` are not copied into your app: make them available next to the executable or on `PATH`.
+
 #### Web (Single-Threaded & Multi-Threaded AudioWorklet)
 
 `flutter_recorder` supports both **Single-Threaded (ST)** and **Multi-Threaded (MT)** WebAssembly builds:

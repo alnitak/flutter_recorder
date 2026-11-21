@@ -14,7 +14,7 @@ dependencies:
   flutter_recorder:
     path: ../
 
-  flutter_soloud: ^5.0.0
+  flutter_soloud: ^5.3.1
     # path: ../../flutter_soloud
 
   audio_session: ^0.2.4

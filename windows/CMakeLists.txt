@@ -1,49 +1,18 @@
-# The Flutter tooling requires that developers have a version of Visual Studio
-# installed that includes CMake 3.14 or later. You should not increase this
-# version, as doing so will cause the plugin to fail to compile for some
-# customers of the plugin.
+# The native engine is built by the Dart build hook (hook/build.dart) and
+# bundled as a native code asset. This file exists only because the Flutter
+# tool requires a CMakeLists.txt for Windows plugins; there is no plugin class
+# and nothing left to compile here.
 cmake_minimum_required(VERSION 3.14)
-
-# Project-level configuration.
 set(PROJECT_NAME "flutter_recorder")
 project(${PROJECT_NAME} LANGUAGES CXX)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(PLUGIN_NAME "${PROJECT_NAME}_plugin")
 
-if (UNIX AND NOT WIN32 AND NOT APPLE)
-	if (CMAKE_SIZEOF_VOID_P MATCHES "8")
-		set (LIB_POSTFIX "64" CACHE STRING "suffix for 32/64 dir placement")
-		mark_as_advanced (LIB_POSTFIX)
-	endif ()
-endif ()
-if (MSVC)
-	add_definitions (-D_CRT_SECURE_NO_WARNINGS)
-endif()
-if (NOT DEFINED LIB_POSTFIX)
-  set (LIB_POSTFIX "")
-endif ()
-
-# list( APPEND CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Wno-error -fPIC")
-message("*************************************************1 ${CMAKE_CXX_FLAGS} *************************************************")
-#set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Wno-error -fPIC -msse2 -msse -mavx -mavx2 -mfma")
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /WX-")
-message("*************************************************2 ${CMAKE_CXX_FLAGS} *************************************************")
-
-
-# Invoke the build for native code shared with the other target platforms.
-# This can be changed to accommodate different builds.
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../src" "${CMAKE_CURRENT_BINARY_DIR}/shared")
+add_library(${PLUGIN_NAME} INTERFACE)
 
 # List of absolute paths to libraries that should be bundled with the plugin.
-# This list could contain prebuilt libraries, or libraries created by an
-# external build triggered from this build file.
+# Empty: the hook-built code asset is bundled by the Flutter tool instead.
 set(flutter_recorder_bundled_libraries
-  # Defined in ../src/CMakeLists.txt.
-  # This can be changed to accommodate different builds.
-  $<TARGET_FILE:flutter_recorder>
-  ${OGG_LIBRARY}
-  ${OPUS_LIBRARY}
-  ${SPEEXDSP_LIBRARY}
+  ""
   PARENT_SCOPE
 )

@@ -2,6 +2,10 @@
 # To learn more about a Podspec see http://guides.cocoapods.org/syntax/podspec.html.
 # Run `pod lib lint flutter_recorder.podspec` to validate before publishing.
 #
+# The native engine is built by the Dart build hook (hook/build.dart) and
+# bundled as a native code asset. This pod only provides the
+# FlutterRecorderPlugin class, which observes the FlutterEngine lifecycle.
+#
 Pod::Spec.new do |s|
   s.name             = 'flutter_recorder'
   s.version          = '0.0.1'
