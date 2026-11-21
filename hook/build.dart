@@ -5,6 +5,18 @@
 // prebuilt Xiph libraries checked into this repo (see `xiph/`).
 //
 // Web is not covered by hooks; the emscripten build in `web/` is unchanged.
+//
+// Configuration (in the *root app* pubspec.yaml):
+//
+// hooks:
+//   user_defines:
+//     flutter_recorder:
+//       linux_use_system_xiph: true   # link the distribution's Xiph libs
+//       macos_use_system_xiph: true   # link Homebrew/MacPorts Xiph libs
+//       windows_use_system_xiph: true # link vcpkg Xiph libs
+//
+// `<os>_use_system_libs` is accepted as an alias of `<os>_use_system_xiph`,
+// and `use_system_xiph_libs` as a Linux-only alias, matching flutter_soloud.
 
 import 'dart:io';
 
@@ -31,7 +43,7 @@ void main(List<String> args) async {
     final defines = <String, String?>{
       'FLUTTER_PLUGIN_IMPL': null,
       // Comment out this line for debugging native code.
-      // 'NDEBUG': null,
+      'NDEBUG': null,
       'MA_NO_PULSEAUDIO': null,
       '_REENTRANT': '1',
       if (isApple) ...{'WITH_COREAUDIO': null, 'MA_NO_RUNTIME_LINKING': '1'},
@@ -45,9 +57,9 @@ void main(List<String> args) async {
     final flags = <String>[
       if (os != OS.windows) '-fvisibility=hidden',
       // For debugging:
-      if (os == OS.windows) ...['/Od', '/Zi', '/EHsc'] else ...['-O0', '-g'],
+      // if (os == OS.windows) ...['/Od', '/Zi', '/EHsc'] else ...['-O0', '-g'],
       // For production / default:
-      // if (os == OS.windows) ...['/Ox', '/EHsc'] else '-O3',
+      if (os == OS.windows) ...['/Ox', '/EHsc'] else '-O3',
       if (os == OS.android) ...[
         '-ffast-math',
         '-funroll-loops',
@@ -197,6 +209,10 @@ final class XiphLink {
     final packageRoot = input.packageRoot;
     final packageName = input.packageName;
 
+    if (_useSystemXiph(input, os)) {
+      return XiphLink.system(os, code.targetArchitecture);
+    }
+
     switch (os) {
       case OS.macOS:
         const dir = 'macos/libs';
@@ -287,23 +303,19 @@ final class XiphLink {
         );
 
       case OS.linux:
-        final useSystem =
-            _parseBool(input.userDefines['linux_use_system_xiph']) ??
-            _parseBool(input.userDefines['linux_use_system_libs']) ??
-            _parseBool(input.userDefines['use_system_xiph_libs']) ??
-            false;
-        if (useSystem) return XiphLink.systemLinux();
-
         const dir = 'linux/libs';
-        final hasFrLibs = File(
-          packageRoot.resolve('$dir/libfr_ogg.so').toFilePath(),
-        ).existsSync();
-        final libs = hasFrLibs
-            ? const ['fr_ogg', 'fr_opus', 'fr_speexdsp']
-            : const ['ogg', 'opus', 'speexdsp'];
-        final runtimeLibs = hasFrLibs
-            ? const ['libfr_ogg.so.0', 'libfr_opus.so.0', 'libfr_speexdsp.so']
-            : const ['libogg.so.0', 'libopus.so.0', 'libspeexdsp.so'];
+        // The prebuilts carry an `fr_` prefix in both file name and SONAME so
+        // they cannot collide with other plugins bundling the Xiph libraries
+        // (such as flutter_soloud): bundled code assets must have unique file
+        // names across all packages of an app.
+        const libs = ['fr_ogg', 'fr_opus', 'fr_speexdsp'];
+        // Bundled by SONAME, which is what the plugin library asks for at
+        // runtime.
+        const runtimeLibs = [
+          'libfr_ogg.so.0',
+          'libfr_opus.so.0',
+          'libfr_speexdsp.so',
+        ];
         return XiphLink._(
           libraries: libs,
           libraryDirectories: [packageRoot.resolve(dir).toFilePath()],
@@ -328,46 +340,66 @@ final class XiphLink {
     }
   }
 
-  /// Use the build environment's Linux libraries, without bundling prebuilts.
-  /// The application's distributor must provide their runtime SONAMEs.
-  factory XiphLink.systemLinux() {
-    const libs = ['ogg', 'opus', 'speexdsp'];
-    String variable(String library, String name) {
-      final result = Process.runSync('pkg-config', [
-        '--variable=$name',
-        library,
-      ]);
-      final value = (result.stdout as String).trim();
-      if (result.exitCode != 0 || value.isEmpty) {
-        throw StateError(
-          'Cannot find system $library ($name): ${result.stderr}. '
-          'Install its development package in the Linux build environment.',
-        );
-      }
-      return value;
-    }
-
+  /// Links the build environment's own Ogg, Opus and SpeexDSP libraries on
+  /// desktop targets, without bundling anything: the libraries must also be
+  /// available wherever the application runs.
+  ///
+  /// They are located with `pkg-config` on Linux, `pkg-config` and then the
+  /// Homebrew/MacPorts prefixes on macOS, and vcpkg on Windows.
+  factory XiphLink.system(OS os, Architecture arch) {
     final directories = <String>{};
     final includes = <String>{};
     final dependencies = <Uri>[];
-    for (final library in libs) {
-      final directory = variable(library, 'libdir');
-      directories.add(directory);
-      includes.add(variable(library, 'includedir'));
-      dependencies.add(
-        File('${variable(library, 'pcfiledir')}/$library.pc').uri,
-      );
-      final linkerFile = File('$directory/lib$library.so');
-      // Track the versioned file too, so SDK upgrades invalidate the hook.
-      dependencies.add(linkerFile.uri);
-      if (linkerFile.existsSync()) {
-        try {
-          dependencies.add(File(linkerFile.resolveSymbolicLinksSync()).uri);
-        } catch (_) {}
+
+    for (final library in _systemLibs) {
+      final header = _systemHeaders[library]!;
+      final candidates = _systemCandidates(library, os, arch);
+      _SystemLibrary? found;
+      for (final candidate in candidates) {
+        if (!File('${candidate.includeDir}/$header').existsSync()) continue;
+        final file = _systemLibraryFile(candidate.libDir, library, os);
+        if (file == null) continue;
+        found = (candidate: candidate, file: file);
+        break;
+      }
+      if (found == null) {
+        final searched = candidates.isEmpty
+            ? 'pkg-config is not installed or does not know "$library".'
+            : [
+                'Searched (include | lib):',
+                for (final c in candidates) '  ${c.includeDir} | ${c.libDir}',
+              ].join('\n');
+        throw BuildError(
+          message:
+              '[flutter_recorder] Cannot find the system "$library" library '
+              '(header `$header`) for ${os.name} ${arch.name}.\n'
+              '${_systemInstallHint(os, arch)}\n'
+              '$searched\n'
+              'Remove the `${os.name}_use_system_xiph` user define to use '
+              'the prebuilt libraries shipped with flutter_recorder instead.',
+        );
+      }
+
+      final file = found.file;
+      if (os == OS.macOS) _checkMacOSSlice(file, library, arch);
+
+      directories.add(found.candidate.libDir);
+      includes.add(found.candidate.includeDir);
+      // Track the metadata, the linker file and the versioned file it points
+      // to, so upgrading the system libraries invalidates the hook.
+      final pcFile = found.candidate.pcFile;
+      if (pcFile != null) dependencies.add(pcFile);
+      dependencies.add(file.uri);
+      try {
+        final resolved = file.resolveSymbolicLinksSync();
+        if (resolved != file.path) dependencies.add(File(resolved).uri);
+      } on FileSystemException {
+        // Keep the unresolved path only.
       }
     }
+
     return XiphLink._(
-      libraries: libs,
+      libraries: _systemLibs,
       libraryDirectories: directories.toList(),
       includeDirs: includes.toList(),
       bundledAssets: const [],
@@ -392,12 +424,179 @@ final class XiphLink {
   final List<Uri> dependencies;
 }
 
-bool? _parseBool(Object? val) {
-  if (val == null) return null;
-  if (val is bool) return val;
-  if (val is String) {
-    if (val.toLowerCase() == 'true' || val == '1') return true;
-    if (val.toLowerCase() == 'false' || val == '0') return false;
+/// System library names, as known to pkg-config, the linker and vcpkg.
+const _systemLibs = ['ogg', 'opus', 'speexdsp'];
+
+/// A header of each system library, relative to its include directory, in the
+/// form the sources include it.
+const _systemHeaders = {
+  'ogg': 'ogg/ogg.h',
+  'opus': 'opus/opus.h',
+  'speexdsp': 'speex/speex_echo.h',
+};
+
+/// A place where a system library may be installed.
+typedef _SystemCandidate = ({String includeDir, String libDir, Uri? pcFile});
+
+typedef _SystemLibrary = ({_SystemCandidate candidate, File file});
+
+/// Whether the app asked for the system Xiph libraries on [os].
+///
+/// Only desktop targets support it. Throws a [BuildError] when a user define
+/// is not a boolean, instead of silently ignoring it.
+bool _useSystemXiph(BuildInput input, OS os) {
+  if (os != OS.linux && os != OS.macOS && os != OS.windows) return false;
+  final keys = [
+    '${os.name}_use_system_xiph',
+    '${os.name}_use_system_libs',
+    if (os == OS.linux) 'use_system_xiph_libs',
+  ];
+  bool? result;
+  for (final key in keys) {
+    // Every key is parsed, so a typo in a lower-priority alias is reported.
+    final value = _boolDefine(input, key);
+    result ??= value;
+  }
+  return result ?? false;
+}
+
+bool? _boolDefine(BuildInput input, String key) {
+  final value = input.userDefines[key];
+  if (value == null) return null;
+  if (value is bool) return value;
+  if (value is String) {
+    switch (value.trim().toLowerCase()) {
+      case 'true' || '1':
+        return true;
+      case 'false' || '0':
+        return false;
+    }
+  }
+  throw BuildError(
+    message:
+        '[flutter_recorder] Invalid value `$value` for '
+        '`hooks.user_defines.flutter_recorder.$key` in pubspec.yaml: '
+        'expected `true` or `false`.',
+  );
+}
+
+/// Where [library] may be installed on [os], most specific first.
+List<_SystemCandidate> _systemCandidates(
+  String library,
+  OS os,
+  Architecture arch,
+) {
+  final candidates = <_SystemCandidate>[];
+
+  if (os != OS.windows) {
+    final libDir = _pkgConfigVariable(library, 'libdir');
+    final includeDir = _pkgConfigVariable(library, 'includedir');
+    final pcDir = _pkgConfigVariable(library, 'pcfiledir');
+    if (libDir != null && includeDir != null) {
+      candidates.add((
+        includeDir: includeDir,
+        libDir: libDir,
+        pcFile: pcDir == null ? null : File('$pcDir/$library.pc').uri,
+      ));
+    }
+  }
+
+  if (os == OS.macOS) {
+    // Homebrew (Apple Silicon, Intel) and MacPorts.
+    for (final prefix in const ['/opt/homebrew', '/usr/local', '/opt/local']) {
+      candidates.add((
+        includeDir: '$prefix/include',
+        libDir: '$prefix/lib',
+        pcFile: null,
+      ));
+    }
+  } else if (os == OS.windows) {
+    final environment = Platform.environment;
+    final triplet =
+        environment['VCPKG_DEFAULT_TRIPLET'] ??
+        switch (arch) {
+          Architecture.arm64 => 'arm64-windows',
+          Architecture.ia32 => 'x86-windows',
+          _ => 'x64-windows',
+        };
+    final roots = <String>{
+      if (environment['VCPKG_ROOT'] case final root? when root.isNotEmpty) root,
+      r'C:\vcpkg',
+      r'C:\tools\vcpkg',
+    };
+    for (final root in roots) {
+      candidates.add((
+        includeDir: '$root\\installed\\$triplet\\include',
+        libDir: '$root\\installed\\$triplet\\lib',
+        pcFile: null,
+      ));
+    }
+  }
+
+  return candidates;
+}
+
+/// The value of a pkg-config variable of [library], or null when pkg-config
+/// is not installed or does not know the library.
+String? _pkgConfigVariable(String library, String name) {
+  try {
+    final result = Process.runSync('pkg-config', ['--variable=$name', library]);
+    final value = (result.stdout as String).trim();
+    return result.exitCode == 0 && value.isNotEmpty ? value : null;
+  } on ProcessException {
+    return null;
+  }
+}
+
+/// The file the linker picks for [library] in [directory], if any.
+File? _systemLibraryFile(String directory, String library, OS os) {
+  final names = switch (os) {
+    OS.windows => ['$library.lib'],
+    OS.macOS => ['lib$library.dylib', 'lib$library.a'],
+    _ => ['lib$library.so', 'lib$library.a'],
+  };
+  final separator = os == OS.windows ? r'\' : '/';
+  for (final name in names) {
+    final file = File('$directory$separator$name');
+    if (file.existsSync()) return file;
   }
   return null;
 }
+
+/// Fails early, with an actionable message, when a macOS system library has
+/// no slice for [arch]: Homebrew libraries are built for the host only, while
+/// Flutter release builds are universal.
+void _checkMacOSSlice(File file, String library, Architecture arch) {
+  final wanted = arch == Architecture.x64 ? 'x86_64' : arch.name;
+  final List<String> slices;
+  try {
+    final result = Process.runSync('lipo', ['-archs', file.path]);
+    if (result.exitCode != 0) return;
+    slices = (result.stdout as String).trim().split(RegExp(r'\s+'));
+  } on ProcessException {
+    return;
+  }
+  if (slices.contains(wanted)) return;
+  throw BuildError(
+    message:
+        '[flutter_recorder] The system "$library" library at ${file.path} '
+        'has no $wanted slice (it contains: ${slices.join(', ')}).\n'
+        'Flutter builds macOS release apps for both arm64 and x86_64, while '
+        'Homebrew installs libraries for the host architecture only. Provide '
+        'universal libraries, build only for the host architecture, or '
+        'remove the `macos_use_system_xiph` user define to use the '
+        'universal prebuilt libraries shipped with flutter_recorder.',
+  );
+}
+
+String _systemInstallHint(OS os, Architecture arch) => switch (os) {
+  OS.linux =>
+    'Install `pkg-config` and the Ogg, Opus and SpeexDSP development '
+        'packages in the build environment, for example '
+        '`sudo apt install pkg-config libogg-dev libopus-dev libspeexdsp-dev`.',
+  OS.macOS => 'Install them with `brew install libogg opus speexdsp`.',
+  _ =>
+    'Install them with `vcpkg install libogg opus speexdsp` for the '
+        '${arch == Architecture.arm64 ? 'arm64' : 'x64'}-windows triplet and '
+        'set the `VCPKG_ROOT` environment variable to the vcpkg directory.',
+};

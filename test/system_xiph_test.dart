@@ -1,4 +1,4 @@
-@TestOn('linux')
+@TestOn('linux || mac-os')
 library;
 
 import 'dart:ffi';
@@ -10,8 +10,10 @@ import 'package:hooks/hooks.dart';
 
 import '../hook/build.dart' as hook;
 
-// Requires pkg-config and the Ogg/Opus/SpeexDSP development packages.
+// Requires pkg-config and the Ogg/Opus/SpeexDSP development packages
+// (Linux distribution packages, or Homebrew/MacPorts on macOS).
 void main() {
+  final os = Platform.isMacOS ? 'macos' : 'linux';
   var hasSystemXiph = false;
   try {
     hasSystemXiph =
@@ -32,16 +34,14 @@ void main() {
         mainMethod: hook.main,
         userDefines: PackageUserDefines(
           workspacePubspec: PackageUserDefinesSource(
-            defines: {'linux_use_system_xiph': true},
+            defines: {'${os}_use_system_xiph': true},
             basePath: Directory.current.uri,
           ),
         ),
         check: (input, output) {
           final asset = output.assets.code.single;
           expect(
-            output.dependencies.any(
-              (file) => file.path.contains('linux/libs/'),
-            ),
+            output.dependencies.any((file) => file.path.contains('$os/libs/')),
             isFalse,
           );
           expect(
